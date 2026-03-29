@@ -1,0 +1,199 @@
+theory MCP_Pirandellian_Masks_Mitigated begin
+
+// Function signature and definition of the equational theory E
+
+functions: fst/1, pair/2, snd/1
+equations: fst(<x.1, x.2>) = x.1, snd(<x.1, x.2>) = x.2
+
+
+
+
+
+rule (modulo E) Init_Task:
+   [ Fr( ~taskId ) ]
+  --[ TaskCreated( ~taskId, $Scope ) ]->
+   [ Task( ~taskId, $Scope ) ]
+
+  /* has exactly the trivial AC variant */
+
+restriction OutScope_Means_Different:
+  "∀ tid scope target #i.
+    (OutScopeDiff( tid, scope, target ) @ #i) ⇒ (¬(scope = target))"
+  // safety formula
+
+rule (modulo E) MCP_Read_Request:
+   [ Task( ~taskId, $Scope ) ]
+  --[ MCPRead( ~taskId, $Scope ) ]->
+   [ ContextAvailable( ~taskId, $Scope ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) MCP_Return_Context:
+   [ ContextAvailable( ~taskId, $Scope ) ]
+  --[ MCPReturn( ~taskId, $Scope ) ]->
+   [ ProposalReady( ~taskId, $Scope ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LLM_Propose_InScope:
+   [ ProposalReady( ~taskId, $Scope ) ]
+  --[ Proposed( ~taskId, $Scope, $Scope ) ]->
+   [ PendingApproval( ~taskId, $Scope, $Scope ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LLM_Propose_OutScope:
+   [ ProposalReady( ~taskId, $Scope ) ]
+  --[
+  Proposed( ~taskId, $Scope, $Target ), IsOutScope( ~taskId ),
+  OutScopeDiff( ~taskId, $Scope, $Target ),
+  ScopeMismatchDetected( ~taskId, $Scope, $Target )
+  ]->
+   [ FrictionState( ~taskId, $Scope, $Target ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Friction_HardInterrupt_Reject:
+   [ FrictionState( ~taskId, $Scope, $Target ) ]
+  --[
+  FrictionApplied( ~taskId, 'HardInterrupt' ), MaskApplied( 'Careless' ),
+  Rejected( ~taskId, $Target ), CarelessCaughtByFriction( ~taskId )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Friction_LLM_Justification_Reject:
+   [ FrictionState( ~taskId, $Scope, $Target ) ]
+  --[
+  FrictionApplied( ~taskId, 'LLMJustification' ), MaskApplied( 'Naive' ),
+  Rejected( ~taskId, $Target ), NaiveCaughtByFriction( ~taskId )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Friction_Attentive_Reject:
+   [ FrictionState( ~taskId, $Scope, $Target ) ]
+  --[
+  FrictionApplied( ~taskId, 'AttentiveReview' ),
+  MaskApplied( 'Attentive' ), Rejected( ~taskId, $Target )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Human_Attentive_Accept:
+   [ PendingApproval( ~taskId, $Scope, $Scope ) ]
+  --[ MaskApplied( 'Attentive' ), Approved( ~taskId, $Scope ) ]->
+   [ ApprovedProposal( ~taskId, $Scope ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Human_Careless_Accept:
+   [ PendingApproval( ~taskId, $Scope, $Target ) ]
+  --[ MaskApplied( 'Careless' ), Approved( ~taskId, $Target ) ]->
+   [ ApprovedProposal( ~taskId, $Target ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Human_Naive_Accept:
+   [ PendingApproval( ~taskId, $Scope, $Target ) ]
+  --[ MaskApplied( 'Naive' ), Approved( ~taskId, $Target ) ]->
+   [ ApprovedProposal( ~taskId, $Target ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) IDE_Execute:
+   [ ApprovedProposal( ~taskId, $Target ) ]
+  --[ Executed( ~taskId, $Target ) ]->
+   [ SystemState( ~taskId, $Target ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma Execution_Reachable:
+  exists-trace "∃ tid target #t. Executed( tid, target ) @ #t"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ tid target #t. (Executed( tid, target ) @ #t)"
+*/
+simplify
+solve( ApprovedProposal( ~taskId, $Target ) ▶₀ #t )
+  case Human_Attentive_Accept
+  SOLVED // trace found
+qed
+
+lemma Friction_Catches_Careless:
+  exists-trace "∃ tid #t. CarelessCaughtByFriction( tid ) @ #t"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ tid #t. (CarelessCaughtByFriction( tid ) @ #t)"
+*/
+simplify
+solve( FrictionState( ~taskId, $Scope, $Target ) ▶₀ #t )
+  case LLM_Propose_OutScope
+  SOLVED // trace found
+qed
+
+lemma Friction_Catches_Naive:
+  exists-trace "∃ tid #t. NaiveCaughtByFriction( tid ) @ #t"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ tid #t. (NaiveCaughtByFriction( tid ) @ #t)"
+*/
+simplify
+solve( FrictionState( ~taskId, $Scope, $Target ) ▶₀ #t )
+  case LLM_Propose_OutScope
+  SOLVED // trace found
+qed
+
+lemma Mitigated_Scope_Safety:
+  all-traces
+  "∀ tid scope target #t1 #t2.
+    (((Proposed( tid, scope, target ) @ #t1) ∧ (IsOutScope( tid ) @ #t1)) ∧
+     (Executed( tid, target ) @ #t2)) ⇒
+    (⊥)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ tid scope target #t1 #t2.
+  (Proposed( tid, scope, target ) @ #t1) ∧
+  (IsOutScope( tid ) @ #t1) ∧
+  (Executed( tid, target ) @ #t2)"
+*/
+simplify
+solve( ProposalReady( ~taskId, $Scope ) ▶₀ #t1 )
+  case MCP_Return_Context
+  by solve( ApprovedProposal( ~taskId, $Target.1 ) ▶₀ #t2 )
+qed
+
+
+
+
+
+
+
+/* All wellformedness checks were successful. */
+
+/*
+Generated from:
+Tamarin version 1.10.0
+Maude version 2.7.1
+Git revision: UNKNOWN, branch: UNKNOWN
+Compiled at: 2024-10-30 14:56:23.355649243 UTC
+*/
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: mcp_interaction_mitigated.spthy
+
+  processing time: 0.22s
+  
+  Execution_Reachable (exists-trace): verified (3 steps)
+  Friction_Catches_Careless (exists-trace): verified (3 steps)
+  Friction_Catches_Naive (exists-trace): verified (3 steps)
+  Mitigated_Scope_Safety (all-traces): verified (3 steps)
+
+==============================================================================

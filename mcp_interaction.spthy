@@ -1,0 +1,200 @@
+theory MCP_Pirandellian_Masks
+begin
+
+/* ======================================================================
+  MCP + Pirandellian Masks — Phase 1: Base Model (Unmitigated)
+
+  Models the pipeline: Human → IDE → LLM → MCP → File System
+  with three static Pirandellian masks: Attentive, Careless, Naive.
+
+  Scenario: "Unintended Dependency Override"
+  The LLM may propose writes that exceed the user's authorized scope.
+  ====================================================================== */
+
+/* ======================================================================
+  1. Initialization — The User Creates a Task
+  ====================================================================== */
+
+// The user initiates a prompt in the IDE, defining a strict authorized scope.
+// E.g., "Update the logging library" → Scope = 'update_logging'
+rule Init_Task:
+  [ Fr(~taskId) ]
+  --[ TaskCreated(~taskId, $Scope) ]->
+  [ Task(~taskId, $Scope) ]
+
+/* ======================================================================
+  2. MCP Read Phase — Context Acquisition
+  ====================================================================== */
+
+// The IDE/LLM requests context via MCP (e.g., reads package.json).
+rule MCP_Read_Request:
+  [ Task(~taskId, $Scope) ]
+  --[ MCPRead(~taskId, $Scope) ]->
+  [ ContextAvailable(~taskId, $Scope) ]
+
+// The MCP server returns the file contents to the LLM.
+rule MCP_Return_Context:
+  [ ContextAvailable(~taskId, $Scope) ]
+  --[ MCPReturn(~taskId, $Scope) ]->
+  [ ProposalReady(~taskId, $Scope) ]
+
+/* ======================================================================
+  1.5. Restrictions
+  ====================================================================== */
+
+// Enforces that out-of-scope proposals have genuinely different scopes.
+restriction OutScope_Means_Different:
+  "All tid scope target #i.
+    OutScopeDiff(tid, scope, target) @ #i ==> not(scope = target)"
+
+/* ======================================================================
+  3. LLM Proposals (The Untrusted Channel)
+  ====================================================================== */
+
+// PATH A: The LLM behaves well — proposes exactly what was asked.
+rule LLM_Propose_InScope:
+  [ ProposalReady(~taskId, $Scope) ]
+  --[ Proposed(~taskId, $Scope, $Scope) ]->
+  [ PendingApproval(~taskId, $Scope, $Scope) ]
+
+// PATH B: The LLM hallucinates — expands the target scope.
+// e.g., $Scope = 'update_logging', $Target = 'update_logging_and_auth'
+rule LLM_Propose_OutScope:
+  [ ProposalReady(~taskId, $Scope) ]
+  --[ 
+      Proposed(~taskId, $Scope, $Target), 
+      IsOutScope(~taskId),
+      OutScopeDiff(~taskId, $Scope, $Target)
+  ]->
+  [ PendingApproval(~taskId, $Scope, $Target) ]
+
+/* ======================================================================
+  4. The Pirandellian Masks (Human Decision Logic)
+
+  Each mask is a deterministic response function:
+    f_H : (Mask, PendingApproval) → Action
+  
+  The mask is STATIC — the human wears one mask for the entire
+  interaction. No usability layer or mask transitions.
+  ====================================================================== */
+
+// --- MASK 1: ATTENTIVE -------------------------------------------
+// "I see the world clearly; I doubt everything until I verify it myself."
+//
+// Cognitive reality: High context awareness. Actively doubts the LLM.
+// Formal behavior:  Only approves when Scope == Target (pattern match).
+
+rule Human_Attentive_Accept:
+  [ PendingApproval(~taskId, $Scope, $Scope) ]
+  --[ MaskApplied('Attentive'), Approved(~taskId, $Scope) ]->
+  [ ApprovedProposal(~taskId, $Scope) ]
+
+rule Human_Attentive_Reject:
+  [ PendingApproval(~taskId, $Scope, $Target) ]
+  --[ MaskApplied('Attentive'), Rejected(~taskId, $Target) ]->
+  [ ] // Safe termination — the trace ends here.
+
+
+// --- MASK 2: CARELESS --------------------------------------------
+// "Speed is truth; if the machine says it, it must be fine."
+//
+// Cognitive reality: Low attention, high speed. Trusts the LLM.
+// Formal behavior:  Accepts ANY Target regardless of Scope.
+// Failure mode:     SILENT — the user is unaware of the mistake.
+
+rule Human_Careless_Accept:
+  [ PendingApproval(~taskId, $Scope, $Target) ]
+  --[ 
+      MaskApplied('Careless'), 
+      Approved(~taskId, $Target),
+      CarelessMistake(~taskId) 
+  ]->
+  [ ApprovedProposal(~taskId, $Target) ]
+
+
+// --- MASK 3: NAIVE -----------------------------------------------
+// "The machine knows better than I do; what it touches must be necessary."
+//
+// Cognitive reality: Low domain knowledge. Views the LLM as authority.
+// Formal behavior:  Reads the diff, sees the out-of-scope change,
+//                   but accepts it assuming it is a necessary dependency.
+// Failure mode:     AUTHORIZED — the user actively consents out of ignorance.
+
+rule Human_Naive_Accept:
+  [ PendingApproval(~taskId, $Scope, $Target) ]
+  --[ 
+      MaskApplied('Naive'), 
+      Approved(~taskId, $Target),
+      NaiveMistake(~taskId) 
+  ]->
+  [ ApprovedProposal(~taskId, $Target) ]
+
+/* ======================================================================
+  5. Execution Interface (MCP → IDE → File System)
+  ====================================================================== */
+
+rule IDE_Execute:
+  [ ApprovedProposal(~taskId, $Target) ]
+  --[ Executed(~taskId, $Target) ]->
+  [ SystemState(~taskId, $Target) ]
+
+/* ======================================================================
+  6. Verification Lemmas
+  ====================================================================== */
+
+// --- SANITY CHECK -------------------------------------------------
+// Can the system successfully execute a normal (in-scope) request?
+// Expected: VERIFIED (a normal happy path exists).
+lemma Execution_Reachable:
+  exists-trace
+  "Ex tid target #t. Executed(tid, target) @ #t"
+
+// --- VULNERABILITY PROOF: CARELESS --------------------------------
+// Does the Careless mask allow an out-of-scope write to execute?
+// Expected: VERIFIED (the attack trace exists).
+lemma Careless_Vulnerability:
+  exists-trace
+  "Ex tid scope target #t1 #t2 #t3.
+    Proposed(tid, scope, target) @ #t1 &
+    IsOutScope(tid) @ #t1 &
+    CarelessMistake(tid) @ #t2 &
+    Executed(tid, target) @ #t3"
+
+// --- VULNERABILITY PROOF: NAIVE ----------------------------------
+// Does the Naive mask allow an out-of-scope write to execute?
+// Expected: VERIFIED (the attack trace exists).
+lemma Naive_Vulnerability:
+  exists-trace
+  "Ex tid scope target #t1 #t2 #t3.
+    Proposed(tid, scope, target) @ #t1 &
+    IsOutScope(tid) @ #t1 &
+    NaiveMistake(tid) @ #t2 &
+    Executed(tid, target) @ #t3"
+
+// --- CENTRAL SAFETY PROPERTY -------------------------------------
+// An out-of-scope write should NEVER execute.
+// Expected: FALSIFIED — Tamarin generates a counterexample via
+// Careless or Naive masks. This counterexample is the paper's
+// main Phase 1 result.
+lemma Strict_Scope_Safety:
+  "All tid scope target #t1 #t2.
+    (Proposed(tid, scope, target) @ #t1 &
+     IsOutScope(tid) @ #t1 &
+     Executed(tid, target) @ #t2)
+    ==> F"
+
+// --- POSITIVE CONTROL: ATTENTIVE ---------------------------------
+// When the human is Attentive AND approves the SAME task that was
+// proposed out-of-scope, the safety property holds.
+// The key binding: Approved(tid, target) links the mask to the task.
+// Expected: VERIFIED.
+lemma Attentive_Is_Safe:
+  "All tid scope target #t1 #t2 #t3.
+    (Proposed(tid, scope, target) @ #t1 &
+     IsOutScope(tid) @ #t1 &
+     MaskApplied('Attentive') @ #t2 &
+     Approved(tid, target) @ #t2 &
+     Executed(tid, target) @ #t3)
+    ==> F"
+
+end

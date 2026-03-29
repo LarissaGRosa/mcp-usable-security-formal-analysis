@@ -1,0 +1,169 @@
+theory MCP_Pirandellian_Masks_Mitigated
+begin
+
+/* ======================================================================
+  MCP + Pirandellian Masks — Phase 2: Mitigated Model (Contextual Friction)
+
+  Key architectural change from Phase 1:
+  Out-of-scope LLM proposals are routed DIRECTLY to FrictionState,
+  bypassing PendingApproval entirely. This ensures no mask can
+  approve an out-of-scope proposal without going through friction.
+  ====================================================================== */
+
+/* ======================================================================
+  1. Initialization
+  ====================================================================== */
+
+rule Init_Task:
+  [ Fr(~taskId) ]
+  --[ TaskCreated(~taskId, $Scope) ]->
+  [ Task(~taskId, $Scope) ]
+
+/* ======================================================================
+  1.5. Restrictions
+  ====================================================================== */
+
+restriction OutScope_Means_Different:
+  "All tid scope target #i.
+    OutScopeDiff(tid, scope, target) @ #i ==> not(scope = target)"
+
+/* ======================================================================
+  2. MCP Read Phase
+  ====================================================================== */
+
+rule MCP_Read_Request:
+  [ Task(~taskId, $Scope) ]
+  --[ MCPRead(~taskId, $Scope) ]->
+  [ ContextAvailable(~taskId, $Scope) ]
+
+rule MCP_Return_Context:
+  [ ContextAvailable(~taskId, $Scope) ]
+  --[ MCPReturn(~taskId, $Scope) ]->
+  [ ProposalReady(~taskId, $Scope) ]
+
+/* ======================================================================
+  3. LLM Proposals
+  ====================================================================== */
+
+// PATH A: In-scope → goes to PendingApproval (normal human decision).
+rule LLM_Propose_InScope:
+  [ ProposalReady(~taskId, $Scope) ]
+  --[ Proposed(~taskId, $Scope, $Scope) ]->
+  [ PendingApproval(~taskId, $Scope, $Scope) ]
+
+// PATH B: Out-of-scope → goes DIRECTLY to FrictionState (mitigated).
+// This is the key architectural change: the human never sees a raw
+// PendingApproval for out-of-scope proposals.
+rule LLM_Propose_OutScope:
+  [ ProposalReady(~taskId, $Scope) ]
+  --[ 
+      Proposed(~taskId, $Scope, $Target), 
+      IsOutScope(~taskId),
+      OutScopeDiff(~taskId, $Scope, $Target),
+      ScopeMismatchDetected(~taskId, $Scope, $Target)
+  ]->
+  [ FrictionState(~taskId, $Scope, $Target) ]
+
+/* ======================================================================
+  4. Contextual Friction Layer
+
+  Friction rules consume FrictionState and terminate the trace safely.
+  In the deterministic MVP model, friction ALWAYS leads to rejection.
+  ====================================================================== */
+
+// --- HARD INTERRUPT (Careless Mitigation) ---
+rule Friction_HardInterrupt_Reject:
+  [ FrictionState(~taskId, $Scope, $Target) ]
+  --[ 
+      FrictionApplied(~taskId, 'HardInterrupt'),
+      MaskApplied('Careless'),
+      Rejected(~taskId, $Target),
+      CarelessCaughtByFriction(~taskId)
+  ]->
+  [ ] // Safe termination
+
+// --- LLM SELF-JUSTIFICATION (Naive Mitigation) ---
+rule Friction_LLM_Justification_Reject:
+  [ FrictionState(~taskId, $Scope, $Target) ]
+  --[
+      FrictionApplied(~taskId, 'LLMJustification'),
+      MaskApplied('Naive'),
+      Rejected(~taskId, $Target),
+      NaiveCaughtByFriction(~taskId)
+  ]->
+  [ ] // Safe termination
+
+// --- ATTENTIVE under friction (also rejects) ---
+rule Friction_Attentive_Reject:
+  [ FrictionState(~taskId, $Scope, $Target) ]
+  --[ 
+      FrictionApplied(~taskId, 'AttentiveReview'),
+      MaskApplied('Attentive'),
+      Rejected(~taskId, $Target)
+  ]->
+  [ ] // Safe termination
+
+/* ======================================================================
+  5. The Pirandellian Masks (Human Decision Logic)
+
+  These rules now ONLY operate on PendingApproval, which is only
+  produced by LLM_Propose_InScope (scope == target).
+  ====================================================================== */
+
+// --- MASK 1: ATTENTIVE ---
+rule Human_Attentive_Accept:
+  [ PendingApproval(~taskId, $Scope, $Scope) ]
+  --[ MaskApplied('Attentive'), Approved(~taskId, $Scope) ]->
+  [ ApprovedProposal(~taskId, $Scope) ]
+
+// --- MASK 2: CARELESS ---
+rule Human_Careless_Accept:
+  [ PendingApproval(~taskId, $Scope, $Target) ]
+  --[ MaskApplied('Careless'), Approved(~taskId, $Target) ]->
+  [ ApprovedProposal(~taskId, $Target) ]
+
+// --- MASK 3: NAIVE ---
+rule Human_Naive_Accept:
+  [ PendingApproval(~taskId, $Scope, $Target) ]
+  --[ MaskApplied('Naive'), Approved(~taskId, $Target) ]->
+  [ ApprovedProposal(~taskId, $Target) ]
+
+/* ======================================================================
+  6. Execution Interface
+  ====================================================================== */
+
+rule IDE_Execute:
+  [ ApprovedProposal(~taskId, $Target) ]
+  --[ Executed(~taskId, $Target) ]->
+  [ SystemState(~taskId, $Target) ]
+
+/* ======================================================================
+  7. Verification Lemmas
+  ====================================================================== */
+
+// --- SANITY: Normal execution still works ---
+lemma Execution_Reachable:
+  exists-trace
+  "Ex tid target #t. Executed(tid, target) @ #t"
+
+// --- FRICTION REACHABILITY: Careless ---
+lemma Friction_Catches_Careless:
+  exists-trace
+  "Ex tid #t. CarelessCaughtByFriction(tid) @ #t"
+
+// --- FRICTION REACHABILITY: Naive ---
+lemma Friction_Catches_Naive:
+  exists-trace
+  "Ex tid #t. NaiveCaughtByFriction(tid) @ #t"
+
+// --- MITIGATED SCOPE SAFETY (THE MAIN PHASE 2 RESULT) ---
+// Out-of-scope writes should now NEVER execute.
+// Expected: VERIFIED — all out-of-scope proposals are caught by friction.
+lemma Mitigated_Scope_Safety:
+  "All tid scope target #t1 #t2.
+    (Proposed(tid, scope, target) @ #t1 &
+     IsOutScope(tid) @ #t1 &
+     Executed(tid, target) @ #t2)
+    ==> F"
+
+end
