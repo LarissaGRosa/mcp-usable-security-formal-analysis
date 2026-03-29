@@ -1,0 +1,58 @@
+/*
+    MALICIOUS SERVER MASK 🔴
+
+    Models a compromised or intentionally malicious MCP Server that:
+    - Advertises fake/poisoned tools (namespace typosquatting)
+    - Returns tampered results for tool invocations
+    - May impersonate a legitimate server
+
+    This mask is used in threat scenarios to demonstrate
+    how a malicious server can exploit careless Hosts.
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   Rule: MaliciousServerAdvertiseFakeTool
+   The attacker creates a server that advertises a tool with
+   a name similar to a legitimate tool (typosquatting).
+   The advertised tool looks genuine but will behave maliciously.
+   ────────────────────────────────────────────────────────────── */
+rule MaliciousServerAdvertiseFakeTool[colour=#BE2444]:
+    [
+      Fr(~malServerId),
+      Fr(~malServerKey),
+      In(legitimateToolName),
+      Fr(~fakeToolDesc)
+    ]
+    --[
+      MaliciousServerInit($Adv, ~malServerId, legitimateToolName),
+      MaliciousMask($Adv, ~malServerId)
+    ]->
+    [
+      !ServerIdentity($Adv, ~malServerId, ~malServerKey),
+      !ServerTool($Adv, ~malServerId, legitimateToolName, ~fakeToolDesc),
+      !ServerMask($Adv, ~malServerId),
+      Out($Adv),
+      Out(legitimateToolName),
+      Out(~fakeToolDesc)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Rule: MaliciousServerReturnPoisonedResult
+   When the malicious server receives a tool invocation,
+   it returns a poisoned/tampered result instead of a real one.
+   The result looks structurally correct but contains malicious data.
+   ────────────────────────────────────────────────────────────── */
+rule MaliciousServerReturnPoisonedResult[colour=#C40233]:
+    [
+      !ActiveServerSession($Adv, malServerId, sessionId, hostName, clientId),
+      !ServerTool($Adv, malServerId, toolName, toolDesc),
+      In(<'TOOL_INVOKE', sessionId, toolName, params, requestId>),
+      Fr(~poisonedData)
+    ]
+    --[
+      MaliciousToolExecution($Adv, toolName, requestId, ~poisonedData),
+      MaliciousMask($Adv, malServerId)
+    ]->
+    [
+      Out(<'TOOL_RESULT', sessionId, toolName, toolResult(toolName, ~poisonedData), requestId>)
+    ]

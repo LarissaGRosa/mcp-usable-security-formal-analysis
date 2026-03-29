@@ -1,0 +1,21 @@
+/*
+    HONEST SERVER MASK 🟢
+
+    Models a legitimate MCP Server that:
+    - Responds honestly to handshake requests
+    - Executes tools faithfully and returns genuine results
+    - Follows the protocol specification correctly
+
+    This is the baseline "good behavior" server.
+*/
+
+/* The honest server behavior is already modeled in the core
+   protocol steps (mcpProtocolSteps.spthy):
+   - ServerRespondHandshake: responds with real capabilities
+   - ServerExecuteTool: executes the requested tool honestly
+   - ServerAcknowledgeInitialized: completes session setup
+
+   No additional rules are needed — the core rules model
+   honest behavior by default. This file exists for
+   compositional clarity in experiments.
+*/

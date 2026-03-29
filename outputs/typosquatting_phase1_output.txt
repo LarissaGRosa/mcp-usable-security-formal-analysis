@@ -1,0 +1,9 @@
+maude tool: 'maude'
+ checking version: 3.5.1. OK.
+ checking installation: OK.
+[Theory typosquatting_phase1] Theory loaded
+[Theory typosquatting_phase1] Theory translated
+[Theory typosquatting_phase1] Derivation checks started
+[Theory typosquatting_phase1] Derivation checks ended
+[Theory typosquatting_phase1] Theory closed
+[Saturating Sources] Step 1 (Max 5)

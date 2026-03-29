@@ -1,0 +1,555 @@
+maude tool: 'maude'
+ checking version: 3.5.1. OK.
+ checking installation: OK.
+[Theory typosquatting_phase2] Theory loaded
+[Theory typosquatting_phase2] Theory translated
+[Theory typosquatting_phase2] Derivation checks started
+[Theory typosquatting_phase2] Derivation checks ended
+[Theory typosquatting_phase2] Theory closed
+[Saturating Sources] Step 1 (Max 5)
+[Saturating Sources] Done
+theory typosquatting_phase2
+
+begin
+
+// Function signature and definition of the equational theory E
+
+functions: fst/1, pair/2, snd/1
+equations: fst(<x.1, x.2>) = x.1, snd(<x.1, x.2>) = x.2
+
+restriction Equality:
+  "∀ x y #i. (Eq( x, y ) @ #i) ⇒ (x = y)"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ x y #i. (Eq( x, y ) @ #i) ⇒ (x = y)"
+  */
+
+restriction Inequality:
+  "∀ x #i. (Neq( x, x ) @ #i) ⇒ (⊥)"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ x #i. (Neq( x, x ) @ #i) ⇒ (⊥)"
+  */
+
+rule (modulo E) InitLegitimateServer[color=#00aa00]:
+   [ Fr( ~serverId ), Fr( ~toolDesc ) ]
+  --[
+  InitServer( $ServerName, ~serverId, $ToolName ),
+  LegitimateServer( $ServerName, ~serverId )
+  ]->
+   [ !Server( $ServerName, ~serverId, $ToolName, ~toolDesc ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) InitMaliciousServer[color=#ff0000]:
+   [ Fr( ~malId ), Fr( ~fakeDesc ) ]
+  --[
+  InitMaliciousServer( $FakeName, ~malId, $ToolName ),
+  MaliciousServer( $FakeName, ~malId )
+  ]->
+   [
+   !Server( $FakeName, ~malId, $ToolName, ~fakeDesc ),
+   !IsMalicious( $FakeName, ~malId )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+restriction MaliciousNameDiffers:
+  "∀ fakeName fakeId toolName legitName legitId #i #j.
+    ((InitMaliciousServer( fakeName, fakeId, toolName ) @ #i) ∧
+     (InitServer( legitName, legitId, toolName ) @ #j)) ⇒
+    (¬(fakeName = legitName))"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ fakeName fakeId toolName legitName legitId #i #j.
+    ((InitMaliciousServer( fakeName, fakeId, toolName ) @ #i) ∧
+     (InitServer( legitName, legitId, toolName ) @ #j)) ⇒
+    (¬(fakeName = legitName))"
+  */
+
+restriction ExclusiveServerType:
+  "∀ name id1 id2 #i #j.
+    ((LegitimateServer( name, id1 ) @ #i) ∧
+     (MaliciousServer( name, id2 ) @ #j)) ⇒
+    (⊥)"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ name id1 id2 #i #j.
+    ((LegitimateServer( name, id1 ) @ #i) ∧
+     (MaliciousServer( name, id2 ) @ #j)) ⇒
+    (⊥)"
+  */
+
+rule (modulo E) InitHost:
+   [ Fr( ~hostId ) ]
+  --[ InitHost( $H, ~hostId ) ]->
+   [ !Host( $H, ~hostId ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) RegisterServer:
+   [
+   !Host( $H, ~hostId ),
+   !Server( $ServerName, serverId, toolName, toolDesc )
+   ]
+  --[ ServerRegistered( $H, $ServerName ) ]->
+   [ !ServerRegistry( $H, $ServerName ) ]
+
+  /* has exactly the trivial AC variant */
+
+restriction OnlyLegitimateRegistered:
+  "∀ H serverName #i.
+    (ServerRegistered( H, serverName ) @ #i) ⇒
+    (∃ serverId #j. LegitimateServer( serverName, serverId ) @ #j)"
+
+  /*
+  expanded formula:
+  "∀ H serverName #i.
+    (ServerRegistered( H, serverName ) @ #i) ⇒
+    (∃ serverId #j. LegitimateServer( serverName, serverId ) @ #j)"
+  */
+
+restriction RegistryExclusive:
+  "∀ H serverName sessionId #i.
+    (UnregisteredServerDetected( H, serverName, sessionId ) @ #i) ⇒
+    (¬(∃ #j. ServerRegistered( H, serverName ) @ #j))"
+  // safety formula
+
+  /*
+  expanded formula:
+  "∀ H serverName sessionId #i.
+    (UnregisteredServerDetected( H, serverName, sessionId ) @ #i) ⇒
+    (¬(∃ #j. ServerRegistered( H, serverName ) @ #j))"
+  */
+
+rule (modulo E) HostDiscoverServer_Registered[color=#00aa00]:
+   [
+   !Host( $H, ~hostId ),
+   !Server( $ServerName, serverId, toolName, toolDesc ),
+   !ServerRegistry( $H, $ServerName ), Fr( ~sessionId )
+   ]
+  --[
+  HostDiscovered( $H, $ServerName, serverId, toolName, ~sessionId ),
+  RegisteredServerFound( $H, $ServerName, ~sessionId )
+  ]->
+   [
+   PendingValidation( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+   )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) HostDiscoverServer_Unregistered[color=#ff6600]:
+   [
+   !Host( $H, ~hostId ),
+   !Server( $ServerName, serverId, toolName, toolDesc ), Fr( ~sessionId )
+   ]
+  --[
+  HostDiscovered( $H, $ServerName, serverId, toolName, ~sessionId ),
+  UnregisteredServerDetected( $H, $ServerName, ~sessionId )
+  ]->
+   [
+   FrictionState( $H, ~hostId, $ServerName, serverId, toolName, ~sessionId )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Friction_Careless_Reject[color=#4488cc]:
+   [
+   FrictionState( $H, ~hostId, $ServerName, serverId, toolName, ~sessionId )
+   ]
+  --[
+  FrictionApplied( $H, 'HardInterrupt' ), MaskApplied( 'Careless' ),
+  CarelessCaughtByFriction( $H, ~sessionId ),
+  ServerRejected( $H, $ServerName, ~sessionId )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Friction_Naive_Reject[color=#4488cc]:
+   [
+   FrictionState( $H, ~hostId, $ServerName, serverId, toolName, ~sessionId )
+   ]
+  --[
+  FrictionApplied( $H, 'VisualDiff' ), MaskApplied( 'Naive' ),
+  NaiveCaughtByFriction( $H, ~sessionId ),
+  ServerRejected( $H, $ServerName, ~sessionId )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Friction_Attentive_Reject[color=#4488cc]:
+   [
+   FrictionState( $H, ~hostId, $ServerName, serverId, toolName, ~sessionId )
+   ]
+  --[
+  FrictionApplied( $H, 'Alert' ), MaskApplied( 'Attentive' ),
+  ServerRejected( $H, $ServerName, ~sessionId )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) HostAttentive_Accept:
+   [
+   PendingValidation( $H, ~hostId, $ExpectedServer, serverId, toolName,
+                      ~sessionId
+   )
+   ]
+  --[
+  MaskApplied( 'Attentive' ),
+  AttentiveValidation( $H, $ExpectedServer, ~sessionId ),
+  ServerAccepted( $H, $ExpectedServer, serverId, ~sessionId )
+  ]->
+   [ TrustedSession( $H, $ExpectedServer, serverId, toolName, ~sessionId ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) HostCareless_Accept:
+   [
+   PendingValidation( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+   )
+   ]
+  --[
+  MaskApplied( 'Careless' ),
+  ServerAccepted( $H, $ServerName, serverId, ~sessionId )
+  ]->
+   [ TrustedSession( $H, $ServerName, serverId, toolName, ~sessionId ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) HostNaive_Accept:
+   [
+   PendingValidation( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+   )
+   ]
+  --[
+  MaskApplied( 'Naive' ),
+  ServerAccepted( $H, $ServerName, serverId, ~sessionId )
+  ]->
+   [ TrustedSession( $H, $ServerName, serverId, toolName, ~sessionId ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) HostInvokeTool:
+   [
+   TrustedSession( $H, $ServerName, serverId, toolName, ~sessionId ),
+   Fr( ~requestId )
+   ]
+  --[ ToolInvoked( $H, $ServerName, toolName, ~requestId ) ]->
+   [ ToolRequest( $H, $ServerName, serverId, toolName, ~requestId ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ServerExecute_Honest:
+   [
+   ToolRequest( $H, $ServerName, serverId, toolName, ~requestId ),
+   !Server( $ServerName, serverId, toolName, toolDesc )
+   ]
+  --[
+  ToolExecuted( $ServerName, toolName, ~requestId ),
+  HonestExecution( $ServerName, toolName, ~requestId )
+  ]->
+   [ ToolResult( $H, $ServerName, toolName, ~requestId, 'genuine' ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ServerExecute_Malicious[color=#ff0000]:
+   [
+   ToolRequest( $H, $ServerName, serverId, toolName, ~requestId ),
+   !IsMalicious( $ServerName, serverId )
+   ]
+  --[
+  ToolExecuted( $ServerName, toolName, ~requestId ),
+  MaliciousExecution( $ServerName, toolName, ~requestId )
+  ]->
+   [ ToolResult( $H, $ServerName, toolName, ~requestId, 'poisoned' ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) HostReceiveResult:
+   [ ToolResult( $H, $ServerName, toolName, ~requestId, resultType ) ]
+  --[ ResultDelivered( $H, $ServerName, toolName, ~requestId, resultType )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+lemma tool_call_reachable:
+  exists-trace
+  "∃ H server toolName reqId resultType #i.
+    ResultDelivered( H, server, toolName, reqId, resultType ) @ #i"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ H server toolName reqId resultType #i.
+  (ResultDelivered( H, server, toolName, reqId, resultType ) @ #i)"
+*/
+simplify
+solve( ToolResult( $H, $ServerName, toolName, ~requestId, resultType
+       ) ▶₀ #i )
+  case ServerExecute_Honest_case_1
+  SOLVED // trace found
+qed
+
+lemma friction_catches_careless:
+  exists-trace
+  "∃ H sessionId #i. CarelessCaughtByFriction( H, sessionId ) @ #i"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ H sessionId #i. (CarelessCaughtByFriction( H, sessionId ) @ #i)"
+*/
+simplify
+solve( FrictionState( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+       ) ▶₀ #i )
+  case HostDiscoverServer_Unregistered_case_1
+  SOLVED // trace found
+qed
+
+lemma friction_catches_naive:
+  exists-trace
+  "∃ H sessionId #i. NaiveCaughtByFriction( H, sessionId ) @ #i"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ H sessionId #i. (NaiveCaughtByFriction( H, sessionId ) @ #i)"
+*/
+simplify
+solve( FrictionState( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+       ) ▶₀ #i )
+  case HostDiscoverServer_Unregistered_case_1
+  SOLVED // trace found
+qed
+
+lemma server_registration_reachable:
+  exists-trace "∃ H serverName #i. ServerRegistered( H, serverName ) @ #i"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ H serverName #i. (ServerRegistered( H, serverName ) @ #i)"
+*/
+simplify
+solve( !Host( $H, ~hostId ) ▶₀ #i )
+  case InitHost
+  solve( !Server( $ServerName, serverId, toolName, toolDesc ) ▶₁ #i )
+    case InitLegitimateServer
+    SOLVED // trace found
+  qed
+qed
+
+lemma poisoned_result_impossible:
+  all-traces
+  "∀ H server toolName reqId #i.
+    (ResultDelivered( H, server, toolName, reqId, 'poisoned' ) @ #i) ⇒ (⊥)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ H server toolName reqId #i.
+  (ResultDelivered( H, server, toolName, reqId, 'poisoned' ) @ #i)"
+*/
+simplify
+solve( ToolResult( $H, $ServerName, toolName, ~requestId, 'poisoned'
+       ) ▶₀ #i )
+  case ServerExecute_Malicious_case_1
+  by contradiction /* from formulas */
+next
+  case ServerExecute_Malicious_case_2
+  by contradiction /* from formulas */
+next
+  case ServerExecute_Malicious_case_3
+  by contradiction /* from formulas */
+qed
+
+lemma careless_attack_blocked:
+  all-traces
+  "∀ H sessionId server toolName reqId #i #j.
+    ((CarelessCaughtByFriction( H, sessionId ) @ #i) ∧
+     (MaliciousExecution( server, toolName, reqId ) @ #j)) ⇒
+    (⊥)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ H sessionId server toolName reqId #i #j.
+  (CarelessCaughtByFriction( H, sessionId ) @ #i) ∧
+  (MaliciousExecution( server, toolName, reqId ) @ #j)"
+*/
+simplify
+solve( FrictionState( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+       ) ▶₀ #i )
+  case HostDiscoverServer_Unregistered_case_1
+  solve( ToolRequest( $H.1, $ServerName.1, serverId.1, toolName, ~requestId
+         ) ▶₀ #j )
+    case HostInvokeTool_case_1
+    by solve( !IsMalicious( $ServerName.1, ~serverId.1 ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_2
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_3
+    by solve( !IsMalicious( $ServerName.1, ~serverId.1 ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_4
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_5
+    by solve( !IsMalicious( $ServerName.1, ~serverId.1 ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_6
+    by contradiction /* from formulas */
+  qed
+next
+  case HostDiscoverServer_Unregistered_case_2
+  solve( ToolRequest( $H.1, $ServerName.1, serverId, toolName, ~requestId
+         ) ▶₀ #j )
+    case HostInvokeTool_case_1
+    by solve( !IsMalicious( $ServerName.1, ~serverId ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_2
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_3
+    by solve( !IsMalicious( $ServerName.1, ~serverId ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_4
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_5
+    by solve( !IsMalicious( $ServerName.1, ~serverId ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_6
+    by contradiction /* from formulas */
+  qed
+qed
+
+lemma naive_attack_blocked:
+  all-traces
+  "∀ H sessionId server toolName reqId #i #j.
+    ((NaiveCaughtByFriction( H, sessionId ) @ #i) ∧
+     (MaliciousExecution( server, toolName, reqId ) @ #j)) ⇒
+    (⊥)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ H sessionId server toolName reqId #i #j.
+  (NaiveCaughtByFriction( H, sessionId ) @ #i) ∧
+  (MaliciousExecution( server, toolName, reqId ) @ #j)"
+*/
+simplify
+solve( FrictionState( $H, ~hostId, $ServerName, serverId, toolName,
+                      ~sessionId
+       ) ▶₀ #i )
+  case HostDiscoverServer_Unregistered_case_1
+  solve( ToolRequest( $H.1, $ServerName.1, serverId.1, toolName, ~requestId
+         ) ▶₀ #j )
+    case HostInvokeTool_case_1
+    by solve( !IsMalicious( $ServerName.1, ~serverId.1 ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_2
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_3
+    by solve( !IsMalicious( $ServerName.1, ~serverId.1 ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_4
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_5
+    by solve( !IsMalicious( $ServerName.1, ~serverId.1 ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_6
+    by contradiction /* from formulas */
+  qed
+next
+  case HostDiscoverServer_Unregistered_case_2
+  solve( ToolRequest( $H.1, $ServerName.1, serverId, toolName, ~requestId
+         ) ▶₀ #j )
+    case HostInvokeTool_case_1
+    by solve( !IsMalicious( $ServerName.1, ~serverId ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_2
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_3
+    by solve( !IsMalicious( $ServerName.1, ~serverId ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_4
+    by contradiction /* from formulas */
+  next
+    case HostInvokeTool_case_5
+    by solve( !IsMalicious( $ServerName.1, ~serverId ) ▶₁ #j )
+  next
+    case HostInvokeTool_case_6
+    by contradiction /* from formulas */
+  qed
+qed
+
+lemma no_malicious_execution:
+  all-traces
+  "∀ server toolName reqId #i.
+    (MaliciousExecution( server, toolName, reqId ) @ #i) ⇒ (⊥)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ server toolName reqId #i.
+  (MaliciousExecution( server, toolName, reqId ) @ #i)"
+*/
+simplify
+solve( ToolRequest( $H, $ServerName, serverId, toolName, ~requestId
+       ) ▶₀ #i )
+  case HostInvokeTool_case_1
+  by solve( !IsMalicious( $ServerName, ~serverId ) ▶₁ #i )
+next
+  case HostInvokeTool_case_2
+  by contradiction /* from formulas */
+next
+  case HostInvokeTool_case_3
+  by solve( !IsMalicious( $ServerName, ~serverId ) ▶₁ #i )
+next
+  case HostInvokeTool_case_4
+  by contradiction /* from formulas */
+next
+  case HostInvokeTool_case_5
+  by solve( !IsMalicious( $ServerName, ~serverId ) ▶₁ #i )
+next
+  case HostInvokeTool_case_6
+  by contradiction /* from formulas */
+qed
+
+/* All wellformedness checks were successful. */
+
+/*
+Generated from:
+Tamarin version 1.12.0
+Maude version 3.5.1
+Git revision: UNKNOWN, branch: UNKNOWN
+Compiled at: 2026-03-08 10:05:47.616272992 UTC
+*/
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: experiments/typosquatting_phase2.spthy
+
+  processing time: 1.24s
+  
+  tool_call_reachable (exists-trace): verified (3 steps)
+  friction_catches_careless (exists-trace): verified (3 steps)
+  friction_catches_naive (exists-trace): verified (3 steps)
+  server_registration_reachable (exists-trace): verified (4 steps)
+  poisoned_result_impossible (all-traces): verified (5 steps)
+  careless_attack_blocked (all-traces): verified (16 steps)
+  naive_attack_blocked (all-traces): verified (16 steps)
+  no_malicious_execution (all-traces): verified (8 steps)
+
+==============================================================================

@@ -1,0 +1,254 @@
+/*
+    EXPERIMENT — Namespace Typosquatting Phase 2 (Mitigated)
+    
+    Self-contained model with two mitigation layers:
+    1. SERVER REGISTRY — Allowlist of trusted servers
+    2. CONTEXTUAL FRICTION — Mask-specific countermeasures for
+       unregistered servers
+
+    Key change: HostDiscoverServer now checks the registry.
+    Registered → normal mask decision.
+    Unregistered → FrictionState (always rejects).
+*/
+
+theory typosquatting_phase2
+begin
+
+/* ══════════════════════════════════════════════════════════════
+   1. INITIALIZATION (same as Phase 1)
+   ══════════════════════════════════════════════════════════════ */
+
+restriction Equality:
+  "All x y #i. Eq(x,y) @i ==> x = y"
+
+restriction Inequality:
+  "All x #i. Neq(x,x) @i ==> F"
+
+rule InitLegitimateServer [colour=#00AA00]:
+    [ Fr(~serverId), Fr(~toolDesc) ]
+    --[ InitServer($ServerName, ~serverId, $ToolName),
+        LegitimateServer($ServerName, ~serverId) ]->
+    [ !Server($ServerName, ~serverId, $ToolName, ~toolDesc) ]
+
+rule InitMaliciousServer [colour=#FF0000]:
+    [ Fr(~malId), Fr(~fakeDesc) ]
+    --[ InitMaliciousServer($FakeName, ~malId, $ToolName),
+        MaliciousServer($FakeName, ~malId) ]->
+    [ !Server($FakeName, ~malId, $ToolName, ~fakeDesc),
+      !IsMalicious($FakeName, ~malId) ]
+
+restriction MaliciousNameDiffers:
+  "All fakeName fakeId toolName legitName legitId #i #j.
+    InitMaliciousServer(fakeName, fakeId, toolName) @ #i
+    & InitServer(legitName, legitId, toolName) @ #j
+    ==> not(fakeName = legitName)"
+
+// A server name cannot be BOTH legitimate and malicious.
+// In reality, a server package either IS what it claims or it isn't.
+restriction ExclusiveServerType:
+  "All name id1 id2 #i #j.
+    LegitimateServer(name, id1) @ #i
+    & MaliciousServer(name, id2) @ #j
+    ==> F"
+
+rule InitHost:
+    [ Fr(~hostId) ]
+    --[ InitHost($H, ~hostId) ]->
+    [ !Host($H, ~hostId) ]
+
+/* ══════════════════════════════════════════════════════════════
+   2. SERVER REGISTRY (NEW — Mitigation Layer 1)
+   ══════════════════════════════════════════════════════════════ */
+
+// Host registers a server as trusted (configuration time)
+rule RegisterServer:
+    [ !Host($H, ~hostId),
+      !Server($ServerName, serverId, toolName, toolDesc) ]
+    --[ ServerRegistered($H, $ServerName) ]->
+    [ !ServerRegistry($H, $ServerName) ]
+
+// RESTRICTION: Only legitimate servers can be registered
+restriction OnlyLegitimateRegistered:
+  "All H serverName #i.
+    ServerRegistered(H, serverName) @ #i
+    ==> (Ex serverId #j. LegitimateServer(serverName, serverId) @ #j)"
+
+// RESTRICTION: If server IS registered, the unregistered path must not fire
+// This models the deterministic registry lookup.
+restriction RegistryExclusive:
+  "All H serverName sessionId #i.
+    UnregisteredServerDetected(H, serverName, sessionId) @ #i
+    ==> not(Ex #j. ServerRegistered(H, serverName) @ #j)"
+
+
+/* ══════════════════════════════════════════════════════════════
+   3. SERVER DISCOVERY (with registry check)
+   ══════════════════════════════════════════════════════════════ */
+
+// PATH A: Server IS in registry → normal validation
+rule HostDiscoverServer_Registered [colour=#00AA00]:
+    [ !Host($H, ~hostId),
+      !Server($ServerName, serverId, toolName, toolDesc),
+      !ServerRegistry($H, $ServerName),
+      Fr(~sessionId) ]
+    --[ HostDiscovered($H, $ServerName, serverId, toolName, ~sessionId),
+        RegisteredServerFound($H, $ServerName, ~sessionId) ]->
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+
+// PATH B: Server NOT in registry → friction
+rule HostDiscoverServer_Unregistered [colour=#FF6600]:
+    [ !Host($H, ~hostId),
+      !Server($ServerName, serverId, toolName, toolDesc),
+      Fr(~sessionId) ]
+    --[ HostDiscovered($H, $ServerName, serverId, toolName, ~sessionId),
+        UnregisteredServerDetected($H, $ServerName, ~sessionId) ]->
+    [ FrictionState($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+
+/* ══════════════════════════════════════════════════════════════
+   4. CONTEXTUAL FRICTION (NEW — Mitigation Layer 2)
+   All masks reject under friction.
+   ══════════════════════════════════════════════════════════════ */
+
+// Friction: Hard Interrupt catches Careless
+rule Friction_Careless_Reject [colour=#4488CC]:
+    [ FrictionState($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ FrictionApplied($H, 'HardInterrupt'),
+        MaskApplied('Careless'),
+        CarelessCaughtByFriction($H, ~sessionId),
+        ServerRejected($H, $ServerName, ~sessionId) ]->
+    [ ] // Safe termination
+
+// Friction: Visual Diff catches Naive
+rule Friction_Naive_Reject [colour=#4488CC]:
+    [ FrictionState($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ FrictionApplied($H, 'VisualDiff'),
+        MaskApplied('Naive'),
+        NaiveCaughtByFriction($H, ~sessionId),
+        ServerRejected($H, $ServerName, ~sessionId) ]->
+    [ ] // Safe termination
+
+// Friction: Alert catches Attentive (redundant, for completeness)
+rule Friction_Attentive_Reject [colour=#4488CC]:
+    [ FrictionState($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ FrictionApplied($H, 'Alert'),
+        MaskApplied('Attentive'),
+        ServerRejected($H, $ServerName, ~sessionId) ]->
+    [ ] // Safe termination
+
+/* ══════════════════════════════════════════════════════════════
+   5. PIRANDELLIAN MASKS (only for registered servers)
+   Same as Phase 1 but now only fire on PendingValidation,
+   which is only produced for registered servers.
+   ══════════════════════════════════════════════════════════════ */
+
+rule HostAttentive_Accept:
+    [ PendingValidation($H, ~hostId, $ExpectedServer, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Attentive'),
+        AttentiveValidation($H, $ExpectedServer, ~sessionId),
+        ServerAccepted($H, $ExpectedServer, serverId, ~sessionId) ]->
+    [ TrustedSession($H, $ExpectedServer, serverId, toolName, ~sessionId) ]
+
+rule HostCareless_Accept:
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Careless'),
+        ServerAccepted($H, $ServerName, serverId, ~sessionId) ]->
+    [ TrustedSession($H, $ServerName, serverId, toolName, ~sessionId) ]
+
+rule HostNaive_Accept:
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Naive'),
+        ServerAccepted($H, $ServerName, serverId, ~sessionId) ]->
+    [ TrustedSession($H, $ServerName, serverId, toolName, ~sessionId) ]
+
+/* ══════════════════════════════════════════════════════════════
+   6. TOOL INVOCATION & EXECUTION (same as Phase 1)
+   ══════════════════════════════════════════════════════════════ */
+
+rule HostInvokeTool:
+    [ TrustedSession($H, $ServerName, serverId, toolName, ~sessionId),
+      Fr(~requestId) ]
+    --[ ToolInvoked($H, $ServerName, toolName, ~requestId) ]->
+    [ ToolRequest($H, $ServerName, serverId, toolName, ~requestId) ]
+
+rule ServerExecute_Honest:
+    [ ToolRequest($H, $ServerName, serverId, toolName, ~requestId),
+      !Server($ServerName, serverId, toolName, toolDesc) ]
+    --[ ToolExecuted($ServerName, toolName, ~requestId),
+        HonestExecution($ServerName, toolName, ~requestId) ]->
+    [ ToolResult($H, $ServerName, toolName, ~requestId, 'genuine') ]
+
+rule ServerExecute_Malicious [colour=#FF0000]:
+    [ ToolRequest($H, $ServerName, serverId, toolName, ~requestId),
+      !IsMalicious($ServerName, serverId) ]
+    --[ ToolExecuted($ServerName, toolName, ~requestId),
+        MaliciousExecution($ServerName, toolName, ~requestId) ]->
+    [ ToolResult($H, $ServerName, toolName, ~requestId, 'poisoned') ]
+
+/* ══════════════════════════════════════════════════════════════
+   7. RESULT DELIVERY (same as Phase 1)
+   ══════════════════════════════════════════════════════════════ */
+
+rule HostReceiveResult:
+    [ ToolResult($H, $ServerName, toolName, ~requestId, resultType) ]
+    --[ ResultDelivered($H, $ServerName, toolName, ~requestId, resultType) ]->
+    [ ]
+
+/* ══════════════════════════════════════════════════════════════
+   8. VERIFICATION LEMMAS
+   ══════════════════════════════════════════════════════════════ */
+
+// SANITY — Normal flow still works (registered server)
+lemma tool_call_reachable:
+  exists-trace
+  "Ex H server toolName reqId resultType #i.
+    ResultDelivered(H, server, toolName, reqId, resultType) @ #i"
+
+// FRICTION REACHABILITY — Friction catches Careless
+lemma friction_catches_careless:
+  exists-trace
+  "Ex H sessionId #i.
+    CarelessCaughtByFriction(H, sessionId) @ #i"
+
+// FRICTION REACHABILITY — Friction catches Naive
+lemma friction_catches_naive:
+  exists-trace
+  "Ex H sessionId #i.
+    NaiveCaughtByFriction(H, sessionId) @ #i"
+
+// REGISTRY — Registration works
+lemma server_registration_reachable:
+  exists-trace
+  "Ex H serverName #i.
+    ServerRegistered(H, serverName) @ #i"
+
+// CONTRAST WITH PHASE 1 — Poisoned results can no longer be delivered
+// Expected: VERIFIED (was falsified in Phase 1)
+lemma poisoned_result_impossible:
+  "All H server toolName reqId #i.
+    ResultDelivered(H, server, toolName, reqId, 'poisoned') @ #i
+    ==> F"
+
+// CONTRAST WITH PHASE 1 — Careless can no longer lead to malicious execution
+// Expected: VERIFIED (careless mistake still happens, but friction blocks it)
+lemma careless_attack_blocked:
+  "All H sessionId server toolName reqId #i #j.
+    (CarelessCaughtByFriction(H, sessionId) @ #i
+    & MaliciousExecution(server, toolName, reqId) @ #j)
+    ==> F"
+
+// CONTRAST WITH PHASE 1 — Naive can no longer lead to malicious execution
+// Expected: VERIFIED
+lemma naive_attack_blocked:
+  "All H sessionId server toolName reqId #i #j.
+    (NaiveCaughtByFriction(H, sessionId) @ #i
+    & MaliciousExecution(server, toolName, reqId) @ #j)
+    ==> F"
+
+// MAIN RESULT — Malicious execution is now IMPOSSIBLE.
+// Expected: VERIFIED ← the mitigation works!
+lemma no_malicious_execution:
+  "All server toolName reqId #i.
+    MaliciousExecution(server, toolName, reqId) @ #i
+    ==> F"
+
+end

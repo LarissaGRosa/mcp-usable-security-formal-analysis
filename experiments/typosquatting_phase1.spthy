@@ -1,0 +1,192 @@
+/*
+    EXPERIMENT — Namespace Typosquatting Phase 1 (Unmitigated)
+    
+    Self-contained model (no Out/In, no Dolev-Yao).
+    The typosquatting attack is NOT a network-level attack — the
+    attacker REGISTERS a server with a similar name. We model this
+    structurally via non-deterministic server selection.
+
+    Pipeline:
+    Host → ClientInit → ServerDiscover → HostValidate(mask) → 
+    SessionEstablish → ToolInvoke → ToolExecute → ResultDeliver
+*/
+
+theory typosquatting_phase1
+begin
+
+/* ══════════════════════════════════════════════════════════════
+   1. INITIALIZATION
+   ══════════════════════════════════════════════════════════════ */
+
+restriction Equality:
+  "All x y #i. Eq(x,y) @i ==> x = y"
+
+restriction Inequality:
+  "All x #i. Neq(x,x) @i ==> F"
+
+// Legitimate server registers with its real name and tool
+rule InitLegitimateServer [colour=#00AA00]:
+    [ Fr(~serverId), Fr(~toolDesc) ]
+    --[ InitServer($ServerName, ~serverId, $ToolName),
+        LegitimateServer($ServerName, ~serverId) ]->
+    [ !Server($ServerName, ~serverId, $ToolName, ~toolDesc) ]
+
+// Malicious server registers with a TYPOSQUATTED name
+// but advertises the SAME tool name as the legitimate server.
+// E.g., $LegitName = 'FileServer', $FakeName = 'Fi1eServer'
+rule InitMaliciousServer [colour=#FF0000]:
+    [ Fr(~malId), Fr(~fakeDesc) ]
+    --[ InitMaliciousServer($FakeName, ~malId, $ToolName),
+        MaliciousServer($FakeName, ~malId) ]->
+    [ !Server($FakeName, ~malId, $ToolName, ~fakeDesc),
+      !IsMalicious($FakeName, ~malId) ]
+
+// Enforce that malicious server has a DIFFERENT name than legitimate
+restriction MaliciousNameDiffers:
+  "All fakeName fakeId toolName legitName legitId #i #j.
+    InitMaliciousServer(fakeName, fakeId, toolName) @ #i
+    & InitServer(legitName, legitId, toolName) @ #j
+    ==> not(fakeName = legitName)"
+
+// Host initialization
+rule InitHost:
+    [ Fr(~hostId) ]
+    --[ InitHost($H, ~hostId) ]->
+    [ !Host($H, ~hostId) ]
+
+/* ══════════════════════════════════════════════════════════════
+   2. SERVER DISCOVERY (Non-deterministic selection)
+   The Host discovers a server. This models the moment where
+   the Host could connect to EITHER the legitimate or the
+   typosquatted server.
+   ══════════════════════════════════════════════════════════════ */
+
+rule HostDiscoverServer:
+    [ !Host($H, ~hostId),
+      !Server($ServerName, serverId, toolName, toolDesc),
+      Fr(~sessionId) ]
+    --[ HostDiscovered($H, $ServerName, serverId, toolName, ~sessionId) ]->
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+
+/* ══════════════════════════════════════════════════════════════
+   3. THE PIRANDELLIAN MASKS (Host Validation Decision)
+   ══════════════════════════════════════════════════════════════ */
+
+// --- ATTENTIVE: Verifies server name matches expected ---
+// Pattern-match on $ExpectedServer: only fires if the discovered
+// server name EXACTLY matches the expected one.
+rule HostAttentive_Accept [colour=#00AA00]:
+    [ PendingValidation($H, ~hostId, $ExpectedServer, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Attentive'),
+        AttentiveValidation($H, $ExpectedServer, ~sessionId),
+        ServerAccepted($H, $ExpectedServer, serverId, ~sessionId) ]->
+    [ TrustedSession($H, $ExpectedServer, serverId, toolName, ~sessionId) ]
+
+// Attentive rejects when server name doesn't match
+// (This fires for ANY server name; Tamarin explores both accept and reject)
+rule HostAttentive_Reject [colour=#00AA00]:
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Attentive'),
+        AttentiveRejection($H, $ServerName, ~sessionId) ]->
+    [ ] // Safe termination
+
+// --- CARELESS: Accepts ANY server without checking ---
+rule HostCareless_Accept [colour=#FF0000]:
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Careless'),
+        CarelessValidation($H, $ServerName, ~sessionId),
+        ServerAccepted($H, $ServerName, serverId, ~sessionId),
+        CarelessMistake($H, ~sessionId) ]->
+    [ TrustedSession($H, $ServerName, serverId, toolName, ~sessionId) ]
+
+// --- NAIVE: Reads server name, trusts it anyway ---
+rule HostNaive_Accept [colour=#E8B32A]:
+    [ PendingValidation($H, ~hostId, $ServerName, serverId, toolName, ~sessionId) ]
+    --[ MaskApplied('Naive'),
+        NaiveValidation($H, $ServerName, ~sessionId),
+        ServerAccepted($H, $ServerName, serverId, ~sessionId),
+        NaiveMistake($H, ~sessionId) ]->
+    [ TrustedSession($H, $ServerName, serverId, toolName, ~sessionId) ]
+
+/* ══════════════════════════════════════════════════════════════
+   4. TOOL INVOCATION & EXECUTION
+   ══════════════════════════════════════════════════════════════ */
+
+rule HostInvokeTool:
+    [ TrustedSession($H, $ServerName, serverId, toolName, ~sessionId),
+      Fr(~requestId) ]
+    --[ ToolInvoked($H, $ServerName, toolName, ~requestId) ]->
+    [ ToolRequest($H, $ServerName, serverId, toolName, ~requestId) ]
+
+// Legitimate server executes honestly
+rule ServerExecute_Honest:
+    [ ToolRequest($H, $ServerName, serverId, toolName, ~requestId),
+      !Server($ServerName, serverId, toolName, toolDesc) ]
+    --[ ToolExecuted($ServerName, toolName, ~requestId),
+        HonestExecution($ServerName, toolName, ~requestId) ]->
+    [ ToolResult($H, $ServerName, toolName, ~requestId, 'genuine') ]
+
+// Malicious server returns poisoned result
+rule ServerExecute_Malicious [colour=#FF0000]:
+    [ ToolRequest($H, $ServerName, serverId, toolName, ~requestId),
+      !IsMalicious($ServerName, serverId) ]
+    --[ ToolExecuted($ServerName, toolName, ~requestId),
+        MaliciousExecution($ServerName, toolName, ~requestId) ]->
+    [ ToolResult($H, $ServerName, toolName, ~requestId, 'poisoned') ]
+
+/* ══════════════════════════════════════════════════════════════
+   5. RESULT DELIVERY
+   ══════════════════════════════════════════════════════════════ */
+
+rule HostReceiveResult:
+    [ ToolResult($H, $ServerName, toolName, ~requestId, resultType) ]
+    --[ ResultDelivered($H, $ServerName, toolName, ~requestId, resultType) ]->
+    [ ] // Terminal state
+
+/* ══════════════════════════════════════════════════════════════
+   6. VERIFICATION LEMMAS
+   ══════════════════════════════════════════════════════════════ */
+
+// SANITY — Can a tool call complete end-to-end?
+lemma tool_call_reachable:
+  exists-trace
+  "Ex H server toolName reqId resultType #i.
+    ResultDelivered(H, server, toolName, reqId, resultType) @ #i"
+
+// VULNERABILITY — Can a Careless host accept a malicious server?
+lemma careless_vulnerability:
+  exists-trace
+  "Ex H sessionId fakeName fakeId toolName #i #j.
+    CarelessMistake(H, sessionId) @ #i
+    & InitMaliciousServer(fakeName, fakeId, toolName) @ #j"
+
+// VULNERABILITY — Can a Naive host accept a malicious server?
+lemma naive_vulnerability:
+  exists-trace
+  "Ex H sessionId fakeName fakeId toolName #i #j.
+    NaiveMistake(H, sessionId) @ #i
+    & InitMaliciousServer(fakeName, fakeId, toolName) @ #j"
+
+// VULNERABILITY — Can poisoned results be delivered?
+lemma poisoned_result_delivered:
+  exists-trace
+  "Ex H server toolName reqId #i.
+    ResultDelivered(H, server, toolName, reqId, 'poisoned') @ #i"
+
+// CENTRAL SAFETY — Malicious execution must never happen.
+// Expected: FALSIFIED (counterexample via Careless or Naive)
+lemma no_malicious_execution:
+  "All server toolName reqId #i.
+    MaliciousExecution(server, toolName, reqId) @ #i
+    ==> F"
+
+// POSITIVE CONTROL — Attentive mask prevents malicious execution
+// when the attentive user only accepts known servers.
+lemma attentive_prevents_malicious:
+  "All H server serverId sessionId toolName reqId #i #k.
+    (AttentiveValidation(H, server, sessionId) @ #i
+    & ServerAccepted(H, server, serverId, sessionId) @ #i
+    & MaliciousExecution(server, toolName, reqId) @ #k)
+    ==> F"
+
+end
