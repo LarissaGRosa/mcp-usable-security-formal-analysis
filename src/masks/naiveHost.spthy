@@ -1,0 +1,80 @@
+/*
+    NAIVE HOST MASK 🟡
+
+    The Naive Host does inspect proposals, but lacks the domain
+    knowledge to judge them correctly:
+    - During handshake: reads the server name, notices it looks
+      slightly different, but assumes it's a variant or alias → ACCEPTS
+    - During tool invocation: invokes discovered tools without
+      questioning their provenance
+    - During result processing: accepts results, assumes the tool
+      knows best
+
+    Key distinction from Careless:
+      Careless = failure of ATTENTION (didn't look)
+      Naive    = failure of KNOWLEDGE (looked, but misinterpreted)
+
+    Failure mode: AUTHORIZED — the user consciously approves
+    based on false trust in the LLM/server authority.
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   Handshake: Naive Host reads the server name but trusts it.
+   Sees the name, might notice it looks odd, but assumes the
+   server is legitimate ("maybe it's a regional variant?").
+   ────────────────────────────────────────────────────────────── */
+rule HostNaiveValidateServer[colour=#E8B32A]:
+    [
+      !HostMask($H, hostId),
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, sessionId),
+      In(<'INIT_RESPONSE', serverName, serverIdResp, sessionId, 'MCP_V1', toolName, toolDesc>)
+    ]
+    --[
+      NaiveHostValidation($H, serverName, sessionId),
+      NaiveMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, $S, <'VALIDATE_SERVER', 'ACCEPT'>)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Tool Invocation: Naive Host invokes a tool without questioning
+   whether the tool's provenance is legitimate.
+   Unlike Careless (doesn't look), Naive reads the tool description
+   but assumes it's necessary ("the AI wouldn't suggest it otherwise").
+   ────────────────────────────────────────────────────────────── */
+rule HostNaiveInvokeTool[colour=#E8B32A]:
+    [
+      !HostMask($H, hostId),
+      !TrustedSession($H, clientId, $S, serverId, sessionId),
+      !DiscoveredTool($H, clientId, $S, sessionId, toolName, toolDesc),
+      Fr(~params)
+    ]
+    --[
+      NaiveHostInvoke($H, $S, toolName, sessionId),
+      NaiveMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, toolName, <'INVOKE_TOOL', ~params>)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Result Verification: Naive Host accepts results without
+   checking if the tool name matches the original request.
+   Reads the result but assumes it's correct ("it came from the
+   server, so it must be right").
+   ────────────────────────────────────────────────────────────── */
+rule HostNaiveVerifyResult[colour=#E8B32A]:
+    [
+      !HostMask($H, hostId),
+      ToolCallStatus('TOOL_REQUESTED', $H, clientId, $S, sessionId, toolName, params, requestId),
+      In(<'TOOL_RESULT', sessionId, toolNameResp, result, requestId>)
+    ]
+    --[
+      /* NOTE: No Eq(toolName, toolNameResp) check — trusts the result */
+      NaiveHostVerifyResult($H, toolNameResp, requestId),
+      NaiveMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, toolNameResp, <'VERIFY_RESULT', 'ACCEPT_RESULT'>)
+    ]

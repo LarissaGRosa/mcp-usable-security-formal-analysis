@@ -1,0 +1,82 @@
+/*
+    MCP SECURITY PROPERTIES — Namespace Typosquatting (Phase 1: Unmitigated)
+
+    These lemmas verify security properties related to Namespace
+    Typosquatting: a malicious server registers a name visually
+    similar to a legitimate server and advertises fake tools.
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   SANITY — Can a handshake complete at all?
+   Expected: VERIFIED (the protocol can complete normally).
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_handshake_reachable:
+  exists-trace
+  "Ex H clientId S sessionId toolName #i.
+    ClientCompleteHandshake(H, clientId, S, sessionId, toolName) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   SANITY — Can an end-to-end tool call complete?
+   Expected: VERIFIED (full flow is reachable).
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_tool_call_reachable:
+  exists-trace
+  "Ex H toolName requestId #i.
+    FinishToolCall(H, toolName, requestId) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   VULNERABILITY — Can a Careless host establish a session
+   with a malicious server?
+   Expected: VERIFIED (the attack trace exists).
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_careless_vulnerability:
+  exists-trace
+  "Ex H serverName sessionId Adv malServerId toolName #i #j.
+    CarelessHostValidation(H, serverName, sessionId) @ #i
+    & MaliciousServerInit(Adv, malServerId, toolName) @ #j"
+
+/* ──────────────────────────────────────────────────────────────
+   VULNERABILITY — Can a Naive host establish a session
+   with a malicious server?
+   Expected: VERIFIED (the attack trace exists).
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_naive_vulnerability:
+  exists-trace
+  "Ex H serverName sessionId Adv malServerId toolName #i #j.
+    NaiveHostValidation(H, serverName, sessionId) @ #i
+    & MaliciousServerInit(Adv, malServerId, toolName) @ #j"
+
+/* ──────────────────────────────────────────────────────────────
+   VULNERABILITY — Can a malicious server's poisoned tool result
+   be delivered end-to-end to the Host?
+   Expected: VERIFIED (full attack path exists).
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_poisoned_result_delivered:
+  exists-trace
+  "Ex Adv toolName requestId poisonedData #i.
+    MaliciousToolExecution(Adv, toolName, requestId, poisonedData) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   CENTRAL SAFETY PROPERTY — A malicious server should NEVER
+   successfully execute a tool through a trusted session.
+   Expected: FALSIFIED — Tamarin generates a counterexample
+   via Careless or Naive masks.
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_no_malicious_execution:
+  "All Adv toolName requestId poisonedData #i.
+    MaliciousToolExecution(Adv, toolName, requestId, poisonedData) @ #i
+    ==> F"
+
+/* ──────────────────────────────────────────────────────────────
+   POSITIVE CONTROL — Attentive host never establishes a session
+   with a server whose identity doesn't match expectations.
+   The Attentive mask uses pattern matching on $S, so a malicious
+   server impersonating a different name cannot pass validation.
+   Expected: VERIFIED.
+   ────────────────────────────────────────────────────────────── */
+lemma typosquatting_attentive_safe:
+  "All H S sessionId #i.
+    AttentiveHostValidation(H, S, sessionId) @ #i
+    ==> not(Ex Adv malServerId toolName #j.
+      MaliciousServerInit(Adv, malServerId, toolName) @ #j
+      & Adv = S)"

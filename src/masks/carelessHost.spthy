@@ -1,0 +1,71 @@
+/*
+    CARELESS HOST MASK 🔵
+
+    The careless Host does NOT validate carefully:
+    - During handshake: accepts ANY server without checking identity
+    - During tool invocation: invokes tools without verifying origin
+    - During result processing: accepts results without checking tool name match
+
+    This opens the door for:
+    - Namespace typosquatting (accepting a malicious server)
+    - Tool name conflicts (invoking the wrong tool)
+    - Result injection (accepting tampered results)
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   Handshake: Careless Host accepts ANY server response
+   No identity check — the server could be anyone.
+   ────────────────────────────────────────────────────────────── */
+rule HostCarelessValidateServer[colour=#9578BE]:
+    [
+      !HostMask($H, hostId),
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, sessionId),
+      In(<'INIT_RESPONSE', serverName, serverIdResp, sessionId, 'MCP_V1', toolName, toolDesc>)
+    ]
+    --[
+      CarelessHostValidation($H, serverName, sessionId),
+      CarelessMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, $S, <'VALIDATE_SERVER', 'ACCEPT'>)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Tool Invocation: Careless Host invokes a tool without
+   verifying it belongs to a trusted session or is legitimate.
+   Accepts tool name from network input (attacker-controllable).
+   ────────────────────────────────────────────────────────────── */
+rule HostCarelessInvokeTool[colour=#9578BE]:
+    [
+      !HostMask($H, hostId),
+      !TrustedSession($H, clientId, $S, serverId, sessionId),
+      !DiscoveredTool($H, clientId, $S, sessionId, toolName, toolDesc),
+      Fr(~params)
+    ]
+    --[
+      CarelessHostInvoke($H, $S, toolName, sessionId),
+      CarelessMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, toolName, <'INVOKE_TOOL', ~params>)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Result Verification: Careless Host accepts results WITHOUT
+   checking if the tool name matches the original request.
+   This allows tool result substitution attacks.
+   ────────────────────────────────────────────────────────────── */
+rule HostCarelessVerifyResult[colour=#9578BE]:
+    [
+      !HostMask($H, hostId),
+      ToolCallStatus('TOOL_REQUESTED', $H, clientId, $S, sessionId, toolName, params, requestId),
+      In(<'TOOL_RESULT', sessionId, toolNameResp, result, requestId>)
+    ]
+    --[
+      /* NOTE: No Eq(toolName, toolNameResp) check here! */
+      CarelessHostVerifyResult($H, toolNameResp, requestId),
+      CarelessMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, toolNameResp, <'VERIFY_RESULT', 'ACCEPT_RESULT'>)
+    ]

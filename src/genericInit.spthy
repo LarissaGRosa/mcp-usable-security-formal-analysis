@@ -1,0 +1,78 @@
+/*
+    GENERIC INITIALIZATION — MCP Protocol
+
+    Initializes the core MCP participants:
+    - Host:   Top-level AI application (execution environment)
+    - Client: Communication proxy inside the Host (1:1 with Server)
+    - Server: Exposes external capabilities (tools, resources, prompts)
+
+    Following the Pirandellian mask pattern from the SIM Swap model,
+    each participant gets a HumanMask (behavioral profile) that
+    determines how they act during the protocol.
+*/
+
+restriction Equality:
+  "All x y #i. Eq(x,y) @i ==> x = y"
+
+restriction Inequality:
+  "All x #i. Neq(x,x) @i ==> F"
+
+/* ──────────────────────────────────────────────────────────────
+   Rule: InitHost
+   Creates an MCP Host with a unique identity and a long-term
+   keypair for signing/verifying capabilities.
+   The hostName is public (discoverable), hostId is fresh (secret).
+   ────────────────────────────────────────────────────────────── */
+rule InitHost:
+    [
+      Fr(~hostId),
+      Fr(~hostKey)
+    ]
+    --[ InitHost($H, ~hostId) ]->
+    [
+      !HostIdentity($H, ~hostId, ~hostKey),
+      !HostMask($H, ~hostId),
+      Out($H)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Rule: InitServer
+   Creates an MCP Server with identity, a keypair, and a set of
+   advertised tool capabilities.
+   The serverName is public. The toolName and toolDesc are
+   published so clients can discover them.
+   ────────────────────────────────────────────────────────────── */
+rule InitServer:
+    [
+      Fr(~serverId),
+      Fr(~serverKey),
+      Fr(~toolName),
+      Fr(~toolDesc)
+    ]
+    --[ InitServer($S, ~serverId, ~toolName) ]->
+    [
+      !ServerIdentity($S, ~serverId, ~serverKey),
+      !ServerTool($S, ~serverId, ~toolName, ~toolDesc),
+      !ServerMask($S, ~serverId),
+      Out($S),
+      Out(~toolName),
+      Out(~toolDesc)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Rule: InitClient
+   Creates an MCP Client inside a Host. The Client mediates
+   all communication between Host and Server.
+   Each Client is bound to exactly one Host (1:1 initially,
+   will bind to a Server during handshake).
+   ────────────────────────────────────────────────────────────── */
+rule InitClient:
+    [
+      Fr(~clientId),
+      !HostIdentity($H, hostId, hostKey)
+    ]
+    --[ InitClient($H, ~clientId) ]->
+    [
+      !ClientIdentity($H, ~clientId),
+      !ClientMask($H, ~clientId)
+    ]

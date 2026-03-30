@@ -1,0 +1,170 @@
+/*
+    MCP PROTOCOL STEPS — Handshake & Tool Calling
+
+    Models the two core MCP protocol flows:
+
+    FLOW 1 — HANDSHAKE (Capability Discovery):
+      1. Client sends Initialize request to Server
+      2. Server responds with capabilities (protocol version, tools)
+      3. Client sends Initialized notification (handshake complete)
+      4. Host records trusted session
+
+    FLOW 2 — TOOL CALLING (Runtime Operation):
+      1. Host decides to invoke a tool (via intent analysis)
+      2. Client sends ToolInvocation request to Server
+      3. Server executes tool and returns result
+      4. Host processes the result
+
+    State machine:
+      'UNINIT' → 'HANDSHAKE_SENT' → 'HANDSHAKE_RECEIVED' → 'SESSION_READY'
+      'SESSION_READY' → 'TOOL_REQUESTED' → 'TOOL_EXECUTED' → 'RESULT_DELIVERED'
+*/
+
+functions: toolResult/2, verifyTool/2
+
+equations:
+    verifyTool(toolResult(name, data), name) = data
+
+
+/* ═══════════════════════════════════════════════════════════════
+   FLOW 1 — HANDSHAKE (Client ↔ Server Capability Discovery)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Step 1: Client initiates handshake
+   The Client sends an Initialize request to the Server,
+   including the protocol version it supports and the Host identity.
+   ────────────────────────────────────────────────────────────── */
+rule ClientInitHandshake:
+    [
+      !ClientIdentity($H, clientId),
+      !ServerIdentity($S, serverId, serverKey),
+      Fr(~sessionId)
+    ]
+    --[ ClientInitHandshake($H, clientId, $S, ~sessionId) ]->
+    [
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, ~sessionId),
+      Out(<'INIT_REQUEST', $H, clientId, ~sessionId, 'MCP_V1'>)
+    ]
+
+/* Step 2: Server receives Initialize request and responds with capabilities
+   The Server advertises its tools, resources, and prompts to the Client.
+   This is the capability discovery phase.
+   ────────────────────────────────────────────────────────────── */
+rule ServerRespondHandshake:
+    [
+      !ServerIdentity($S, serverId, serverKey),
+      !ServerTool($S, serverId, toolName, toolDesc),
+      In(<'INIT_REQUEST', hostName, clientId, sessionId, 'MCP_V1'>)
+    ]
+    --[ ServerRespondHandshake($S, serverId, toolName, sessionId) ]->
+    [
+      ServerSession($S, serverId, sessionId, hostName, clientId),
+      Out(<'INIT_RESPONSE', $S, serverId, sessionId, 'MCP_V1', toolName, toolDesc>)
+    ]
+
+/* Step 3: Client receives capabilities and confirms handshake
+   The Client validates the server response and sends an Initialized
+   notification. The Host mask determines HOW validation happens.
+   ────────────────────────────────────────────────────────────── */
+rule ClientCompleteHandshake:
+    [
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, sessionId),
+      In(<'INIT_RESPONSE', $S, serverId, sessionId, 'MCP_V1', toolName, toolDesc>),
+      MaskPerform($H, clientId, $S, <'VALIDATE_SERVER', decision>)
+    ]
+    --[
+      Eq(decision, 'ACCEPT'),
+      ClientCompleteHandshake($H, clientId, $S, sessionId, toolName)
+    ]->
+    [
+      !TrustedSession($H, clientId, $S, serverId, sessionId),
+      !DiscoveredTool($H, clientId, $S, sessionId, toolName, toolDesc),
+      Out(<'INITIALIZED', $H, clientId, sessionId>)
+    ]
+
+/* Step 4: Server acknowledges the Initialized notification
+   Session is fully established on both sides.
+   ────────────────────────────────────────────────────────────── */
+rule ServerAcknowledgeInitialized:
+    [
+      ServerSession($S, serverId, sessionId, hostName, clientId),
+      In(<'INITIALIZED', hostName, clientId, sessionId>)
+    ]
+    --[ SessionEstablished($S, serverId, sessionId, hostName) ]->
+    [
+      !ActiveServerSession($S, serverId, sessionId, hostName, clientId)
+    ]
+
+
+/* ═══════════════════════════════════════════════════════════════
+   FLOW 2 — TOOL CALLING (Host → Client → Server → Result)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Step 5: Host requests tool invocation through the Client
+   The Host analyzes user intent and selects a tool to invoke.
+   The Host mask determines which tool is selected and how.
+   ────────────────────────────────────────────────────────────── */
+rule HostRequestToolInvocation:
+    [
+      !TrustedSession($H, clientId, $S, serverId, sessionId),
+      !DiscoveredTool($H, clientId, $S, sessionId, toolName, toolDesc),
+      MaskPerform($H, clientId, toolName, <'INVOKE_TOOL', params>),
+      Fr(~requestId)
+    ]
+    --[ HostRequestTool($H, clientId, $S, sessionId, toolName, ~requestId) ]->
+    [
+      ToolCallStatus('TOOL_REQUESTED', $H, clientId, $S, sessionId, toolName, params, ~requestId),
+      Out(<'TOOL_INVOKE', sessionId, toolName, params, ~requestId>)
+    ]
+
+/* Step 6: Server receives tool invocation and executes it
+   The Server validates the request, executes the tool, and
+   returns the result. Server mask determines validation behavior.
+   ────────────────────────────────────────────────────────────── */
+rule ServerExecuteTool:
+    [
+      !ActiveServerSession($S, serverId, sessionId, hostName, clientId),
+      !ServerTool($S, serverId, toolName, toolDesc),
+      In(<'TOOL_INVOKE', sessionId, toolName, params, requestId>),
+      Fr(~resultData)
+    ]
+    --[
+      ServerExecuteTool($S, serverId, sessionId, toolName, requestId),
+      ToolExecuted($S, toolName, requestId)
+    ]->
+    [
+      Out(<'TOOL_RESULT', sessionId, toolName, toolResult(toolName, ~resultData), requestId>)
+    ]
+
+/* Step 7: Client receives tool result and delivers to Host
+   The Client validates the result matches the requested tool.
+   The Host mask determines whether the result is verified.
+   ────────────────────────────────────────────────────────────── */
+rule ClientReceiveToolResult:
+    [
+      ToolCallStatus('TOOL_REQUESTED', $H, clientId, $S, sessionId, toolName, params, requestId),
+      In(<'TOOL_RESULT', sessionId, toolNameResp, result, requestId>),
+      MaskPerform($H, clientId, toolNameResp, <'VERIFY_RESULT', verifyDecision>)
+    ]
+    --[
+      Eq(verifyDecision, 'ACCEPT_RESULT'),
+      ClientReceiveResult($H, clientId, $S, sessionId, toolNameResp, requestId),
+      ToolResultDelivered($H, toolNameResp, requestId)
+    ]->
+    [
+      ResultDelivered($H, clientId, $S, sessionId, toolNameResp, result, requestId)
+    ]
+
+/* Step 8: Host processes the delivered result
+   Final step — the Host incorporates the tool result into its
+   workflow. This completes the tool calling flow.
+   ────────────────────────────────────────────────────────────── */
+rule HostProcessResult:
+    [
+      ResultDelivered($H, clientId, $S, sessionId, toolName, result, requestId)
+    ]
+    --[ HostProcessResult($H, clientId, $S, sessionId, toolName, requestId),
+        FinishToolCall($H, toolName, requestId) ]->
+    [
+      /* Terminal state — result consumed by Host */
+    ]

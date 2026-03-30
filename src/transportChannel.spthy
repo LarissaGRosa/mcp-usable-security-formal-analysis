@@ -1,0 +1,41 @@
+/*
+    TRANSPORT CHANNEL — MCP Protocol
+
+    Models the transport layer between Client and Server.
+    Two variants:
+    - Secure channel: messages cannot be intercepted (modeled
+      with !Sec facts, like the SIM Swap secureChannel)
+    - Public channel: messages go through Out/In (Dolev-Yao
+      adversary can intercept, modify, inject)
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   SECURE TRANSPORT CHANNEL
+   Used when the Client↔Server link uses TLS or equivalent.
+   The attacker cannot read or modify these messages.
+   ────────────────────────────────────────────────────────────── */
+rule TransportChanOut_S[colour=#189BCC]:
+    [ Out_S($A, $B, x) ]
+    --[ ChanOut_S($A, $B, x) ]->
+    [ !Sec($A, $B, x) ]
+
+rule TransportChanIn_S[colour=#d6f7ff]:
+    [ !Sec($A, $B, x) ]
+    --[ ChanIn_S($A, $B, x) ]->
+    [ In_S($A, $B, x) ]
+
+/* ──────────────────────────────────────────────────────────────
+   PUBLIC TRANSPORT CHANNEL
+   Used when the Client↔Server link is unprotected.
+   Messages pass through the public network (Out/In), so the
+   Dolev-Yao adversary has full control.
+   ────────────────────────────────────────────────────────────── */
+rule TransportChanOut_P[colour=#FF6600]:
+    [ Out_P($A, $B, x) ]
+    --[ ChanOut_P($A, $B, x) ]->
+    [ Out(x) ]
+
+rule TransportChanIn_P[colour=#FDBE87]:
+    [ In(x) ]
+    --[ ChanIn_P($A, $B, x) ]->
+    [ In_P($A, $B, x) ]

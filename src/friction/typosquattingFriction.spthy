@@ -1,0 +1,138 @@
+/*
+    CONTEXTUAL FRICTION + SERVER REGISTRY — Namespace Typosquatting Mitigation
+
+    Two-layer mitigation:
+
+    LAYER 1 — SERVER REGISTRY (Allowlist):
+      The Host maintains a registry of known legitimate servers.
+      During handshake, the responding server name is checked against
+      the registry. Only registered servers proceed to normal approval.
+
+    LAYER 2 — CONTEXTUAL FRICTION:
+      If a server is NOT in the registry, the proposal is routed to
+      a FrictionState instead of proceeding to the mask decision.
+      Friction mechanisms are mask-specific:
+        - Careless: Hard Interrupt (forced delay + visual highlight)
+        - Naive: Visual Diff (side-by-side name comparison)
+        - Attentive: Informational alert (attentive user already rejects)
+*/
+
+/* ══════════════════════════════════════════════════════════════════
+   LAYER 1 — SERVER REGISTRY
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Rule: RegisterServer
+   The Host registers a legitimate server in its allowlist.
+   This happens at configuration time, before any handshake.
+   ────────────────────────────────────────────────────────────── */
+rule RegisterServer:
+    [
+      !HostIdentity($H, hostId, hostKey),
+      !ServerIdentity($S, serverId, serverKey)
+    ]
+    --[ ServerRegistered($H, $S) ]->
+    [
+      !ServerRegistry($H, $S)
+    ]
+
+/* ══════════════════════════════════════════════════════════════════
+   LAYER 2 — CONTEXTUAL FRICTION (Handshake Interception)
+
+   When a handshake response comes from a server NOT in the registry,
+   the response is routed to FrictionState instead of the mask's
+   normal VALIDATE_SERVER path.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Rule: Friction_UnregisteredServer
+   An INIT_RESPONSE arrives from a server name that does not match
+   any registered server. The proposal enters friction.
+   ────────────────────────────────────────────────────────────── */
+rule Friction_UnregisteredServer:
+    [
+      !HostMask($H, hostId),
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, sessionId),
+      In(<'INIT_RESPONSE', serverName, serverIdResp, sessionId, 'MCP_V1', toolName, toolDesc>)
+    ]
+    --[
+      ServerNameMismatch($H, serverName, $S, sessionId),
+      UnregisteredServerDetected($H, serverName, sessionId)
+    ]->
+    [
+      FrictionState_Handshake($H, clientId, serverName, serverId, sessionId, toolName, toolDesc)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Friction: Hard Interrupt → Careless Rejection
+   Forces a cognitive break: accept button delayed, scope
+   mismatch highlighted. The Careless user is forced to stop.
+   ────────────────────────────────────────────────────────────── */
+rule Friction_HardInterrupt_Reject:
+    [
+      FrictionState_Handshake($H, clientId, serverName, serverId, sessionId, toolName, toolDesc)
+    ]
+    --[
+      FrictionApplied($H, 'HardInterrupt_Handshake'),
+      MaskApplied('Careless'),
+      CarelessCaughtByFriction($H, sessionId),
+      Rejected($H, serverName)
+    ]->
+    [ ] // Safe termination — handshake blocked
+
+/* ──────────────────────────────────────────────────────────────
+   Friction: Visual Diff → Naive Rejection
+   Shows side-by-side comparison: expected server name vs actual.
+   The Naive user reads the explanation and realizes the names
+   don't match ("Fi1eServer" vs "FileServer").
+   ────────────────────────────────────────────────────────────── */
+rule Friction_VisualDiff_Reject:
+    [
+      FrictionState_Handshake($H, clientId, serverName, serverId, sessionId, toolName, toolDesc)
+    ]
+    --[
+      FrictionApplied($H, 'VisualDiff_Handshake'),
+      MaskApplied('Naive'),
+      NaiveCaughtByFriction($H, sessionId),
+      Rejected($H, serverName)
+    ]->
+    [ ] // Safe termination — handshake blocked
+
+/* ──────────────────────────────────────────────────────────────
+   Friction: Attentive Alert → Attentive Rejection
+   Information alert shown. The Attentive user already validates
+   carefully, so this is redundant but models the friction layer
+   being active for all masks.
+   ────────────────────────────────────────────────────────────── */
+rule Friction_Attentive_Reject:
+    [
+      FrictionState_Handshake($H, clientId, serverName, serverId, sessionId, toolName, toolDesc)
+    ]
+    --[
+      FrictionApplied($H, 'AttentiveReview_Handshake'),
+      MaskApplied('Attentive'),
+      Rejected($H, serverName)
+    ]->
+    [ ] // Safe termination — handshake blocked
+
+/* ══════════════════════════════════════════════════════════════════
+   REGISTERED SERVER PATH — Normal Handshake (Bypass Friction)
+
+   When the server IS in the registry, the handshake proceeds
+   normally through the mask's VALIDATE_SERVER path.
+   These rules replace the unmitigated mask rules for registered
+   servers only.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Registered server → any mask can accept (server is trusted) */
+rule RegisteredServer_Accept:
+    [
+      !HostMask($H, hostId),
+      !ServerRegistry($H, $S),
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, sessionId),
+      In(<'INIT_RESPONSE', $S, serverId, sessionId, 'MCP_V1', toolName, toolDesc>)
+    ]
+    --[
+      RegisteredServerValidation($H, $S, sessionId)
+    ]->
+    [
+      MaskPerform($H, clientId, $S, <'VALIDATE_SERVER', 'ACCEPT'>)
+    ]

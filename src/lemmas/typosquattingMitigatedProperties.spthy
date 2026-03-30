@@ -1,0 +1,71 @@
+/*
+    MCP SECURITY PROPERTIES — Namespace Typosquatting (Phase 2: Mitigated)
+
+    These lemmas verify that the Contextual Friction + Server Registry
+    mitigation restores the safety property across all masks.
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   SANITY — Normal handshake still works with registered servers.
+   Expected: VERIFIED (mitigation does not break normal flow).
+   ────────────────────────────────────────────────────────────── */
+lemma mitigated_handshake_reachable:
+  exists-trace
+  "Ex H clientId S sessionId toolName #i.
+    ClientCompleteHandshake(H, clientId, S, sessionId, toolName) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   SANITY — End-to-end tool call still works.
+   Expected: VERIFIED.
+   ────────────────────────────────────────────────────────────── */
+lemma mitigated_tool_call_reachable:
+  exists-trace
+  "Ex H toolName requestId #i.
+    FinishToolCall(H, toolName, requestId) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   FRICTION REACHABILITY — Friction catches Careless.
+   Expected: VERIFIED (the friction path is reachable).
+   ────────────────────────────────────────────────────────────── */
+lemma friction_catches_careless_typosquatting:
+  exists-trace
+  "Ex H sessionId #i.
+    CarelessCaughtByFriction(H, sessionId) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   FRICTION REACHABILITY — Friction catches Naive.
+   Expected: VERIFIED (the friction path is reachable).
+   ────────────────────────────────────────────────────────────── */
+lemma friction_catches_naive_typosquatting:
+  exists-trace
+  "Ex H sessionId #i.
+    NaiveCaughtByFriction(H, sessionId) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   SERVER REGISTRY — Registration is reachable.
+   Expected: VERIFIED.
+   ────────────────────────────────────────────────────────────── */
+lemma server_registration_reachable:
+  exists-trace
+  "Ex H S #i.
+    ServerRegistered(H, S) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   UNREGISTERED SERVER DETECTION — System detects unregistered servers.
+   Expected: VERIFIED.
+   ────────────────────────────────────────────────────────────── */
+lemma unregistered_server_detected:
+  exists-trace
+  "Ex H serverName sessionId #i.
+    UnregisteredServerDetected(H, serverName, sessionId) @ #i"
+
+/* ──────────────────────────────────────────────────────────────
+   MAIN RESULT — Malicious tool execution is now IMPOSSIBLE.
+   No malicious server can get its poisoned results delivered
+   to the Host, regardless of the human mask.
+   Expected: VERIFIED — this is the Phase 2 key result.
+   ────────────────────────────────────────────────────────────── */
+lemma mitigated_no_malicious_execution:
+  "All Adv toolName requestId poisonedData #i.
+    MaliciousToolExecution(Adv, toolName, requestId, poisonedData) @ #i
+    ==> F"

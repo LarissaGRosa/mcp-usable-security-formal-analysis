@@ -1,0 +1,68 @@
+/*
+    ATTENTIVE HOST MASK 🟣
+
+    The attentive Host carefully validates everything:
+    - During handshake: verifies server identity matches expectations
+    - During tool invocation: selects only discovered/verified tools
+    - During result processing: verifies result comes from expected tool
+
+    This is the "secure by default" behavioral profile.
+    All Eq() checks are present — no shortcuts.
+*/
+
+/* ──────────────────────────────────────────────────────────────
+   Handshake: Attentive Host validates server before accepting
+   Checks that the server name matches a known/expected server.
+   ────────────────────────────────────────────────────────────── */
+rule HostAttentiveValidateServer[colour=#AC8BDB]:
+    [
+      !HostMask($H, hostId),
+      !HostIdentity($H, hostId, hostKey),
+      HandshakeStatus('HANDSHAKE_SENT', $H, clientId, $S, serverId, sessionId),
+      In(<'INIT_RESPONSE', $S, serverId, sessionId, 'MCP_V1', toolName, toolDesc>)
+    ]
+    --[
+      AttentiveHostValidation($H, $S, sessionId),
+      AttentiveMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, $S, <'VALIDATE_SERVER', 'ACCEPT'>)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Tool Invocation: Attentive Host verifies the tool is from
+   a trusted session and matches the originally discovered tool.
+   ────────────────────────────────────────────────────────────── */
+rule HostAttentiveInvokeTool[colour=#AC8BDB]:
+    [
+      !HostMask($H, hostId),
+      !TrustedSession($H, clientId, $S, serverId, sessionId),
+      !DiscoveredTool($H, clientId, $S, sessionId, toolName, toolDesc),
+      Fr(~params)
+    ]
+    --[
+      AttentiveHostInvoke($H, $S, toolName, sessionId),
+      AttentiveMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, toolName, <'INVOKE_TOOL', ~params>)
+    ]
+
+/* ──────────────────────────────────────────────────────────────
+   Result Verification: Attentive Host verifies the result
+   toolName matches the originally requested tool.
+   ────────────────────────────────────────────────────────────── */
+rule HostAttentiveVerifyResult[colour=#AC8BDB]:
+    [
+      !HostMask($H, hostId),
+      ToolCallStatus('TOOL_REQUESTED', $H, clientId, $S, sessionId, toolName, params, requestId),
+      In(<'TOOL_RESULT', sessionId, toolNameResp, result, requestId>)
+    ]
+    --[
+      Eq(toolName, toolNameResp),
+      AttentiveHostVerifyResult($H, toolName, requestId),
+      AttentiveMask($H, hostId)
+    ]->
+    [
+      MaskPerform($H, clientId, toolNameResp, <'VERIFY_RESULT', 'ACCEPT_RESULT'>)
+    ]
