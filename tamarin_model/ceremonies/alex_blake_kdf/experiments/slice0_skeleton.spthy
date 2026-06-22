@@ -1,0 +1,14 @@
+/*
+  experiments/slice0_skeleton.spthy -- Phase 0 · Slice 0 lemmas (L0_*).
+  Lemmas only; included last by ceremony_slice0.spthy.
+*/
+
+// sanity: the ceremony can finish
+lemma L0_completes:
+  exists-trace
+  "Ex #i. Finish('Alex') @ i"
+
+// honest run => same SK (shared variable k forces equality on both Key facts)
+lemma L0_agreement:
+  exists-trace
+  "Ex k #i #j. Key('Alex',k)@i & Key('Blake',k)@j"

@@ -1,0 +1,11 @@
+theory ProcExample begin
+builtins: symmetric-encryption
+
+process:
+  new ~k;
+  ( in(m); event Got(m); out(senc(m, ~k)) )
+
+lemma can_run:
+  exists-trace "Ex m #i. Got(m)@i"
+
+end

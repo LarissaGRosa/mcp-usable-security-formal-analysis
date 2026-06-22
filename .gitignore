@@ -1,0 +1,12 @@
+# Claude Code — machine-specific personal settings (shared config goes in settings.json)
+.claude/settings.local.json
+
+# Tamarin / Maude scratch output
+*.spthy.tmp
+*.dot
+*.proof
+
+# OS / editor cruft
+.DS_Store
+*~
+*.swp

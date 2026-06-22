@@ -1,0 +1,16 @@
+/*
+  core/stressors/cognitive_load.spthy -- f_U for sigma1 HighCognitiveLoad.
+
+  A Hard CALC_SK request deposits the stressor. It READS the persistent !Req (no
+  consume-and-reproduce, so the sources solver cannot loop). §6.4 narrow interface:
+  the only thing it inspects is the request's 'complexity' = 'Hard'.
+  §6.3 single active stressor: OneStressPerParty caps it to one Load per party.
+*/
+
+rule Trigger_HighCognitiveLoad:
+    [ !Req(P, rid, 'CALC_SK', m, 'Hard') ]
+  --[ Load(P) ]->
+    [ !Stressor(P,'HighCognitiveLoad') ]
+
+restriction OneStressPerParty:
+  "All p #i #j. Load(p)@i & Load(p)@j ==> #i = #j"

@@ -1,0 +1,22 @@
+theory ToyCeremony_Slice0
+begin
+
+/*
+  ENTRY POINT -- Phase 0 · Slice 0 (walking skeleton).
+  Profile (mask_machinery_formalization.md §6.1):  E_skeleton = < C0, {Attentive}, {} >.
+
+  Includes the minimum: shared types + protocol (init, msg1/2, inline Attentive msg3)
+  + the L0_* lemmas. NO stressor / transition / Busy -- the baseline the failures perturb.
+  Run:  python3 .claude/skills/model-tamarin/check.py --prove \
+          tamarin_model/ceremonies/alex_blake_kdf/ceremony_slice0.spthy
+*/
+
+#include "../../core/types.spthy"
+
+#include "init.spthy"
+#include "messages.spthy"
+#include "advance_attentive.spthy"
+
+#include "experiments/slice0_skeleton.spthy"
+
+end

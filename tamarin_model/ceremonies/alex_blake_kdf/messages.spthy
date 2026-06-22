@@ -1,0 +1,20 @@
+/*
+  ceremonies/alex_blake_kdf/messages.spthy -- PROTOCOL LAYER, Msg1 + Msg2.
+  Identical in both slices, hence shared:
+    Msg1  A->B : N_A           (GEN_NONCE; Easy)
+    Msg2  B->A : N_B           (GEN_NONCE + CALC_SK)
+  Blake computes SK = kdf(N_A,N_B) inline and stays Attentive -- the one-stressed-human
+  convention (§6.5): only Alex's Msg3 CALC_SK is put under stress, so any disagreement
+  is attributable to Alex. Msg3 differs per slice (see advance_attentive / requests).
+*/
+
+rule A_send_Na:
+    [ AlexInit(idA), Fr(~Na) ]
+  --[ Gen('Alex','Attentive'), Send('Alex',~Na) ]->
+    [ AlexWait(idA,~Na), Out(~Na) ]
+
+rule B_recv_Na_send_Nb:
+    [ BlakeInit(idB), In(Na), Fr(~Nb) ]
+  --[ Gen('Blake','Attentive'), Calc('Blake','Attentive'),
+      Key('Blake', kdf(Na,~Nb)), Send('Blake',~Nb) ]->
+    [ BlakeDone(idB, kdf(Na,~Nb)), Out(~Nb) ]

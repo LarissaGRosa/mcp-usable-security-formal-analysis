@@ -1,0 +1,12 @@
+/*
+  core/masks/attentive.spthy -- f_H for the Attentive mask.
+
+  §6.2 derived-mask: the mask is NOT stored state; the response IS the mask.
+  Attentive answers CALC_SK correctly. RespAttentive(P) marks the response so the
+  monotone gate in core/transitions/from_attentive.spthy can forbid it after a Load.
+*/
+
+rule Calc_Attentive:
+    [ !Req(P, rid, 'CALC_SK', <Na,Nb>, c) ]
+  --[ Calc(P,'Attentive'), RespAttentive(P), Answered(rid), Key(P, kdf(Na,Nb)) ]->
+    [ KeyResult(P, rid, kdf(Na,Nb)) ]

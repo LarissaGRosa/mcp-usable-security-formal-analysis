@@ -1,0 +1,16 @@
+/*
+  core/types.spthy -- HUMAN LAYER, shared across all ceremonies.
+  Crypto symbols + framework-wide restrictions. Kept deliberately small
+  (mask_machinery_formalization.md §6: the human layer is reusable verbatim;
+  masks/stressors/transitions live in their own files).
+
+  This is the ONLY core file Slice 0 needs (profile E_skeleton = <C0,{Attentive},{}>).
+*/
+
+functions: kdf/2     // free 2-ary symbol: kdf(a,b)=kdf(a',b') iff a=a' & b=b'
+
+// A human participant is ONE person: at most one instance of each identity per trace.
+// (Init can otherwise fire repeatedly, spawning concurrent sessions and letting a
+//  constant-keyed lemma mix facts across instances.) Keyed on the Start(p) action.
+restriction OneInstancePerHuman:
+  "All p #i #j. Start(p)@i & Start(p)@j ==> #i = #j"

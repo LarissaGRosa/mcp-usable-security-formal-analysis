@@ -1,0 +1,27 @@
+theory ToyCeremony_Slice1
+begin
+
+/*
+  ENTRY POINT -- Phase 0 · Slice 1 (one stressor + one transition).
+  Profile (mask_machinery_formalization.md §6.1):  E_0 = < C0, {Attentive, Busy}, {sigma1} >.
+
+  Includes the human layer it exercises (Attentive + Busy f_H, the HighCognitiveLoad
+  stressor, the Attentive->Busy transition) + protocol (init, shared msg1/2, the
+  slice-1 request/ack msg3) + the L1_* lemmas. §6.2 derived-mask throughout.
+  Run:  python3 .claude/skills/model-tamarin/check.py --prove \
+          tamarin_model/ceremonies/alex_blake_kdf/ceremony_slice1.spthy
+*/
+
+#include "../../core/types.spthy"
+#include "../../core/masks/attentive.spthy"
+#include "../../core/masks/busy.spthy"
+#include "../../core/stressors/cognitive_load.spthy"
+#include "../../core/transitions/from_attentive.spthy"
+
+#include "init.spthy"
+#include "messages.spthy"
+#include "requests.spthy"
+
+#include "experiments/slice1_cogload.spthy"
+
+end

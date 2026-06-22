@@ -1,0 +1,33 @@
+/*
+  experiments/slice1_cogload.spthy -- Phase 0 · Slice 1 lemmas (L1_*).
+  Five lemmas mapping 1:1 onto the formalization's properties. Lemmas only;
+  included last by ceremony_slice1.spthy.
+*/
+
+// sanity: happy path survives (no Slice-0 regression)            [Liveness]
+lemma L1_attentive_ok:
+  exists-trace
+  "Ex p k #i. Calc(p,'Attentive')@i & Key(p,k)@i"
+
+// failure chain reachable: Load (stressor) precedes the derived Busy-mask slip.
+// (Mask & Slip co-occur in the derived style, so they share the response timepoint #o.)
+//                                                                 [feedback-loop §4]
+lemma L1_load_causes_slip:
+  exists-trace
+  "Ex p #s #o. Load(p)@s & Mask(p,'Attentive','Busy')@o & Slip(p)@o & #s < #o"
+
+// completes WRONGLY (unsafe-success, not a safe stall)            [§2 unsafe-success]
+lemma L1_unsafe_completion:
+  exists-trace
+  "Ex ka kb #i #j #f. Key('Alex',ka)@i & Key('Blake',kb)@j & Finish('Alex')@f
+                      & not(ka = kb)"
+
+// every Busy-shift is preceded by its stressor                    [Safety: Stressor Causality]
+lemma L1_stressor_causality:
+  all-traces
+  "All p #m. Mask(p,'Attentive','Busy')@m ==> (Ex #s. Load(p)@s & #s < #m)"
+
+// a Busy CALC_SK can never produce a correct kdf key              [Protocol Vulnerability]
+lemma L1_busy_no_correct_key:
+  all-traces
+  "All p k #i. (Calc(p,'Busy')@i & Key(p,k)@i) ==> not(Ex a b. k = kdf(a,b))"

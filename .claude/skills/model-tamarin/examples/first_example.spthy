@@ -1,0 +1,48 @@
+theory FirstExample
+begin
+
+builtins: hashing, asymmetric-encryption
+
+rule Register_pk:
+    [ Fr(~ltk) ]
+  -->
+    [ !Ltk($A, ~ltk), !Pk($A, pk(~ltk)) ]
+
+rule Get_pk:
+    [ !Pk(A, pubkey) ]
+  -->
+    [ Out(pubkey) ]
+
+rule Reveal_ltk:
+    [ !Ltk(A, ltk) ]
+  --[ LtkReveal(A) ]->
+    [ Out(ltk) ]
+
+rule Client_1:
+    [ Fr(~k), !Pk($S, pkS) ]
+  -->
+    [ Client_1($S, ~k), Out(aenc(~k, pkS)) ]
+
+rule Client_2:
+    [ Client_1(S, k), In(h(k)) ]
+  --[ SessKeyC(S, k) ]->
+    []
+
+rule Serv_1:
+    [ !Ltk($S, ~ltkS), In(aenc(k, pk(~ltkS))) ]
+  --[ AnswerRequest($S, k) ]->
+    [ Out(h(k)) ]
+
+lemma Client_session_key_secrecy:
+  " not (
+      Ex S k #i #j.
+        SessKeyC(S, k) @ #i
+      & K(k) @ #j
+      & not (Ex #r. LtkReveal(S) @ r)
+    ) "
+
+lemma Client_session_key_honest_setup:
+  exists-trace
+  " Ex S k #i. SessKeyC(S, k) @ #i "
+
+end

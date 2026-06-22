@@ -1,0 +1,13 @@
+/*
+  core/masks/busy.spthy -- f_H for the Busy mask.
+
+  §6.2 derived-mask: Busy is DERIVED from an active stressor (!Stressor on the LHS),
+  not stored. Busy slips: it emits a FRESH wrong key whose top symbol is not kdf, so
+  it can never equal kdf(_,_). Mask(P,'Attentive','Busy') marks the derived shift for
+  the lemmas; Slip(P) is the Norman-slip outcome.
+*/
+
+rule Calc_Busy_slip:
+    [ !Req(P, rid, 'CALC_SK', <Na,Nb>, c), !Stressor(P,'HighCognitiveLoad'), Fr(~wrong) ]
+  --[ Calc(P,'Busy'), Mask(P,'Attentive','Busy'), Slip(P), Answered(rid), Key(P, ~wrong) ]->
+    [ KeyResult(P, rid, ~wrong) ]
