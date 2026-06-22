@@ -1,5 +1,8 @@
 /*
-  core/masks/attentive.spthy -- f_H for the Attentive mask.
+  core/masks/attentive_calc.spthy -- f_H for the Attentive mask, CALC_SK action.
+  (Action-scoped: a slice that does not use CALC_SK must not include this file, or its
+   LHS fact !Req would be unproduced -- a hard wellformedness failure. Attentive's
+   APPROVE_REQ behaviour lives in attentive_approve.spthy.)
 
   §6.2 derived-mask: the mask is NOT stored state; the response IS the mask.
   Attentive answers CALC_SK correctly. RespAttentive(P) marks the response so the

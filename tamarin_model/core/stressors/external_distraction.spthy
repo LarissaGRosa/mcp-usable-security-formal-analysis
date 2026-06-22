@@ -1,0 +1,17 @@
+/*
+  core/stressors/external_distraction.spthy -- f_U for the NEW stressor sigma2 ExternalDistraction.
+
+  UNCONDITIONAL trigger (plan §4): unlike sigma1 HighCognitiveLoad, which fires only on a
+  'Hard' request, distraction can strike during ANY pending action -- it ignores the
+  'complexity' field entirely. We read the persistent !Req (no consume-and-reproduce, so no
+  sources loop; §6.2) merely to bind the participant P who currently has work in hand.
+  §6.3 single active stressor: OneDistractPerParty caps it to one Distract per party.
+*/
+
+rule Trigger_ExternalDistraction:
+    [ !Req(P, rid, t, m, c) ]
+  --[ Distract(P) ]->
+    [ !Stressor(P,'ExternalDistraction') ]
+
+restriction OneDistractPerParty:
+  "All p #i #j. Distract(p)@i & Distract(p)@j ==> #i = #j"

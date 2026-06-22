@@ -1,0 +1,18 @@
+/*
+  core/transitions/from_attentive_habituation.spthy -- f_M edge Attentive --Habituation--> Habituated.
+
+  Derived-mask realization (§6.2), exactly parallel to from_attentive.spthy's Busy edge:
+  rather than a MaskShift rule mutating stored state, an Attentive (verifying) approval is
+  forbidden once the party has habituated, so after Habituate only the Habituated response
+  (core/masks/habituated_approve.spthy) remains. Monotone: no recovery (the number-matching
+  'shutout' mitigation of plan §7 would be a later slice).
+
+  OneApproval keeps each persistent, read-only !Prompt from being answered twice (it would
+  otherwise admit both an Attentive and a Habituated response to the same prompt).
+*/
+
+restriction ApproveAttentiveOnlyBeforeHabituation:
+  "All p #i. ApproveAttentive(p)@i ==> not (Ex #h. Habituate(p)@h & #h < #i)"
+
+restriction OneApproval:
+  "All pid #i #j. Answered(pid)@i & Answered(pid)@j ==> #i = #j"

@@ -1,5 +1,5 @@
 /*
-  core/masks/busy.spthy -- f_H for the Busy mask.
+  core/masks/busy_calc.spthy -- f_H for the Busy mask, CALC_SK action.
 
   §6.2 derived-mask: Busy is DERIVED from an active stressor (!Stressor on the LHS),
   not stored. Busy slips: it emits a FRESH wrong key whose top symbol is not kdf, so

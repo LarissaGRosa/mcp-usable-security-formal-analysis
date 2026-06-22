@@ -13,8 +13,8 @@ begin
 */
 
 #include "../../core/types.spthy"
-#include "../../core/masks/attentive.spthy"
-#include "../../core/masks/busy.spthy"
+#include "../../core/masks/attentive_calc.spthy"
+#include "../../core/masks/busy_calc.spthy"
 #include "../../core/stressors/cognitive_load.spthy"
 #include "../../core/transitions/from_attentive.spthy"
 

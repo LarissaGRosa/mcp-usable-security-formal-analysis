@@ -1,0 +1,18 @@
+/*
+  core/stressors/habituation.spthy -- f_U for the NEW stressor sigma8 Habituation.
+
+  HISTORY-KEYED trigger (plan §4, trigger flavour 3): unlike sigma1 (type-keyed), the
+  condition is "N>=2 identical prior APPROVE_REQ already handled". It reads two DISTINCT
+  persistent !Approved(P,_,'Attentive') facts (the history) and deposits the stressor.
+  Distinctness (pid1 != pid2) is enforced by the standard Inequality restriction, so a
+  single approval cannot masquerade as two. Monotone: !Stressor is only ever added.
+*/
+
+rule Trigger_Habituation:
+    [ !Approved(P, pid1, 'Attentive'), !Approved(P, pid2, 'Attentive') ]
+  --[ Habituate(P), Neq(pid1, pid2) ]->
+    [ !Stressor(P,'Habituation') ]
+
+// pid1 and pid2 must be two different prompts (>= 2 distinct prior approvals).
+restriction Inequality:
+  "All x #i. Neq(x,x)@i ==> F"

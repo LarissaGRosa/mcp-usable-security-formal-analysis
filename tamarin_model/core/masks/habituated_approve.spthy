@@ -1,0 +1,16 @@
+/*
+  core/masks/habituated_approve.spthy -- f_H for the NEW Habituated mask, APPROVE_REQ action.
+  (Plan §3: the strongest single research-backed addition; MFA prompt-bombing, warning fatigue.)
+
+  Habituated is NOT Careless: a Careless user disengages (timeout); a Habituated user
+  ACTIVELY approves -- reflexively, without reading -- to make the prompt go away. It is
+  DERIVED from the active sigma8 stressor (!Stressor(P,'Habituation') on the LHS; §6.2):
+  it approves a prompt of ANY kind, including an adversary-'injected' one. That is exactly
+  the behaviour prompt-bombing weaponizes. auto_approve() is the dangerous outcome (plan §2).
+*/
+
+rule Approve_Habituated:
+    [ !Prompt(P, pid, kind), !Stressor(P,'Habituation') ]
+  --[ Approve(P, pid, 'Habituated'), AutoApprove(P, pid),
+      Mask(P,'Attentive','Habituated'), Answered(pid) ]->
+    [ !Approved(P, pid, 'Habituated') ]

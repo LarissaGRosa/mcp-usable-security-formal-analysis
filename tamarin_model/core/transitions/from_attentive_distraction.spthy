@@ -1,0 +1,17 @@
+/*
+  core/transitions/from_attentive_distraction.spthy -- f_M edge Attentive --ExternalDistraction--> Careless.
+
+  Derived-mask realization (§6.2), parallel to the Busy and Habituated edges: an Attentive
+  (correct) CALC_SK response is forbidden once the party has been distracted, so after a
+  Distract only the Careless response (core/masks/careless_calc.spthy) remains -- i.e. the
+  request times out. Monotone: no recovery.
+
+  OneAnswer keeps each persistent, read-only !Req from being answered twice (it would
+  otherwise admit both an Attentive key and a Careless timeout for the same request).
+*/
+
+restriction AttentiveOnlyBeforeDistraction:
+  "All p #i. RespAttentive(p)@i ==> not (Ex #s. Distract(p)@s & #s < #i)"
+
+restriction OneAnswer:
+  "All rid #i #j. Answered(rid)@i & Answered(rid)@j ==> #i = #j"

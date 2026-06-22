@@ -1,0 +1,31 @@
+theory ToyCeremony_Slice2
+begin
+
+/*
+  ENTRY POINT -- Phase 1 · Slice 2 (second stressor + second mask, MFA-fatigue).
+  Profile (mask_machinery_formalization.md §6.1):
+      E_2 = < C0 + approval UI, {Attentive, Habituated}, {sigma8 Habituation} >.
+
+  Extends the C0 ceremony with an APPROVE_REQ UI phase (approve_ui.spthy) on top of the
+  Slice-0 KDF baseline (init + messages + advance_attentive, all Attentive inline -- no
+  cognitive-load stressor here; §6.5 keeps one stressor per slice). Exercises the NEW
+  Habituated mask and the NEW sigma8 Habituation stressor + its Attentive->Habituated edge.
+  §6.2 derived-mask throughout.
+  Run:  python3 .claude/skills/model-tamarin/check.py --prove \
+          tamarin_model/ceremonies/alex_blake_kdf/ceremony_slice2.spthy
+*/
+
+#include "../../core/types.spthy"
+#include "../../core/masks/attentive_approve.spthy"
+#include "../../core/masks/habituated_approve.spthy"
+#include "../../core/stressors/habituation.spthy"
+#include "../../core/transitions/from_attentive_habituation.spthy"
+
+#include "init.spthy"
+#include "messages.spthy"
+#include "advance_attentive.spthy"
+#include "approve_ui.spthy"
+
+#include "experiments/slice2_habituation.spthy"
+
+end

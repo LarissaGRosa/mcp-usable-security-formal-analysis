@@ -1,0 +1,34 @@
+/*
+  experiments/slice3_distraction.spthy -- Phase 1 · Slice 3 lemmas (L3_*).
+  sigma2 ExternalDistraction -> Careless mask -> timeout, on the CALC_SK action.
+  The point of contrast with Slice 1: Careless is SAFE-FAIL (the ceremony stalls), not
+  unsafe-success. Lemmas only; included last by ceremony_slice3.spthy.
+*/
+
+// sanity: the happy path still completes (Attentive computes a key).   [Liveness]
+lemma L3_attentive_ok:
+  exists-trace
+  "Ex p k #i. Calc(p,'Attentive')@i & Key(p,k)@i"
+
+// failure chain reachable: distraction precedes the derived Careless timeout.
+//                                                                       [feedback-loop §4]
+lemma L3_distraction_causes_timeout:
+  exists-trace
+  "Ex p #s #o. Distract(p)@s & Mask(p,'Attentive','Careless')@o & Timeout(p)@o & #s < #o"
+
+// SAFE-FAIL: a party that times out never completes the ceremony (no unsafe completion).
+//                                                                       [§2 safe-fail]
+lemma L3_timeout_is_safe_fail:
+  all-traces
+  "All #o. Timeout('Alex')@o ==> not (Ex #f. Finish('Alex')@f)"
+
+// every Careless shift is preceded by its stressor.                    [Safety: Stressor Causality]
+lemma L3_timeout_causality:
+  all-traces
+  "All p #o. Mask(p,'Attentive','Careless')@o ==> (Ex #s. Distract(p)@s & #s < #o)"
+
+// Careless DISENGAGES rather than slipping: it never emits a key at all
+// (contrast Busy, which emits a wrong one).                            [Protocol Vulnerability]
+lemma L3_careless_emits_no_key:
+  all-traces
+  "All p #i. Calc(p,'Careless')@i ==> not (Ex k #j. Key(p,k)@j)"

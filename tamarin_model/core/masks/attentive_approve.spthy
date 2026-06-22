@@ -1,0 +1,14 @@
+/*
+  core/masks/attentive_approve.spthy -- f_H for the Attentive mask, APPROVE_REQ action.
+
+  An Attentive user VERIFIES an approval prompt before consenting: it only approves a
+  prompt bound to its own session (kind = 'self'), and would reject an injected one.
+  §6.2 derived-mask: ApproveAttentive(P) marks the response so the monotone gate in
+  core/transitions/from_attentive_habituation.spthy can forbid it once habituated.
+  !Approved(...,'Attentive') is the persistent history sigma8 reads (two of them => habituation).
+*/
+
+rule Approve_Attentive:
+    [ !Prompt(P, pid, 'self') ]
+  --[ Approve(P, pid, 'Attentive'), ApproveAttentive(P), Verified(P, pid), Answered(pid) ]->
+    [ !Approved(P, pid, 'Attentive') ]
