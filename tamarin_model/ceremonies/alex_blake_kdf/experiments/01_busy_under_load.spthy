@@ -1,10 +1,10 @@
 /*
-  experiments/slice1_cogload.spthy -- Phase 0 · Slice 1 lemmas (L1_*).
+  experiments/01_busy_under_load.spthy -- Experiment 01 · Busy under load lemmas (L1_*).
   Five lemmas mapping 1:1 onto the formalization's properties. Lemmas only;
-  included last by ceremony_slice1.spthy.
+  included last by 01_busy_under_load.spthy.
 */
 
-// sanity: happy path survives (no Slice-0 regression)            [Liveness]
+// sanity: happy path survives (no Experiment-00 regression)      [Liveness]
 lemma L1_attentive_ok:
   exists-trace
   "Ex p k #i. Calc(p,'Attentive')@i & Key(p,k)@i"

@@ -5,7 +5,7 @@
   rather than a MaskShift rule mutating stored state, an Attentive (verifying) approval is
   forbidden once the party has habituated, so after Habituate only the Habituated response
   (core/masks/habituated_approve.spthy) remains. Monotone: no recovery (the number-matching
-  'shutout' mitigation of plan §7 would be a later slice).
+  'shutout' mitigation of plan §7 would be a later experiment).
 
   OneApproval keeps each persistent, read-only !Prompt from being answered twice (it would
   otherwise admit both an Attentive and a Habituated response to the same prompt).

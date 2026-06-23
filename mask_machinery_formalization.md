@@ -107,17 +107,17 @@ Either choice makes the reachable space a **DAG**: stressors accumulate only, ma
 
 The only coupling from $\mathcal{P}$ into $\mathcal{H}$ is the request **complexity** $\in \{\text{Easy}, \text{Hard}\}$ consumed by $f_U$ (§3.1). Hold that as the *sole* interface. As long as the contract is "Hard request $\Rightarrow$ one stressor event," the four layers compose lazily and the product $\mathcal{P} \times \mathcal{H} \times \mathcal{U} \times \mathcal{N}$ is never instantiated as a monolith.
 
-### 6.5 Per-slice composition
+### 6.5 Per-experiment composition
 
-If two stressors act on disjoint masks / disjoint actions, their slices are **orthogonal**: prove the §5 Protocol-Vulnerability property on each $\langle 1\ \text{mask},\ 1\ \text{stressor}\rangle$ slice independently and compose. Cost becomes **additive** in the catalogue, not multiplicative:
-$$\sum_k |\text{slice}_k| \quad\text{instead of}\quad \prod_k 2^{|\mathcal{S}_{\sigma,k}|}.$$
+If two stressors act on disjoint masks / disjoint actions, their experiments are **orthogonal**: prove the §5 Protocol-Vulnerability property on each $\langle 1\ \text{mask},\ 1\ \text{stressor}\rangle$ experiment independently and compose. Cost becomes **additive** in the catalogue, not multiplicative:
+$$\sum_k |\text{experiment}_k| \quad\text{instead of}\quad \prod_k 2^{|\mathcal{S}_{\sigma,k}|}.$$
 Bound participants too: analyze **one** honest human under the Dolev–Yao adversary rather than parameterizing over unbounded humans.
 
 ### 6.6 Phase-0 as the first profile
 
-The agreed bootstrap slice is exactly the smallest profile:
+The agreed bootstrap experiment is exactly the smallest profile:
 $$\mathcal{E}_0 = \big\langle\, C_0\ (\text{Alex–Blake KDF}),\ \{\text{Attentive}, \text{Busy}\},\ \{\sigma_1\ \text{HighCognitiveLoad}\} \,\big\rangle$$
-with a single $f_M$ edge (Attentive→Busy) and one honest stressed party. Human state: **2** reachable masks, derived, single stressor — flat. Adding masks/stressors to the *catalogue* leaves $\mathcal{E}_0$ untouched; each new construct is a *new* profile/slice, kept small by §6.1–§6.5.
+with a single $f_M$ edge (Attentive→Busy) and one honest stressed party. Human state: **2** reachable masks, derived, single stressor — flat. Adding masks/stressors to the *catalogue* leaves $\mathcal{E}_0$ untouched; each new construct is a *new* profile/experiment, kept small by §6.1–§6.5.
 
 ### 6.7 Tamarin realization (for when $C_0$ lands)
 
@@ -125,3 +125,11 @@ with a single $f_M$ edge (Attentive→Busy) and one honest stressed party. Human
 - **Mask** = an **action-fact label** computed inside the rule (§6.2), not a persistent stored fact — no $\times|M|$ and no extra sources.
 - **Profile setup** rule emits *only* the masks/stressors the experiment names; disabled ones generate no rules ⇒ fewer partial deconstructions and less branching.
 - **Monotone** degradation via linear facts consumed once ⇒ bounded, acyclic, terminating proof search.
+
+### 6.8 Realization status (2026-06-22)
+
+§6 is **implemented** in `tamarin_model/` as profiles $\mathcal{E}_0$ (Experiment 01), plus $\mathcal{E}_2 = \langle C_0{+}\text{UI}, \{\text{Attentive},\text{Habituated}\}, \{\sigma_8\}\rangle$ (Experiment 02) and $\mathcal{E}_3 = \langle C_0, \{\text{Attentive},\text{Careless}\}, \{\sigma_2\}\rangle$ (Experiment 03), atop the Experiment-00 baseline. All four entry-point theories prove under Tamarin 1.12 (22 lemmas). Confirmations and one refinement to §6.7:
+
+- **Derived mask (§6.2)** holds as written — the mask is an action-fact label, not stored. Two practical findings: (i) the *stored* `St_H` style provably **loops** Tamarin's sources solver (it can source the mask from the rule consuming it), which is the concrete reason §6.2 is mandatory, not just an optimization; (ii) the §6.3 "single active stressor" is most simply enforced by capping the *trigger action* (`OneStressPerParty` etc.) rather than the `!Stressor` fact itself.
+- **Refinement to "Profile setup".** Disabled masks/stressors must be *physically excluded from the include set*, not merely left unfired: an included rule whose LHS fact no producer supplies is a **hard wellformedness failure**. This forces `f_H` files to be **action-scoped** (`<mask>_<action>.spthy`) so each experiment can include a *closed* subset — see `usability_extension_plan.md` Appendix A.
+- **Single instance.** A `OneInstancePerHuman` restriction (keyed on `Start(p)`) realizes the "one honest human" of §6.5 at the instance level.

@@ -1,8 +1,7 @@
 /*
-  ceremonies/alex_blake_kdf/approve_ui.spthy -- PROTOCOL LAYER, the APPROVE_REQ UI phase.
-  This is the "extra ceremony steps / UI" that surfaces sigma8 Habituation: after the KDF
-  completes, the ceremony enters an approval phase in which Alex is shown approval prompts
-  (think MFA push notifications) that he must consent to.
+  protocol/approval_ui.spthy -- PROTOCOL LAYER, the APPROVE_REQ UI phase (used by Experiment 02).
+  The "extra ceremony steps / UI" that surface sigma8 Habituation: after the KDF completes,
+  Alex is shown approval prompts (think MFA push notifications) he must consent to.
 
   Enter_Approval_Phase turns the one-shot AlexDone into a PERSISTENT !Session, so prompts
   can be issued repeatedly by READING it -- no consume-and-reproduce of a linear fact, so

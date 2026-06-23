@@ -1,0 +1,11 @@
+/*
+  protocol/init.spthy -- PROTOCOL LAYER, participant initialization (shared by all experiments).
+  The mask is a label (§6.2), so Init carries no mask fact; Start(P) keys
+  OneInstancePerHuman (core/types.spthy). Pulled in by ceremony.base.spthy.
+*/
+
+rule Init_Alex:
+    [ Fr(~idA) ] --[ Start('Alex') ]-> [ AlexInit(~idA) ]
+
+rule Init_Blake:
+    [ Fr(~idB) ] --[ Start('Blake') ]-> [ BlakeInit(~idB) ]

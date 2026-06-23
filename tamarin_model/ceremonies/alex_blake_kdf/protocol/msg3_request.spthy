@@ -1,0 +1,19 @@
+/*
+  protocol/msg3_request.spthy -- PROTOCOL LAYER, Msg3 variant: REQUEST / ACK.
+  Instead of computing SK itself, Alex ISSUES a Hard CALC_SK request (persistent !Req;
+  §6.4 narrow interface -- only the 'complexity' field), then consumes whatever key
+  resulted and ACKs. The f_H that answers the request lives in the core/masks files; which
+  mask answers is decided by the experiment's stressor + transition. Used by Experiments 01 and 03.
+  The inline variant is protocol/msg3_inline.spthy.
+*/
+
+rule A_recv_Nb_request:
+    [ AlexWait(idA,Na), In(Nb), Fr(~rid) ]
+  --[ Request('Alex', ~rid, 'CALC_SK', 'Hard') ]->
+    [ AlexAwaitKey(idA, ~rid),
+      !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard') ]
+
+rule A_send_ack:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk) ]
+  --[ Finish('Alex') ]->
+    [ AlexDone(idA, sk), Out('ACK') ]

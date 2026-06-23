@@ -1,7 +1,7 @@
 /*
-  experiments/slice2_habituation.spthy -- Phase 1 · Slice 2 lemmas (L2_*).
+  experiments/02_habituated_mfa.spthy -- Experiment 02 · Habituated (MFA fatigue) lemmas (L2_*).
   sigma8 Habituation -> Habituated mask -> auto_approve, on the APPROVE_REQ UI phase.
-  Lemmas only; included last by ceremony_slice2.spthy.
+  Lemmas only; included last by 02_habituated_mfa.spthy.
 */
 
 // sanity: an Attentive (verified) approval is reachable -- the careful baseline.

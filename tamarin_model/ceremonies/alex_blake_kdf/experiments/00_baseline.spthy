@@ -1,6 +1,6 @@
 /*
-  experiments/slice0_skeleton.spthy -- Phase 0 · Slice 0 lemmas (L0_*).
-  Lemmas only; included last by ceremony_slice0.spthy.
+  experiments/00_baseline.spthy -- Experiment 00 · Baseline lemmas (L0_*).
+  Lemmas only; included last by 00_baseline.spthy.
 */
 
 // sanity: the ceremony can finish

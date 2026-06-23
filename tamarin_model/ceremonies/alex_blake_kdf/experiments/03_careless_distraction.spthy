@@ -1,8 +1,8 @@
 /*
-  experiments/slice3_distraction.spthy -- Phase 1 · Slice 3 lemmas (L3_*).
+  experiments/03_careless_distraction.spthy -- Experiment 03 · Careless (distraction) lemmas (L3_*).
   sigma2 ExternalDistraction -> Careless mask -> timeout, on the CALC_SK action.
-  The point of contrast with Slice 1: Careless is SAFE-FAIL (the ceremony stalls), not
-  unsafe-success. Lemmas only; included last by ceremony_slice3.spthy.
+  The point of contrast with Experiment 01: Careless is SAFE-FAIL (the ceremony stalls), not
+  unsafe-success. Lemmas only; included last by 03_careless_distraction.spthy.
 */
 
 // sanity: the happy path still completes (Attentive computes a key).   [Liveness]

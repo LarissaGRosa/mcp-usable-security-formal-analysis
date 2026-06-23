@@ -4,7 +4,7 @@
   (mask_machinery_formalization.md §6: the human layer is reusable verbatim;
   masks/stressors/transitions live in their own files).
 
-  This is the ONLY core file Slice 0 needs (profile E_skeleton = <C0,{Attentive},{}>).
+  This is the ONLY core file Experiment 00 (baseline) needs (profile E_skeleton = <C0,{Attentive},{}>).
 */
 
 functions: kdf/2     // free 2-ary symbol: kdf(a,b)=kdf(a',b') iff a=a' & b=b'

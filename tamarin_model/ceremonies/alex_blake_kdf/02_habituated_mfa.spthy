@@ -1,0 +1,26 @@
+theory ToyCeremony_HabituatedMFA
+begin
+
+/*
+  ENTRY POINT -- Experiment 02 · Habituated (MFA fatigue).
+  Profile (machinery §6.1): E_2 = < C0 + approval UI, {Attentive, Habituated}, {sigma8 Habituation} >.
+  = base spine + inline Msg3 (KDF baseline) + APPROVE_REQ UI + Habituated machinery + L2 lemmas.
+  Run: check.py --prove ceremonies/alex_blake_kdf/02_habituated_mfa.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human layer (the delta this experiment adds) --
+#include "../../core/masks/attentive_approve.spthy"
+#include "../../core/masks/habituated_approve.spthy"
+#include "../../core/stressors/habituation.spthy"
+#include "../../core/transitions/from_attentive_habituation.spthy"
+
+// -- Msg3 variant + the extra UI steps --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/approval_ui.spthy"
+
+// -- experiment --
+#include "experiments/02_habituated_mfa.spthy"
+
+end

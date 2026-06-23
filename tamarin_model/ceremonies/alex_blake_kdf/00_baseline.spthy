@@ -1,0 +1,19 @@
+theory ToyCeremony_Baseline
+begin
+
+/*
+  ENTRY POINT -- Experiment 00 · Baseline (walking skeleton).
+  Profile (machinery §6.1): E_skeleton = < C0, {Attentive}, {} >.
+  = base spine + inline Msg3 + L0 lemmas. No stressor / transition / Busy: the baseline
+  the failures perturb. Run: check.py --prove ceremonies/alex_blake_kdf/00_baseline.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- Msg3 variant --
+#include "protocol/msg3_inline.spthy"
+
+// -- experiment --
+#include "experiments/00_baseline.spthy"
+
+end
