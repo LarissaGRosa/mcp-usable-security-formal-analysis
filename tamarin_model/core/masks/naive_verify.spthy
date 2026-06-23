@@ -1,0 +1,13 @@
+/*
+  core/masks/naive_verify.spthy -- f_H for the NEW Naive mask, VERIFY_KEY action.
+  (Plan §3: the Clueless user with no mental model of the abstract check -- PGP key metaphor.)
+
+  Naive ACCEPTS the fingerprint of ANY kind, including a 'tampered' one -- a Norman MISTAKE
+  (confident wrong action from a wrong mental model), NOT a slip. RespMask(P,'Naive') is gated
+  by the current-mask restrictions: Naive must be the current mask (set by sigma6 Abstraction).
+*/
+
+rule Verify_Naive_mistake:
+    [ !VerifyReq(P, vid, kind) ]
+  --[ Verify(P, vid, 'Naive'), RespMask(P,'Naive'), Mistake(P, vid), Accept(P, vid), Answered(vid) ]->
+    [ !KeyChecked(P, vid) ]

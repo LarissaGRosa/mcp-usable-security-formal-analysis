@@ -1,0 +1,25 @@
+/*
+  experiments/06_abstraction_naive.spthy -- Experiment 06 · Abstraction -> Naive -> mistake.
+  sigma6 Abstraction on the VERIFY_KEY phase drives Attentive -> Naive, who makes a Norman
+  MISTAKE: accepts a tampered key fingerprint (Pathway via wrong mental model). Lemmas only.
+*/
+
+// sanity: an Attentive user verifies a genuine fingerprint.
+lemma L6_attentive_ok:
+  exists-trace
+  "Ex p vid #i. Verify(p, vid, 'Attentive')@i"
+
+// failure reachable: abstraction -> Naive -> mistake accepting an adversary-TAMPERED fingerprint.
+lemma L6_abstraction_causes_mistake:
+  exists-trace
+  "Ex p vid #s #t #o. Abstraction(p)@s & Tampered(vid)@t & Mistake(p,vid)@o & #s < #o"
+
+// every mistake is preceded by its stressor (Naive sets in via Abstraction).   [Safety: causality]
+lemma L6_mistake_requires_abstraction:
+  all-traces
+  "All p vid #o. Mistake(p,vid)@o ==> (Ex #s. Abstraction(p)@s & #s < #o)"
+
+// an Attentive user NEVER accepts a tampered fingerprint (it verifies genuinely).  [§2 safe]
+lemma L6_attentive_never_accepts_tampered:
+  all-traces
+  "All p vid #i. Verify(p, vid, 'Attentive')@i ==> not (Ex #j. Tampered(vid)@j)"

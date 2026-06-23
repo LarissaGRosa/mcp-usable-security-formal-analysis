@@ -30,9 +30,18 @@ wellformedness note in the plan's Appendix A.
 | `03_careless_distraction.spthy` (`ToyCeremony_CarelessDistraction`) | σ₂ ExternalDistraction → **Careless** → `timeout` | request/ack | **safe-fail** (ceremony stalls) | `L3_*` (5) |
 | `04_multi_stressor.spthy` (`ToyCeremony_MultiStressor`) | **σ₁ + σ₂ + σ₈** together → {Busy, Careless, Habituated} | request/ack + approval UI | **interaction + persistence** (mask carries across steps) | `LM_*` (7) |
 | `05_warning_recovery.spthy` (`ToyCeremony_WarningRecovery`) | σ₈ Habituation → **Habituated**, then **UI warning → back to Attentive** | inline + approval UI + warning | **recovery** (mask persists, then re-engages) | `L5_*` (5) |
+| `06_abstraction_naive.spthy` (`ToyCeremony_AbstractionNaive`) | σ₆ Abstraction → **Naive** → `mistake` | inline + **VERIFY_KEY** phase | **unsafe-success** (accepts a tampered fingerprint) | `L6_*` (4) |
+| `07_anxiety_fearful.spthy` (`ToyCeremony_AnxietyFearful`) | SecurityAnxiety → **Fearful** → `abort` | inline + **AUTHORIZE** phase | **safe-fail** (active refusal / withdrawal) | `L7_*` (4) |
+| `08_timepressure_busy.spthy` (`ToyCeremony_TimePressureBusy`) | σ₃ TimePressure → **Busy** → `slip` | request/ack | **unsafe-success** (2nd route into Busy) | `L8_*` (4) |
+| `09_all_stressors.spthy` (`ToyCeremony_AllStressors`) | **all 6 stressors → all masks**, all phases + recovery | request/ack + approval + VERIFY + AUTHORIZE + warning | **maximal**: every failure still reachable; safety composes | `L9_*` (7) |
 
-Lemma prefixes `L0_`…`L3_` track the `00`…`03` ordinal; the merged experiment uses `LM_`, the recovery one `L5_`.
-All 29 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+Lemma prefixes `L0_`…`L3_` track the `00`…`03` ordinal; the merged experiment uses `LM_`, recovery `L5_`,
+the new ones `L6_`/`L7_`/`L8_`, and the maximal one `L9_`.
+All 48 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+
+**Built:** masks Attentive, Busy, Careless, Habituated, Naive, Fearful (Elder remains); stressors σ₁
+HighCognitiveLoad, σ₂ ExternalDistraction, σ₃ TimePressure, σ₆ Abstraction, σ₈ Habituation, SecurityAnxiety;
+phases CALC_SK, APPROVE_REQ, VERIFY_KEY, AUTHORIZE; outcomes slip, auto_approve, timeout, mistake, abort.
 
 **Persistent current mask (across action types).** The mask is not re-derived per action: each
 stressor emits `SetMask(p,m)` at onset and the UI warning emits `SetMask(p,'Attentive')`; the gates in

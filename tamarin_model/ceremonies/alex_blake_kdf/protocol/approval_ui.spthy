@@ -3,19 +3,13 @@
   The "extra ceremony steps / UI" that surface sigma8 Habituation: after the KDF completes,
   Alex is shown approval prompts (think MFA push notifications) he must consent to.
 
-  Enter_Approval_Phase turns the one-shot AlexDone into a PERSISTENT !Session, so prompts
-  can be issued repeatedly by READING it -- no consume-and-reproduce of a linear fact, so
-  no sources loop (the §6.2 lesson). Two prompt sources:
+  The persistent !Session it reads is created once by protocol/session.spthy (include that
+  alongside). Two prompt sources, each READING !Session (loop-free):
     * UI_issue_self_prompt -- a legitimate, session-bound prompt (kind 'self'); fresh ~pid
       is never sent on the wire, so the adversary cannot forge it.
     * UI_inject_prompt     -- an adversary-crafted prompt (kind 'injected'; pid from In),
       modelling MFA prompt-bombing. Injected(pid) marks it for the lemmas.
 */
-
-rule Enter_Approval_Phase:
-    [ AlexDone(idA, sk) ]
-  --[ SessionUp('Alex') ]->
-    [ !Session('Alex', idA, sk) ]
 
 rule UI_issue_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]

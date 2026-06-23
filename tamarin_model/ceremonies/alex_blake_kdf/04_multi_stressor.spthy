@@ -43,6 +43,7 @@ begin
 
 // -- protocol: CALC_SK via request/ack, then the APPROVE_REQ UI phase --
 #include "protocol/msg3_request.spthy"
+#include "protocol/session.spthy"
 #include "protocol/approval_ui.spthy"
 
 // -- experiment --

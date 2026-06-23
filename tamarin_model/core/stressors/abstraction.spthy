@@ -1,0 +1,15 @@
+/*
+  core/stressors/abstraction.spthy -- f_U for the NEW stressor sigma6 Abstraction.
+  Crypto has no physical analog (Whitten & Tygar #2; the PGP key metaphor): the abstract
+  VERIFY_KEY fingerprint check overwhelms the user's mental model. At onset it emits
+  SetMask(P,'Naive') -- the f_M transition Attentive->Naive (core/transitions/mask_state.spthy).
+  Reads the persistent !VerifyReq to bind P. OnceAbstraction caps it to one onset per party.
+*/
+
+rule Trigger_Abstraction:
+    [ !VerifyReq(P, vid, kind) ]
+  --[ Abstraction(P), SetMask(P,'Naive') ]->
+    [ ]
+
+restriction OnceAbstraction:
+  "All p #i #j. Abstraction(p)@i & Abstraction(p)@j ==> #i = #j"

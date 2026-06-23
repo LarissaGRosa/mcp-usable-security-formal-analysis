@@ -1,0 +1,18 @@
+/*
+  protocol/verify_ui.spthy -- PROTOCOL LAYER, the VERIFY_KEY phase (used by Experiment 06).
+  After the session is up, Alex is asked to verify a key fingerprint -- an abstract crypto
+  check (the PGP-style "compare the fingerprints" step). Two sources, mirroring approval_ui:
+    * UI_verify_genuine  -- the real fingerprint (fresh ~vid; never on the wire, unforgeable).
+    * UI_verify_tampered -- an adversary-supplied fingerprint (vid from In); Tampered(vid) marks it.
+  Reads the persistent !Session (loop-free). Needs protocol/session.spthy.
+*/
+
+rule UI_verify_genuine:
+    [ !Session('Alex', idA, sk), Fr(~vid) ]
+  --[ VerifyPrompt('Alex', ~vid, 'genuine') ]->
+    [ !VerifyReq('Alex', ~vid, 'genuine') ]
+
+rule UI_verify_tampered:
+    [ !Session('Alex', idA, sk), In(vid) ]
+  --[ VerifyPrompt('Alex', vid, 'tampered'), Tampered(vid) ]->
+    [ !VerifyReq('Alex', vid, 'tampered') ]

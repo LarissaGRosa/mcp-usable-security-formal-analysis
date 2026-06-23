@@ -1,0 +1,15 @@
+/*
+  core/stressors/security_anxiety.spthy -- f_U for the NEW stressor SecurityAnxiety (low-trust;
+  the Fearful trigger from the plan's §5 f_M graph; unnumbered in the §4 sigma-catalogue).
+  A sensitive, high-stakes step (the AUTHORIZE request) provokes low-trust anxiety. At onset it
+  emits SetMask(P,'Fearful') -- the f_M transition Attentive->Fearful (core/transitions/mask_state.spthy).
+  Reads the persistent !AuthReq to bind P. OnceSecurityAnxiety caps it to one onset per party.
+*/
+
+rule Trigger_SecurityAnxiety:
+    [ !AuthReq(P, aid) ]
+  --[ SecurityAnxiety(P), SetMask(P,'Fearful') ]->
+    [ ]
+
+restriction OnceSecurityAnxiety:
+  "All p #i #j. SecurityAnxiety(p)@i & SecurityAnxiety(p)@j ==> #i = #j"

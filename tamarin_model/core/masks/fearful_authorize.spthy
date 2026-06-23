@@ -1,0 +1,15 @@
+/*
+  core/masks/fearful_authorize.spthy -- f_H for the NEW Fearful mask, AUTHORIZE action.
+  (Plan §3: the low-trust user who withdraws from anything security-critical.)
+
+  Fearful ABORTS the authorization -- it refuses to proceed even when the request is legitimate
+  (Whitten & Tygar "unmotivated"/distrust; outcome abort()/withdrawal). It produces NO !AuthDone,
+  so the ceremony safely STALLS at this step (safe-fail, distinct from Careless's passive timeout:
+  this is an *active* refusal). RespMask(P,'Fearful') is gated by the current-mask restrictions:
+  Fearful must be the current mask (set by sigma5 SecurityAnxiety).
+*/
+
+rule Authorize_Fearful_abort:
+    [ !AuthReq(P, aid) ]
+  --[ Authorize(P, aid, 'Fearful'), RespMask(P,'Fearful'), Abort(P, aid), Answered(aid) ]->
+    [ ]

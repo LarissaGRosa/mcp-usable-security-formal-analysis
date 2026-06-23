@@ -1,0 +1,27 @@
+theory ToyCeremony_TimePressureBusy
+begin
+
+/*
+  ENTRY POINT -- Experiment 08 · TimePressure -> Busy -> slip.
+  Profile (machinery §6.1): E_8 = < C0, {Attentive, Busy}, {sigma3 TimePressure} >.
+  Reuses the Slice-1 CALC_SK request flow and the Busy mask; only the stressor differs --
+  showing a second route into Busy. No new phase.
+  Run: check.py --prove ceremonies/alex_blake_kdf/08_timepressure_busy.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human layer --
+#include "../../core/masks/attentive_calc.spthy"
+#include "../../core/masks/busy_calc.spthy"
+#include "../../core/stressors/time_pressure.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+
+// -- Msg3 variant --
+#include "protocol/msg3_request.spthy"
+
+// -- experiment --
+#include "experiments/08_timepressure_busy.spthy"
+
+end

@@ -1,6 +1,6 @@
 # Plan: Extending Usability Stressors, Mask Transitions, and Masks
 
-> **Status (2026-06-23): Phase 0 + Experiments 02–05 are built and proven** in `tamarin_model/` (incl. a merged multi-stressor experiment and a UI-warning recovery experiment) — see §0 for the implemented-vs-pending breakdown. The rest of this plan is the remaining roadmap.
+> **Status (2026-06-23): Phase 0 + Experiments 02–09 are built and proven** in `tamarin_model/` — 10 experiments, 48 lemmas, 6 masks, 6 stressors, 4 ceremony phases, recovery. See §0 for the implemented-vs-pending breakdown. The rest of this plan is the remaining roadmap.
 
 > **Scope.** Deliverables for the Ceremony Mask framework:
 > 0. **First toy ceremony + bootstrap experiment (new — start here).** A concrete `alex_blake_kdf` ceremony (§C0) plus a vertical-experiment build/test plan (§Phase 0) that proves *one stressor → one transition → one broken property* end-to-end **before** any breadth is added.
@@ -12,21 +12,21 @@
 
 ---
 
-## 0. Current state — implemented through Experiment 05 (2026-06-23)
+## 0. Current state — implemented through Experiment 09 (2026-06-23)
 
-> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Six entry-point theories** — `00_baseline.spthy` … `05_warning_recovery.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 29 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is now a **persistent current mask that carries across action types** (a user driven Busy on the KDF is still degraded at the approval prompt) — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
+> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Ten entry-point theories** — `00_baseline.spthy` … `09_all_stressors.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 48 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** (a user driven Busy on the KDF is still degraded at later phases) — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
 
 **Built vs pending (✅ done · ⬜ pending):**
 
 | Layer | ✅ Built | ⬜ Pending |
 |---|---|---|
-| Masks (`f_H`) | `Attentive`, `Busy`, `Habituated`, `Careless` | `Fearful`, `Naive`, `Elder` |
-| Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₈ `Habituation` | σ₃ `TimePressure`, σ₄ `MisleadingTerminology`, σ₅ `LackOfFeedback`, σ₆ `Abstraction`, σ₇ `SecondaryTask`, σ₉ `AlertVolume`, σ₁₀ `RepeatedFailure` |
-| Transitions (`f_M`) | Attentive→Busy (σ₁), Attentive→Habituated (σ₈), Attentive→Careless (σ₂); **Habituated→Attentive recovery** (warning) | all other edges; chaining; escalation; other recovery edges |
-| Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout` | `mistake`, `bypass`, `abort`/`withdrawal` |
-| Action types | `CALC_SK`, `SEND_MSG`, `GEN_NONCE`, **`APPROVE_REQ`** | `SET_POLICY`, `VERIFY_KEY` |
-| Ceremony (𝒫) | C0 `alex_blake_kdf` + an `APPROVE_REQ` UI phase | payload flags (§6); **mitigations** (§7); **Pathway B**; further ceremonies |
-| Experiments | `L0_*`, `L1_*` (Phase 0); `L2_*`, `L3_*`, `LM_*` (Phase 1, incl. merged multi-stressor) | one file per remaining phenomenon (§9) |
+| Masks (`f_H`) | `Attentive`, `Busy`, `Habituated`, `Careless`, `Naive`, `Fearful` | `Elder` |
+| Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₃ `TimePressure`, σ₆ `Abstraction`, σ₈ `Habituation`, `SecurityAnxiety` | σ₄ `MisleadingTerminology`, σ₅ `LackOfFeedback`, σ₇ `SecondaryTask`, σ₉ `AlertVolume`, σ₁₀ `RepeatedFailure` |
+| Transitions (`f_M`) | Attentive→Busy (σ₁ **&** σ₃), Attentive→Careless (σ₂), Attentive→Habituated (σ₈), Attentive→Naive (σ₆), Attentive→Fearful (SecurityAnxiety); **Habituated→Attentive recovery** (warning) | chaining (e.g. Naive→Fearful); escalation; other recovery edges |
+| Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout`, `mistake`, `abort`/withdrawal | `bypass` |
+| Action types | `CALC_SK`, `SEND_MSG`, `GEN_NONCE`, `APPROVE_REQ`, **`VERIFY_KEY`**, **`AUTHORIZE`** | `SET_POLICY` |
+| Ceremony (𝒫) | C0 `alex_blake_kdf` + `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE` UI phases + recovery warning | payload flags (§6); other mitigations (§7); **Pathway B**; further ceremonies |
+| Experiments | `L0_*`…`L3_*`, `LM_*`, `L5_*`…`L9_*` (10 experiments) | one file per remaining phenomenon (§9) |
 
 **Experiments proven so far** (each is a profile `𝓔` in the §6a sense — a minimal `#include` set):
 
@@ -38,6 +38,10 @@
 | **03** careless_distraction | σ₂ → Careless → `timeout` | **safe-fail** (ceremony stalls) | five `L3_*` |
 | **04** multi_stressor | **σ₁+σ₂+σ₈ merged** → {Busy, Careless, Habituated} | **interaction**: compound failures in one run | six `LM_*` |
 | **05** warning_recovery | σ₈ → Habituated, then **UI warning → Attentive** | **recovery**: mask persists, then re-engages | five `L5_*` |
+| **06** abstraction_naive | σ₆ Abstraction → **Naive** → `mistake` (VERIFY_KEY) | **unsafe-success**: accepts a tampered fingerprint | four `L6_*` |
+| **07** anxiety_fearful | SecurityAnxiety → **Fearful** → `abort` (AUTHORIZE) | **safe-fail**: active refusal / withdrawal | four `L7_*` |
+| **08** timepressure_busy | σ₃ TimePressure → **Busy** → `slip` | **unsafe-success**: 2nd route into Busy | four `L8_*` |
+| **09** all_stressors | **all 6 stressors / 6 masks / 4 phases + recovery** | **maximal**: every failure reachable; safety composes | seven `L9_*` |
 
 **Key as-built deviations from the original plan text** (the prose below predates the build; trust the code where they differ):
 
@@ -213,7 +217,7 @@ Each later construct is "one more experiment," reusing the same three-kind test 
 
 - **Experiment 02 — ✅ DONE (built differently than first sketched).** σ₈ `Habituation` → `Habituated` → `auto_approve`, on a new `APPROVE_REQ` UI phase (`protocol/approval_ui.spthy`): a persistent `!Session` issues repeated prompts; an Attentive user verifies (`'self'` prompts only) while a habituated one auto-approves *any* prompt — including an adversary-`'injected'` one (the prompt-bombing breach). σ₈ is **history-keyed**: it fires after ≥2 distinct prior Attentive approvals. Five `L2_*` lemmas (sanity, breach-reachable, causality, derived-mask, and the Attentive-never-injected contrast). The **`shutout` mitigation half is still ⬜ pending** — Experiment 02 proves the failure; the number-matching fix is a later experiment (needs §7).
 - **Experiment 03 — ✅ DONE (this is the distraction/Careless experiment, *not* Pathway B).** σ₂ `ExternalDistraction` → `Careless` → `timeout`, reusing the Experiment-01 CALC_SK request flow. Establishes the **safe-fail** semantics (the ceremony stalls; Careless emits no key) versus Experiment 01/2's unsafe-success. Five `L3_*` lemmas. **Pathway B is now ⬜ unbuilt** and reassigned to a future experiment (see §10).
-- **Experiment 04+ — ⬜ pending.** Drive out the remaining masks/stressors per §3–§5, each as a failure (and where possible mitigation) lemma set drawn from §8's case-study table. Highest-value next targets: the **`shutout` mitigation for σ₈** (first recovery edge), **Pathway B** (σ₄ `MisleadingTerminology` → `mistake` from an Attentive user, no transition), and **σ₃ `TimePressure`**.
+- **Experiments 04–09 — ✅ DONE.** Multi-stressor (04), recovery (05), Abstraction→Naive (06), SecurityAnxiety→Fearful (07), TimePressure→Busy (08), and the maximal all-stressors ceremony (09). **Highest-value remaining ⬜:** **Pathway B** (σ₄ `MisleadingTerminology` → `mistake` from an *Attentive* user, no transition — the second failure pathway), **chaining** (σ₁₀ RepeatedFailure → Naive→Fearful), `bypass`/σ₇, and the `Elder` trait mask.
 - **Payload enrichment (§6) + the full `core/` split** have already happened structurally; what remains is the six-field `flags` tuple, needed once a flag-keyed stressor (σ₃–σ₇) lands.
 
 ---
@@ -252,11 +256,11 @@ The single most important enrichment. **Built so far:** valid (`kdf`), `slip` (E
 |---|---|---|---|---|---|
 | ✅ | valid (`~n`,`kdf`,`data`) | — | task done as designed | — | — |
 | ✅ | `slip()` | `'Slip'` | correct intent, wrong execution | Norman slip | — |
-| ⬜ | `mistake()` | `'Mistake'` | confident wrong action, wrong mental model | Norman mistake | S3 "Any Authenticated Users" |
+| ✅ | `mistake()` | `'Mistake'` | confident wrong action, wrong mental model | Norman mistake | S3 "Any Authenticated Users" |
 | ⬜ | `bypass()` | `'Bypass'` | deliberately circumvents the control to finish the primary task | Unmotivated / workaround | EHR sticky-notes, Shadow AI |
 | ✅ | `auto_approve()` | `'HabituatedApproval'` | reflexive "yes" without reading | habituation / RS | MFA prompt-bombing, warning fatigue |
 | ✅ | `timeout()` | `'Timeout'` | disengages / gives up | — | — |
-| ⬜ | `abort()` | `'Withdrawal'` | refuses to continue (distrust) | — | Fearful |
+| ✅ | `abort()` | `'Withdrawal'` | refuses to continue (distrust) | — | Fearful |
 
 `mistake()`, `bypass()`, and `auto_approve()` are the dangerous ones: unlike `timeout`, they let the ceremony *proceed* with a compromised result — which is precisely how the real-world incidents broke security. Lemmas should distinguish "ceremony stalls (safe-fail)" from "ceremony completes wrongly (unsafe-success)".
 
@@ -284,8 +288,8 @@ Outcomes per `f_H(mask, action)`. **Built cells are marked** `✅` with the file
 | ✅ | **Attentive** | valid | ✅ valid | valid | ✅ valid (verifies `'self'`) | valid *if* terminology clear, else `mistake` (Pathway B) | "I read each step, double-check, and finish as intended." |
 | ✅ | **Busy** | `slip` | ✅ `slip` | valid | ✅ `auto_approve` (`busy_approve`) | `bypass` | "Short on time, I skim and act fast — that's when I slip, or work around the control to keep moving." |
 | ✅ | **Careless** | `timeout` | ✅ `timeout` | `timeout` | ✅ `timeout` (`careless_approve`; was `auto_approve` — revised: Careless dismisses) | `bypass` | "I don't engage with security; I skip, dismiss, or take the shortcut." |
-| ⬜ | **Fearful** | valid (slow) | `abort`/`timeout` | `abort` on sensitive sends | `abort` (rejects all, even valid) | `abort` | "I don't trust this; on anything security-critical I hesitate, back out, or refuse." |
-| ⬜ | **Naive** | valid *iff* guided | `mistake` (no mental model) | valid (follows literally) | `auto_approve` (doesn't grasp the risk) | `mistake` | "I'm new; I do exactly what the screen says and I'm lost the moment a step assumes knowledge I lack." |
+| ✅ | **Fearful** | valid (slow) | `abort`/`timeout` | `abort` on sensitive sends | `abort` (rejects all, even valid) | `abort` | ✅ built on the new **AUTHORIZE** phase (Exp 07): Fearful `abort`. "I don't trust this; on anything security-critical I hesitate, back out, or refuse." |
+| ✅ | **Naive** | valid *iff* guided | `mistake` (no mental model) | valid (follows literally) | `auto_approve` (doesn't grasp the risk) | `mistake` | ✅ built on the new **VERIFY_KEY** phase (Exp 06): Naive `mistake` (accepts tampered). "I do exactly what the screen says; lost when a step assumes knowledge I lack." |
 | ⬜ | **Elder** | valid *iff* untimed | `slip`/`timeout` under pace | valid untimed, `timeout` rushed | valid (slow) | `mistake` | "Careful when unhurried; dense or fast steps cause slips and missed deadlines." |
 | ✅ | **Habituated** | valid | valid | valid | ✅ **`auto_approve`** (reflexive yes) | valid | "I've seen this prompt a hundred times; I click through without reading to make it stop." |
 
@@ -303,10 +307,10 @@ Literature-grounded catalogue. Shared implementation pattern (the same shape as 
 |---|---|---|---|---|---|
 | ✅ | σ₁ | `HighCognitiveLoad` **(Experiment 01)** | `CALC_SK` request, `complexity='Hard'` | Abstraction | Attentive→Busy |
 | ✅ | σ₂ | `ExternalDistraction` **(Experiment 03)** | unconditional (any pending `!Req`, ignores `complexity`) | Norman slip | Attentive→Careless |
-| ⬜ | σ₃ | `TimePressure` | request carries deadline marker | EHR workarounds | Attentive→Busy, Elder→error |
+| ✅ | σ₃ | `TimePressure` **(Exp 08)** | deadline on CALC_SK (any complexity) | EHR workarounds | Attentive→Busy |
 | ⬜ | σ₄ | `MisleadingTerminology` | request flag `terminology='Misleading'` | S3 case | **Pathway B** mistake (any mask) |
 | ⬜ | σ₅ | `LackOfFeedback` | request flag `feedback='None'` | Whitten #3, PGP9 | Pathway B mistake; Gulf of Evaluation |
-| ⬜ | σ₆ | `Abstraction` | request flag `concept='Abstract'` (key metaphor) | Whitten #2, PGP | Attentive→Naive; HighCognitiveLoad |
+| ✅ | σ₆ | `Abstraction` **(Exp 06)** | the abstract VERIFY_KEY fingerprint check | Whitten #2, PGP | Attentive→Naive |
 | ⬜ | σ₇ | `SecondaryTask` | participant has a competing primary-task fact | Whitten #1, Shadow AI | →bypass (Busy/Careless) |
 | ✅ | σ₈ | `Habituation` **(Experiment 02)** | **N≥2 distinct prior Attentive `APPROVE_REQ`** (history-keyed: reads two persistent `!Approved` facts, distinctness via `Neq`) | BYU RS; MFA fatigue | Attentive→Habituated |
 | ⬜ | σ₉ | `AlertVolume`/`DecisionFatigue` | ≥k requests within the trace before a `Step` | MFA prompt-bombing | →Habituated/Careless |
@@ -317,7 +321,7 @@ Literature-grounded catalogue. Shared implementation pattern (the same shape as 
 2. **Flag-keyed** (σ₃–σ₇ ⬜): needs the payload enrichment in §6. Unlocks five stressors at once.
 3. **History-keyed** (σ₈ ✅, σ₉/σ₁₀ ⬜): *count/existence* lives in the rule LHS (σ₈ reads two distinct persistent `!Approved` facts, distinctness forced by a `Neq` restriction), while *temporal ordering* lives in the **lemma** (`#a < #h`). The lesson held: don't try to encode the ordering in the multiset LHS — only the existence of the prior events.
 
-**Next stressors to implement (⬜):** σ₄ `MisleadingTerminology` (cleanest demonstration of Pathway B), σ₃ `TimePressure` (drives Busy/Elder). *(σ₈ `Habituation` and σ₂ `ExternalDistraction` are done — Experiments 2 and 3.)*
+**Next stressors to implement (⬜):** σ₄ `MisleadingTerminology` (cleanest demonstration of **Pathway B** — a `mistake` from an *Attentive* user, no transition), σ₅ `LackOfFeedback`, σ₇ `SecondaryTask` (→ `bypass`), σ₁₀ `RepeatedFailure` (→ chaining, e.g. Naive→Fearful). *(✅ done: σ₁, σ₂, σ₃, σ₆, σ₈, SecurityAnxiety — Experiments 01–09.)*
 
 ---
 
@@ -344,9 +348,9 @@ Literature-grounded catalogue. Shared implementation pattern (the same shape as 
 |---|---|---|---|---|
 | ✅ | Attentive | `HighCognitiveLoad` **(Experiment 01)** | Busy | — |
 | ✅ | Attentive | `ExternalDistraction` **(Experiment 03)** | Careless | — |
-| ⬜ | Attentive | `TimePressure` | Busy | EHR |
-| ⬜ | Attentive | `Abstraction`/`MisleadingTerminology` | Naive | PGP key metaphor |
-| ⬜ | Attentive | `SecurityAnxiety` | Fearful | low trust |
+| ✅ | Attentive | `TimePressure` **(Exp 08)** | Busy | EHR |
+| ✅ | Attentive | `Abstraction` **(Exp 06)** | Naive | PGP key metaphor |
+| ✅ | Attentive | `SecurityAnxiety` **(Exp 07)** | Fearful | low trust |
 | ✅ | Attentive | `Habituation` (N≥2) **(Experiment 02)** | **Habituated** | BYU / MFA fatigue |
 | ⬜ | Naive | `RepeatedFailure` | Fearful | confusion → withdrawal |
 | ⬜ | Elder | `TimePressure`/`StepDensity` | Fearful | pace pressure |

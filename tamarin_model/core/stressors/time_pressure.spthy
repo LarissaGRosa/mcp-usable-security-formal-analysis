@@ -1,0 +1,15 @@
+/*
+  core/stressors/time_pressure.spthy -- f_U for the NEW stressor sigma3 TimePressure.
+  A deadline on the CALC_SK step makes the user rush (clinical-EHR workaround pattern). At onset
+  it emits SetMask(P,'Busy') -- a SECOND f_M route Attentive->Busy (besides sigma1 HighCognitiveLoad),
+  showing multiple stressors can drive one mask. Reads the persistent !Req (any complexity --
+  unlike sigma1 which needs 'Hard'). OneTimePressure caps it to one onset per party.
+*/
+
+rule Trigger_TimePressure:
+    [ !Req(P, rid, 'CALC_SK', m, c) ]
+  --[ TimePressure(P), SetMask(P,'Busy') ]->
+    [ ]
+
+restriction OneTimePressure:
+  "All p #i #j. TimePressure(p)@i & TimePressure(p)@j ==> #i = #j"

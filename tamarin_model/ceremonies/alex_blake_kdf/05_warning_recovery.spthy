@@ -26,6 +26,7 @@ begin
 
 // -- protocol: inline Msg3 (KDF baseline) + the APPROVE_REQ UI + the re-engagement warning --
 #include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
 #include "protocol/approval_ui.spthy"
 #include "protocol/warning_ui.spthy"
 

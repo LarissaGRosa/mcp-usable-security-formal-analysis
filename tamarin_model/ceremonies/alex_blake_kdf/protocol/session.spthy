@@ -1,0 +1,11 @@
+/*
+  protocol/session.spthy -- PROTOCOL LAYER, post-KDF session handle (shared by all UI phases).
+  Turns the one-shot AlexDone into a PERSISTENT !Session that the UI phases (approval_ui,
+  verify_ui, authorize_ui) READ to issue their prompts -- no consume-and-reproduce of a linear
+  fact, so loop-free. Include this once in any experiment that has a post-KDF phase.
+*/
+
+rule Enter_Session:
+    [ AlexDone(idA, sk) ]
+  --[ SessionUp('Alex') ]->
+    [ !Session('Alex', idA, sk) ]

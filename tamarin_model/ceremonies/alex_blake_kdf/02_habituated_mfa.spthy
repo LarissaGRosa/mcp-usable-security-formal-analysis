@@ -19,6 +19,7 @@ begin
 
 // -- Msg3 variant + the extra UI steps --
 #include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
 #include "protocol/approval_ui.spthy"
 
 // -- experiment --
