@@ -1,0 +1,35 @@
+theory ToyCeremony_WarningRecovery
+begin
+
+/*
+  ENTRY POINT -- Experiment 05 · Recovery via a good-usability UI warning.
+  Profile (machinery §6.1):
+      E_5 = < C0 + approval UI + warning, {Attentive, Habituated}, {sigma8 Habituation} >,
+            with a RECOVERY edge Habituated --warning--> Attentive.
+
+  Same building blocks as Experiment 02, plus protocol/warning_ui.spthy: the warning emits
+  SetMask(P,'Attentive'), which the current-mask gates (core/transitions/mask_state.spthy)
+  read as a recovery onset. This is the first experiment with a way BACK to Attentive: the
+  mask persists across prompts until the UI warning re-engages the user. Derived event-ordering
+  throughout (§6.2), monotone.
+  Run: check.py --prove ceremonies/alex_blake_kdf/05_warning_recovery.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human layer --
+#include "../../core/masks/attentive_approve.spthy"
+#include "../../core/masks/habituated_approve.spthy"
+#include "../../core/stressors/habituation.spthy"
+#include "../../core/transitions/mask_state.spthy"                  // current-mask gates (recovery via SetMask Attentive from the warning)
+#include "../../core/transitions/answered_once.spthy"
+
+// -- protocol: inline Msg3 (KDF baseline) + the APPROVE_REQ UI + the re-engagement warning --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/approval_ui.spthy"
+#include "protocol/warning_ui.spthy"
+
+// -- experiment --
+#include "experiments/05_warning_recovery.spthy"
+
+end

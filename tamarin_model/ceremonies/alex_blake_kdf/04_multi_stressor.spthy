@@ -1,0 +1,51 @@
+theory ToyCeremony_MultiStressor
+begin
+
+/*
+  ENTRY POINT -- Experiment 04 · Multi-stressor (Experiments 00–03 merged).
+  Profile (machinery §6.1):
+      E_4 = < C0 + approval UI, {Attentive, Busy, Careless, Habituated},
+              {sigma1 HighCognitiveLoad, sigma2 ExternalDistraction, sigma8 Habituation} >.
+
+  This is the deliberate WORST-CASE-DISCOVERY profile the discipline of §6a/§6.5 warns about:
+  it enables three stressors and four masks on ONE human at once, so the analysis is to see
+  how stressors INTERACT (the other experiments isolate one each). It stays tractable only
+  because the model is still single-human (OneInstancePerHuman), monotone (stressors only
+  added, masks only degrade), and single-active-per-stressor (OneStress/OneDistract/Inequality).
+  Expect more proof branching than 00–03; if it ever stops terminating, that is the §6a
+  blow-up showing up and the fix is to narrow the enabled set, not to add masks.
+
+  CALC_SK runs through the request flow (so sigma1 and sigma2 both act on it); the approval
+  UI runs afterwards (so sigma8 acts there). A Busy slip still produces a (wrong) key, so the
+  run can REACH the approval phase and habituate -- that is how one user accrues two failures.
+  Run: check.py --prove ceremonies/alex_blake_kdf/04_multi_stressor.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- masks (CALC_SK f_H for the three CALC masks; APPROVE_REQ f_H for Attentive + Habituated) --
+#include "../../core/masks/attentive_calc.spthy"
+#include "../../core/masks/busy_calc.spthy"
+#include "../../core/masks/careless_calc.spthy"
+#include "../../core/masks/attentive_approve.spthy"
+#include "../../core/masks/busy_approve.spthy"
+#include "../../core/masks/careless_approve.spthy"
+#include "../../core/masks/habituated_approve.spthy"
+
+// -- stressors (all three) --
+#include "../../core/stressors/cognitive_load.spthy"
+#include "../../core/stressors/external_distraction.spthy"
+#include "../../core/stressors/habituation.spthy"
+
+// -- transitions (three Attentive-out edges + the shared answer discipline) --
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+
+// -- protocol: CALC_SK via request/ack, then the APPROVE_REQ UI phase --
+#include "protocol/msg3_request.spthy"
+#include "protocol/approval_ui.spthy"
+
+// -- experiment --
+#include "experiments/04_multi_stressor.spthy"
+
+end

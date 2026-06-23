@@ -1,0 +1,54 @@
+/*
+  experiments/04_multi_stressor.spthy -- Experiment 04 · Multi-stressor (00–03 merged).
+  Lemmas (LM_*) for the worst-case profile that enables sigma1 + sigma2 + sigma8 and all
+  four masks at once on a single human. The point is to analyse INTERACTION between
+  stressors: that they compose without interfering, and that one user can suffer more than
+  one failure in a single run. Lemmas only; included last by 04_multi_stressor.spthy.
+*/
+
+// sanity: the fully-correct run still exists -- a correct KDF AND a verified approval.
+//                                                                   [Liveness, no over-constraint]
+lemma LM_happy_path_ok:
+  exists-trace
+  "Ex k pid #c #a. Calc('Alex','Attentive')@c & Key('Alex',k)@c
+                 & Approve('Alex',pid,'Attentive')@a"
+
+// all THREE stressors can fire in one trace (cognitive load + distraction on the KDF,
+// then habituation in the approval phase).                          [multi-stressor reachable]
+lemma LM_three_stressors_reachable:
+  exists-trace
+  "Ex #l #d #h. Load('Alex')@l & Distract('Alex')@d & Habituate('Alex')@h"
+
+// COMPOUND failure: one user, two distinct failures in a single run -- a Busy slip on the
+// KDF, then a Habituated auto-approval of an adversary-injected prompt.   [interaction headline]
+lemma LM_compound_failure:
+  exists-trace
+  "Ex pid #s #j #o. Slip('Alex')@s & Injected(pid)@j & AutoApprove('Alex',pid)@o & #s < #o"
+
+// PERSISTENCE across actions (the fix): a user who slipped (Busy) on the KDF cannot then
+// verify attentively at the approval prompt -- the Busy mask carries over. Since approvals
+// only occur after the KDF and this experiment has no recovery, an Attentive approval can
+// never co-occur with a slip (it would have to precede it).         [mask persists across steps]
+lemma LM_mask_persists_across_actions:
+  all-traces
+  "All p pid #s #a. Slip(p)@s & Approve(p,pid,'Attentive')@a ==> #a < #s"
+
+// generalized safety (was 'requires habituation'): now that the persisted Busy mask also
+// auto-approves at the prompt, auto-approval requires SOME degraded onset -- cognitive load
+// OR habituation (Careless times out instead of auto-approving).    [Protocol Vulnerability]
+lemma LM_autoapprove_requires_degraded_stressor:
+  all-traces
+  "All p pid #i. AutoApprove(p,pid)@i ==>
+       ( (Ex #s. Load(p)@s & #s < #i) | (Ex #h. Habituate(p)@h & #h < #i) )"
+
+// composition preserves sigma1 safety: a Busy CALC_SK never yields a correct kdf key.
+//                                                                   [Protocol Vulnerability, σ1]
+lemma LM_busy_no_correct_key:
+  all-traces
+  "All p k #i. (Calc(p,'Busy')@i & Key(p,k)@i) ==> not(Ex a b. k = kdf(a,b))"
+
+// composition preserves the approve-verify safety: an Attentive user never approves an
+// injected prompt, even amid the other stressors.                  [§2 safe vs unsafe]
+lemma LM_attentive_never_injected:
+  all-traces
+  "All p pid #i. Approve(p,pid,'Attentive')@i ==> not (Ex #j. Injected(pid)@j)"

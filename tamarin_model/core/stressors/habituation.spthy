@@ -5,14 +5,23 @@
   condition is "N>=2 identical prior APPROVE_REQ already handled". It reads two DISTINCT
   persistent !Approved(P,_,'Attentive') facts (the history) and deposits the stressor.
   Distinctness (pid1 != pid2) is enforced by the standard Inequality restriction, so a
-  single approval cannot masquerade as two. Monotone: !Stressor is only ever added.
+  single approval cannot masquerade as two. At onset it emits SetMask(P,'Habituated') -- the
+  f_M transition in the persistent current-mask model (mask_state.spthy), timed to the event.
 */
 
 rule Trigger_Habituation:
     [ !Approved(P, pid1, 'Attentive'), !Approved(P, pid2, 'Attentive') ]
-  --[ Habituate(P), Neq(pid1, pid2) ]->
-    [ !Stressor(P,'Habituation') ]
+  --[ Habituate(P), Neq(pid1, pid2), SetMask(P,'Habituated') ]->
+    [ ]
 
 // pid1 and pid2 must be two different prompts (>= 2 distinct prior approvals).
 restriction Inequality:
   "All x #i. Neq(x,x)@i ==> F"
+
+// Habituation SETS IN once per party. Without this the rule could re-fire unboundedly (from
+// the same persistent !Approved facts), emitting many SetMask(P,'Habituated') events and
+// exploding the "latest event" interval reasoning in mask_state.spthy. Bounding it keeps the
+// mask history finite (proofs terminate) and is semantically a no-op (re-habituating to a
+// mask you are already in changes nothing).
+restriction OnceHabituate:
+  "All p #i #j. Habituate(p)@i & Habituate(p)@j ==> #i = #j"

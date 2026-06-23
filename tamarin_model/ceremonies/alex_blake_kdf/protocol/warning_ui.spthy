@@ -1,0 +1,13 @@
+/*
+  protocol/warning_ui.spthy -- PROTOCOL LAYER, a good-usability re-engagement warning (Exp 05).
+  A protective UI step (think number-matching MFA or a polymorphic warning -- plan §7 'shutout'):
+  shown during the approval phase, it forces the user to re-engage with the decision. It reads
+  the persistent !Session (no consume-and-reproduce, so loop-free) and emits SetMask(P,'Attentive')
+  -- the recovery onset that core/transitions/mask_state.spthy reads to make the user's CURRENT
+  mask Attentive again (until a later stressor re-degrades them). Bounded once by OneSetMaskPerMask.
+*/
+
+rule UI_warning_reengage:
+    [ !Session('Alex', idA, sk) ]
+  --[ WarningShown('Alex'), SetMask('Alex','Attentive') ]->
+    [ ]

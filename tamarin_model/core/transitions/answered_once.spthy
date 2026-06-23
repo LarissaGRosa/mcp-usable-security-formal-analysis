@@ -1,7 +1,7 @@
 /*
   core/transitions/answered_once.spthy -- shared "answer discipline" restriction.
 
-  Every f_H rule (CALC_SK in core/masks/*_calc, APPROVE_REQ in core/masks/*_approve)
+  Every f_H rule (the CALC_SK masks and the APPROVE_REQ masks under core/masks/)
   emits Answered(id) when it consumes a persistent, read-only request/prompt. This single
   restriction keeps each id answered AT MOST ONCE, so the same !Req / !Prompt cannot be
   answered by two different masks (e.g. both an Attentive key and a Busy slip for one rid,

@@ -14,7 +14,8 @@ begin
 #include "../../core/masks/attentive_approve.spthy"
 #include "../../core/masks/habituated_approve.spthy"
 #include "../../core/stressors/habituation.spthy"
-#include "../../core/transitions/from_attentive_habituation.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
 
 // -- Msg3 variant + the extra UI steps --
 #include "protocol/msg3_inline.spthy"

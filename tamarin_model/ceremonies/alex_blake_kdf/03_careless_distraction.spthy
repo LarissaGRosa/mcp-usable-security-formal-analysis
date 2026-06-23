@@ -15,7 +15,8 @@ begin
 #include "../../core/masks/attentive_calc.spthy"
 #include "../../core/masks/careless_calc.spthy"
 #include "../../core/stressors/external_distraction.spthy"
-#include "../../core/transitions/from_attentive_distraction.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
 
 // -- Msg3 variant --
 #include "protocol/msg3_request.spthy"

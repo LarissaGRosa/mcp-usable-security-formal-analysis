@@ -1,16 +1,18 @@
 /*
   core/stressors/cognitive_load.spthy -- f_U for sigma1 HighCognitiveLoad.
 
-  A Hard CALC_SK request deposits the stressor. It READS the persistent !Req (no
-  consume-and-reproduce, so the sources solver cannot loop). §6.4 narrow interface:
-  the only thing it inspects is the request's 'complexity' = 'Hard'.
-  §6.3 single active stressor: OneStressPerParty caps it to one Load per party.
+  A Hard CALC_SK request makes the user Busy: at onset it emits SetMask(P,'Busy') -- the
+  f_M transition Attentive->Busy in the persistent current-mask model (mask_state.spthy),
+  timed to the stressor so the mask cannot be re-asserted later out of order. It READS the
+  persistent !Req (no consume-and-reproduce, so no sources loop). §6.4 narrow interface: the
+  only thing it inspects is 'complexity' = 'Hard'. §6.3: OneStressPerParty caps it to one
+  onset per party (so SetMask(P,'Busy') is emitted once).
 */
 
 rule Trigger_HighCognitiveLoad:
     [ !Req(P, rid, 'CALC_SK', m, 'Hard') ]
-  --[ Load(P) ]->
-    [ !Stressor(P,'HighCognitiveLoad') ]
+  --[ Load(P), SetMask(P,'Busy') ]->
+    [ ]
 
 restriction OneStressPerParty:
   "All p #i #j. Load(p)@i & Load(p)@j ==> #i = #j"

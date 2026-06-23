@@ -28,9 +28,34 @@ wellformedness note in the plan's Appendix A.
 | `01_busy_under_load.spthy` (`ToyCeremony_BusyUnderLoad`) | σ₁ HighCognitiveLoad → **Busy** → `slip` | request/ack | **unsafe-success** (wrong key, completes) | `L1_*` (5) |
 | `02_habituated_mfa.spthy` (`ToyCeremony_HabituatedMFA`) | σ₈ Habituation → **Habituated** → `auto_approve` | inline + approval UI | **unsafe-success** (approves injected prompt) | `L2_*` (5) |
 | `03_careless_distraction.spthy` (`ToyCeremony_CarelessDistraction`) | σ₂ ExternalDistraction → **Careless** → `timeout` | request/ack | **safe-fail** (ceremony stalls) | `L3_*` (5) |
+| `04_multi_stressor.spthy` (`ToyCeremony_MultiStressor`) | **σ₁ + σ₂ + σ₈** together → {Busy, Careless, Habituated} | request/ack + approval UI | **interaction + persistence** (mask carries across steps) | `LM_*` (7) |
+| `05_warning_recovery.spthy` (`ToyCeremony_WarningRecovery`) | σ₈ Habituation → **Habituated**, then **UI warning → back to Attentive** | inline + approval UI + warning | **recovery** (mask persists, then re-engages) | `L5_*` (5) |
 
-Lemma prefixes (`L0_`…`L3_`) track the `00`…`03` ordinal. All 22 lemmas verify under
-Tamarin 1.12 / Maude 3.5.1.
+Lemma prefixes `L0_`…`L3_` track the `00`…`03` ordinal; the merged experiment uses `LM_`, the recovery one `L5_`.
+All 29 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+
+**Persistent current mask (across action types).** The mask is not re-derived per action: each
+stressor emits `SetMask(p,m)` at onset and the UI warning emits `SetMask(p,'Attentive')`; the gates in
+`core/transitions/mask_state.spthy` make every f_H respond as the current mask, which carries CALC_SK →
+APPROVE_REQ until a recovery. So a user driven **Busy** on the KDF stays degraded at the approval prompt
+(Busy → `auto_approve` via `busy_approve`, Careless → `timeout` via `careless_approve`), proven by
+`LM_mask_persists_across_actions`. Encoded as "degrade active until recovery" (the tractable choice;
+strict latest-wins blows up on the merged experiment).
+
+**Experiment 05 adds the first way BACK to Attentive** (plan §5/§7 recovery): the Habituated mask
+persists across prompts (monotone `!Stressor`) until a good-usability UI warning (`Reengage`) re-engages
+the user. Modelled as derived event-ordering in `core/transitions/recovery.spthy` (no stored mask). The
+state-establishing events are bounded to once per party (`OnceHabituate`, `OnceReengage`) — without that
+the warning/habituation rules re-fire unboundedly and the recovery gates' interval reasoning never
+terminates; the bound keeps it at ≤2 s and is semantically a no-op (the persistent `!Stressor` already
+makes re-emission redundant). Modelling repeated habituate↔recover *cycles* would relax those bounds.
+
+**Experiment 04 is the deliberate multi-stressor "worst-case" profile** (machinery §6a/§6.5):
+it enables all three stressors and four masks on one human to study how they *interact* —
+e.g. `LM_compound_failure` shows a single run in which Alex both slips on the KDF (Busy) and
+later auto-approves an injected prompt (Habituated). It stays tractable only because the
+model is single-human + monotone + single-active-per-stressor; if it stops terminating, that
+is the §6a blow-up and the fix is to narrow the enabled set.
 
 ## Run
 

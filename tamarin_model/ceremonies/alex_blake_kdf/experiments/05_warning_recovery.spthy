@@ -1,0 +1,44 @@
+/*
+  experiments/05_warning_recovery.spthy -- Experiment 05 · Recovery via a good-usability warning.
+  Demonstrates, on the APPROVE_REQ phase: the Habituated mask PERSISTS across prompts, and a
+  UI warning (SetMask Attentive) returns the user to Attentive -- the plan's §5/§7 recovery edge.
+  Lemmas only; included last by 05_warning_recovery.spthy.
+*/
+
+// sanity: a verifying Attentive approval is reachable.
+lemma L5_attentive_ok:
+  exists-trace
+  "Ex pid #a. Approve('Alex',pid,'Attentive')@a"
+
+// PERSISTENCE: the Habituated mask carries across prompts -- two distinct auto-approvals,
+// no warning needed in between.                                       [mask persists]
+lemma L5_mask_persists:
+  exists-trace
+  "Ex p1 p2 #o1 #o2. AutoApprove('Alex',p1)@o1 & AutoApprove('Alex',p2)@o2 & not(p1 = p2)"
+
+// RECOVERY arc reachable: habituate -> auto-approve -> UI warning -> re-engaged Attentive approval.
+//                                                                     [recovery edge]
+lemma L5_recovery_reachable:
+  exists-trace
+  "Ex p1 p2 #h #o #w #a.
+       Habituate('Alex')@h
+     & AutoApprove('Alex',p1)@o
+     & WarningShown('Alex')@w
+     & Approve('Alex',p2,'Attentive')@a
+     & #h < #o & #o < #w & #w < #a"
+
+// recovery is CAUSED by the warning: re-engaging to Attentive after habituation is impossible
+// without an intervening UI warning (no spontaneous recovery).        [Safety: recovery causality]
+lemma L5_recovery_requires_warning:
+  all-traces
+  "All p pid #a #h. Approve(p,pid,'Attentive')@a & Habituate(p)@h & #h < #a
+                    ==> (Ex #w. WarningShown(p)@w & #h < #w & #w < #a)"
+
+// the warning actually STOPS auto-approval: auto-approve requires habituation with NO warning
+// since (the warning's SetMask Attentive would have superseded the Habituated mask).
+//                                                                     [Protocol Vulnerability, gated]
+lemma L5_autoapprove_needs_active_habituation:
+  all-traces
+  "All p pid #i. AutoApprove(p,pid)@i
+                 ==> (Ex #h. Habituate(p)@h & #h < #i
+                             & not (Ex #w. WarningShown(p)@w & #h < #w & #w < #i))"

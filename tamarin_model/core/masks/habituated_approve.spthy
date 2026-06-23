@@ -4,13 +4,13 @@
 
   Habituated is NOT Careless: a Careless user disengages (timeout); a Habituated user
   ACTIVELY approves -- reflexively, without reading -- to make the prompt go away. It is
-  DERIVED from the active sigma8 stressor (!Stressor(P,'Habituation') on the LHS; §6.2):
-  it approves a prompt of ANY kind, including an adversary-'injected' one. That is exactly
-  the behaviour prompt-bombing weaponizes. auto_approve() is the dangerous outcome (plan §2).
+  Habituated is the CURRENT mask (gated by core/transitions/mask_state.spthy via RespMask, set
+  by the Shift rule once sigma8 is active): it approves a prompt of ANY kind, including an
+  adversary-'injected' one -- exactly what prompt-bombing weaponizes. auto_approve() (plan §2).
 */
 
 rule Approve_Habituated:
-    [ !Prompt(P, pid, kind), !Stressor(P,'Habituation') ]
-  --[ Approve(P, pid, 'Habituated'), AutoApprove(P, pid),
+    [ !Prompt(P, pid, kind) ]
+  --[ Approve(P, pid, 'Habituated'), RespMask(P,'Habituated'), AutoApprove(P, pid),
       Mask(P,'Attentive','Habituated'), Answered(pid) ]->
     [ !Approved(P, pid, 'Habituated') ]

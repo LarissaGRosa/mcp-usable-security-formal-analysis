@@ -1,0 +1,39 @@
+/*
+  core/transitions/mask_state.spthy -- the PERSISTENT current-mask, derived by event ordering
+  (machinery §6.2, §6.8). Replaces the old per-action gates (AttentiveOnlyBeforeLoad, …).
+
+  A degraded mask persists ACROSS action types (CALC_SK, APPROVE_REQ, …) until a RECOVERY --
+  so a user driven Busy on the KDF is still degraded at the approval prompt (cannot silently
+  become Attentive again). The mask is not stored; it is read from SetMask(p,m) events:
+    * each stressor emits SetMask(p, <its mask>) at onset (the core/stressors triggers);
+    * a good-usability recovery (the UI warning) emits SetMask(p,'Attentive').
+  A degrade m is ACTIVE if some SetMask(p,m) has no later recovery SetMask(p,'Attentive').
+  Every f_H emits RespMask(p, <the mask it responds as>); the restrictions force a degraded
+  response to a currently-active degrade, and an Attentive response only when NO degrade is
+  active. Events are bounded (OneSetMaskPerMask + the per-stressor Once* bounds), so proofs
+  terminate (≤2 s).
+
+  Design note: the "active until recovery" reading (rather than strict latest-mask-wins) is the
+  deliberate, tractable choice -- it forbids the spurious Busy->Attentive revert and keeps
+  recovery, while a *new* degrade simply adds an active mask rather than replacing the old one
+  (a safe over-approximation for worst-case analysis). Strict latest-wins needs a "no SetMask of
+  ANY mask between" clause whose all-traces search blows up once 3 stressors interleave.
+*/
+
+// at most one onset to a given mask per party -> SetMask events are bounded.
+restriction OneSetMaskPerMask:
+  "All p m #i #j. SetMask(p,m)@i & SetMask(p,m)@j ==> #i = #j"
+
+// a degraded response as mask m is valid only while m is ACTIVE: some SetMask(p,m) precedes it
+// with no recovery (SetMask(p,'Attentive')) since.
+restriction RespondDegradedRequiresActive:
+  "All p m #i. RespMask(p,m)@i & not(m = 'Attentive') ==>
+     (Ex #s. SetMask(p,m)@s & #s < #i
+             & not (Ex #r. SetMask(p,'Attentive')@r & #s < #r & #r < #i))"
+
+// an Attentive response is valid only when NO degrade is active: every non-Attentive SetMask
+// before it has a later recovery SetMask(p,'Attentive').
+restriction AttentiveRequiresNoActiveDegrade:
+  "All p #i. RespMask(p,'Attentive')@i ==>
+     not (Ex m #s. SetMask(p,m)@s & not(m = 'Attentive') & #s < #i
+                   & not (Ex #r. SetMask(p,'Attentive')@r & #s < #r & #r < #i))"

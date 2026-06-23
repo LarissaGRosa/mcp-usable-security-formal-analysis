@@ -1,0 +1,15 @@
+/*
+  core/masks/careless_approve.spthy -- f_H for the Careless mask, APPROVE_REQ action.
+  (Plan §3: Careless disengages -- here it TIMES OUT on the prompt rather than auto-approving.)
+
+  A Careless user dismisses the prompt without acting on it: Answered(pid) spends the prompt
+  slot (so it is not also handled by another mask) but NO !Approved is produced -- the approval
+  simply does not complete (safe-fail), mirroring Careless's CALC_SK timeout. This is the
+  persist-rule carry of Careless from the KDF into the approval step. Current-mask gated by
+  RespMask (core/transitions/mask_state.spthy) -> fires only while Careless is the current mask.
+*/
+
+rule Approve_Careless_timeout:
+    [ !Prompt(P, pid, kind) ]
+  --[ Approve(P, pid, 'Careless'), RespMask(P,'Careless'), Timeout(P), Answered(pid) ]->
+    [ ]

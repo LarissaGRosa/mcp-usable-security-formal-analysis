@@ -5,13 +5,15 @@
   'Hard' request, distraction can strike during ANY pending action -- it ignores the
   'complexity' field entirely. We read the persistent !Req (no consume-and-reproduce, so no
   sources loop; §6.2) merely to bind the participant P who currently has work in hand.
-  §6.3 single active stressor: OneDistractPerParty caps it to one Distract per party.
+  At onset it emits SetMask(P,'Careless') -- the f_M transition Attentive->Careless in the
+  persistent current-mask model (mask_state.spthy), timed to the stressor.
+  §6.3 single active stressor: OneDistractPerParty caps it to one onset per party.
 */
 
 rule Trigger_ExternalDistraction:
     [ !Req(P, rid, t, m, c) ]
-  --[ Distract(P) ]->
-    [ !Stressor(P,'ExternalDistraction') ]
+  --[ Distract(P), SetMask(P,'Careless') ]->
+    [ ]
 
 restriction OneDistractPerParty:
   "All p #i #j. Distract(p)@i & Distract(p)@j ==> #i = #j"
