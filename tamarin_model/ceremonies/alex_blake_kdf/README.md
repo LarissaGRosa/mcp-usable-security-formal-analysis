@@ -34,10 +34,20 @@ wellformedness note in the plan's Appendix A.
 | `07_anxiety_fearful.spthy` (`ToyCeremony_AnxietyFearful`) | SecurityAnxiety → **Fearful** → `abort` | inline + **AUTHORIZE** phase | **safe-fail** (active refusal / withdrawal) | `L7_*` (4) |
 | `08_timepressure_busy.spthy` (`ToyCeremony_TimePressureBusy`) | σ₃ TimePressure → **Busy** → `slip` | request/ack | **unsafe-success** (2nd route into Busy) | `L8_*` (4) |
 | `09_all_stressors.spthy` (`ToyCeremony_AllStressors`) | **all 6 stressors → all masks**, all phases + recovery | request/ack + approval + VERIFY + AUTHORIZE + warning | **maximal**: every failure still reachable; safety composes | `L9_*` (7) |
+| `10_inferred_load.spthy` (`ToyCeremony_InferredLoad`) | σ₁ **inferred** from `op='kdf'` → Busy → slip | `!Op` compute (operation-inference) | inference is sound (load only from a posed kdf) | `L10_*` (4) |
+| `11_inferred_abstraction.spthy` (`ToyCeremony_InferredAbstraction`) | σ₆ **inferred** from `op='verify'` → Naive → mistake | `!Op` verify (operation-inference) | accepts a tampered fingerprint | `L11_*` (4) |
+| `12_inferred_repeated_failure.spthy` (`ToyCeremony_InferredRepeatedFailure`) | σ₁₀ **inferred** from a prior `!Failed` → Careless | token-bounded ops (trace-inference) | **chaining** σ₁→σ₁₀ | `L12_*` (3) |
 
 Lemma prefixes `L0_`…`L3_` track the `00`…`03` ordinal; the merged experiment uses `LM_`, recovery `L5_`,
 the new ones `L6_`/`L7_`/`L8_`, and the maximal one `L9_`.
-All 48 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+All 59 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+
+**Two families.** Experiments 00–09 *declare* the stressor (a trigger wired to a named request).
+Experiments **10–12** *infer* it from the ceremony itself (the usability-analyzer goal): the step
+records the **objective operation** `!Op(P,rid,optag,…)` or the **trace** (`!Failed`), and a `core/`
+detector infers the stressor — operation-inference (10: σ₁ from `'kdf'`, 11: σ₆ from `'verify'`) and
+trace-inference (12: σ₁₀ from a prior failure, with chaining σ₁→σ₁₀). Detectors key on the operation
+**tag**, never by destructuring the term (MEMORY.md #11).
 
 **Built:** masks Attentive, Busy, Careless, Habituated, Naive, Fearful (Elder remains); stressors σ₁
 HighCognitiveLoad, σ₂ ExternalDistraction, σ₃ TimePressure, σ₆ Abstraction, σ₈ Habituation, SecurityAnxiety;

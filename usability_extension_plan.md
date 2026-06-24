@@ -1,6 +1,6 @@
 # Plan: Extending Usability Stressors, Mask Transitions, and Masks
 
-> **Status (2026-06-23): Phase 0 + Experiments 02–09 are built and proven** in `tamarin_model/` — 10 experiments, 48 lemmas, 6 masks, 6 stressors, 4 ceremony phases, recovery. See §0 for the implemented-vs-pending breakdown. The rest of this plan is the remaining roadmap.
+> **Status (2026-06-23): Phase 0 + Experiments 02–12 are built and proven** in `tamarin_model/` — 13 experiments, 59 lemmas, 6 masks, 6 stressors, 4 ceremony phases, recovery, and (Exp 10–12) a **stressor-inference** family where stressors are *derived from the ceremony's own operations/trace* rather than declared. See §0. The rest of this plan is the remaining roadmap.
 
 > **Scope.** Deliverables for the Ceremony Mask framework:
 > 0. **First toy ceremony + bootstrap experiment (new — start here).** A concrete `alex_blake_kdf` ceremony (§C0) plus a vertical-experiment build/test plan (§Phase 0) that proves *one stressor → one transition → one broken property* end-to-end **before** any breadth is added.
@@ -12,16 +12,18 @@
 
 ---
 
-## 0. Current state — implemented through Experiment 09 (2026-06-23)
+## 0. Current state — implemented through Experiment 12 (2026-06-23)
 
-> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Ten entry-point theories** — `00_baseline.spthy` … `09_all_stressors.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 48 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** (a user driven Busy on the KDF is still degraded at later phases) — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
+> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Thirteen entry-point theories** — `00_baseline.spthy` … `12_inferred_repeated_failure.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 59 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
+
+> **Two families of experiments.** Experiments **00–09** *declare* the stressor (a `Trigger_*` wired to a named request). Experiments **10–12** are the **stressor-inference** direction (the usability-analyzer goal): the ceremony records only the **objective operation** it poses to the human (`!Op(P, rid, optag, …)`) or the **trace** of what was handled/failed, and a `core/` detector *infers* the stressor — encoding the HCI knowledge (which operations are hard/abstract; repetition; prior failure) without any designer usability flag. Two sub-techniques: **operation-inference** (Exp 10 σ₁ from `op='kdf'`, Exp 11 σ₆ from `op='verify'`) and **trace-inference** (Exp 12 σ₁₀ from a prior `!Failed`, which also gives the first **chaining** edge σ₁→σ₁₀). NB: to stay clear of Tamarin's message-derivation check, detectors key on an operation **tag**, not by destructuring the term (MEMORY.md #11).
 
 **Built vs pending (✅ done · ⬜ pending):**
 
 | Layer | ✅ Built | ⬜ Pending |
 |---|---|---|
 | Masks (`f_H`) | `Attentive`, `Busy`, `Habituated`, `Careless`, `Naive`, `Fearful` | `Elder` |
-| Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₃ `TimePressure`, σ₆ `Abstraction`, σ₈ `Habituation`, `SecurityAnxiety` | σ₄ `MisleadingTerminology`, σ₅ `LackOfFeedback`, σ₇ `SecondaryTask`, σ₉ `AlertVolume`, σ₁₀ `RepeatedFailure` |
+| Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₃ `TimePressure`, σ₆ `Abstraction`, σ₈ `Habituation`, `SecurityAnxiety`, σ₁₀ `RepeatedFailure` (inferred); **σ₁/σ₆/σ₁₀ also have inference detectors** | σ₄ `MisleadingTerminology`, σ₅ `LackOfFeedback`, σ₇ `SecondaryTask`, σ₉ `AlertVolume` |
 | Transitions (`f_M`) | Attentive→Busy (σ₁ **&** σ₃), Attentive→Careless (σ₂), Attentive→Habituated (σ₈), Attentive→Naive (σ₆), Attentive→Fearful (SecurityAnxiety); **Habituated→Attentive recovery** (warning) | chaining (e.g. Naive→Fearful); escalation; other recovery edges |
 | Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout`, `mistake`, `abort`/withdrawal | `bypass` |
 | Action types | `CALC_SK`, `SEND_MSG`, `GEN_NONCE`, `APPROVE_REQ`, **`VERIFY_KEY`**, **`AUTHORIZE`** | `SET_POLICY` |
@@ -42,6 +44,9 @@
 | **07** anxiety_fearful | SecurityAnxiety → **Fearful** → `abort` (AUTHORIZE) | **safe-fail**: active refusal / withdrawal | four `L7_*` |
 | **08** timepressure_busy | σ₃ TimePressure → **Busy** → `slip` | **unsafe-success**: 2nd route into Busy | four `L8_*` |
 | **09** all_stressors | **all 6 stressors / 6 masks / 4 phases + recovery** | **maximal**: every failure reachable; safety composes | seven `L9_*` |
+| **10** inferred_load | σ₁ **inferred** from `op='kdf'` → Busy → slip | inference (operation); sound: load only from a posed kdf | four `L10_*` |
+| **11** inferred_abstraction | σ₆ **inferred** from `op='verify'` → Naive → mistake | inference (operation); accepts a tampered fingerprint | four `L11_*` |
+| **12** inferred_repeated_failure | σ₁₀ **inferred** from a prior `!Failed` → Careless | inference (trace) + **chaining** σ₁→σ₁₀ | three `L12_*` |
 
 **Key as-built deviations from the original plan text** (the prose below predates the build; trust the code where they differ):
 

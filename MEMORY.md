@@ -78,7 +78,17 @@
     `--precompute-only` first to clear sources/open-chains; the derivation check shows up under
     `--prove`/lint, so check both. (This is how Experiment 10 infers σ1 with no `Hard` flag.)
 
-12. **Outcome semantics proven so far** — three failure modes, keep them distinct:
+12. **Inferring stressors from the ceremony (the analyzer direction, Exp 10–12).** Record the
+    *objective* operation on a persistent fact `!Op(P,rid,optag,result)` and let a `core/` detector
+    key on the **optag** (`'kdf'`→load, `'verify'`→abstraction) — the HCI judgment lives in the
+    detector, not in a designer flag. For **trace-inference** (repetition / prior failure), read a
+    persistent marker (`!Did`, `!Failed`) and **bound the operation count with linear tokens**
+    (`protocol/op_tokens.spthy` seeds N `OpToken`s) so counting stays finite. The op f_H must
+    produce a *state* fact to advance (e.g. `OpResult`/`VerifyDone`) — emitting the finish token as
+    an *action* fact is an unproduced-LHS hard failure (caught at lint in Exp 11). Bound every
+    inferred onset once/party.
+
+13. **Outcome semantics proven so far** — three failure modes, keep them distinct:
     unsafe-success (Busy `slip` wrong key; Habituated/Busy `auto_approve`) vs safe-fail
     (Careless `timeout` / stall). Auto-approve requires a degraded mask, not specifically habituation
     (a persisted Busy user also auto-approves).
