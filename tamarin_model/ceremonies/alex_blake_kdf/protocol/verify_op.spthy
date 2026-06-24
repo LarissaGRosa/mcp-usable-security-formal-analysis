@@ -1,0 +1,24 @@
+/*
+  protocol/verify_op.spthy -- PROTOCOL LAYER, a step that POSES a VERIFY operation (objective).
+  Records that the ceremony asks Alex to verify a key fingerprint. Two sources:
+    * A_pose_verify_genuine  -- the real fingerprint (a fresh opaque token ~fp), marked !Genuine.
+    * A_pose_verify_tampered -- an adversary-supplied fingerprint (fp from In); TamperedFp marks it.
+  The core detector reads only the operation tag 'verify' to infer Abstraction. (Genuine is a
+  fresh opaque value -- no need for a hash symbol; the abstraction is that the human cannot
+  meaningfully check an opaque token.)
+*/
+
+rule A_pose_verify_genuine:
+    [ AlexInit(idA), Fr(~vid), Fr(~fp) ]
+  --[ PoseOp('Alex', 'verify'), GenuineFp('Alex', ~vid) ]->
+    [ !Op('Alex', ~vid, 'verify', ~fp), !Genuine(~vid), AlexAwaitResult(idA, ~vid) ]
+
+rule A_pose_verify_tampered:
+    [ AlexInit(idA), Fr(~vid), In(fp) ]
+  --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
+    [ !Op('Alex', ~vid, 'verify', fp), AlexAwaitResult(idA, ~vid) ]
+
+rule A_finish_verify:
+    [ AlexAwaitResult(idA, vid), VerifyDone('Alex', vid) ]
+  --[ Finish('Alex') ]->
+    [ ]

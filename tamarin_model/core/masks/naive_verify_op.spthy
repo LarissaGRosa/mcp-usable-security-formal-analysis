@@ -1,0 +1,11 @@
+/*
+  core/masks/naive_verify_op.spthy -- f_H for the Naive mask, VERIFY operation.
+  Naive accepts the fingerprint of ANY kind, including a tampered one (no !Genuine required) --
+  a Norman MISTAKE (confident wrong action from no mental model). RespMask(P,'Naive') is gated by
+  the current-mask restrictions: Naive must be the current mask (set by the inferred Abstraction).
+*/
+
+rule Verify_Op_Naive_mistake:
+    [ !Op(P, rid, 'verify', m) ]
+  --[ Verify(P, rid, 'Naive'), RespMask(P,'Naive'), Mistake(P, rid), Answered(rid) ]->
+    [ VerifyDone(P, rid) ]
