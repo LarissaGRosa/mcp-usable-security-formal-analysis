@@ -1,0 +1,17 @@
+/*
+  protocol/compute_op.spthy -- PROTOCOL LAYER, a step that POSES an operation to the human.
+  Objectively records the operation the ceremony asks Alex to perform -- here: produce the
+  session key kdf(Na,Nb). It carries the OPERATION TERM (not a usability judgment); the core
+  detectors read its structure to infer stressors. PoseOp(...) records the posed operation for
+  the lemmas (so "load was inferred" can be tied back to "a kdf computation was posed").
+*/
+
+rule A_pose_compute:
+    [ AlexInit(idA), Fr(~rid), Fr(~Na), In(Nb) ]
+  --[ PoseOp('Alex', 'kdf') ]->
+    [ !Op('Alex', ~rid, 'kdf', kdf(~Na, Nb)), AlexAwaitResult(idA, ~rid) ]
+
+rule A_finish_op:
+    [ AlexAwaitResult(idA, rid), OpResult('Alex', rid, m) ]
+  --[ Finish('Alex') ]->
+    [ ]

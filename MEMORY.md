@@ -70,7 +70,15 @@
     naive grep can grab the wrong "skip" line). **Every experiment must prove in ≤5 min** (currently
     all ≤2 s) — if one drifts past that, it's lesson (5) or (7), not a reason to raise the timeout.
 
-11. **Outcome semantics proven so far** — three failure modes, keep them distinct:
+11. **Don't pattern-match into a function term on a rule LHS.** A premise like `!Op(P,rid,kdf(x,y))`
+    trips Tamarin's **message-derivation check** ("variables x,y not derivable / unintended pattern
+    matching") — `check.py` reports FAIL even though every lemma verifies. To *infer a stressor from
+    the operation*, key the detector on an **objective operation TAG** (a public constant, e.g.
+    `!Op(P,rid,'kdf',m)`) and carry the result term `m` as an opaque variable. Run
+    `--precompute-only` first to clear sources/open-chains; the derivation check shows up under
+    `--prove`/lint, so check both. (This is how Experiment 10 infers σ1 with no `Hard` flag.)
+
+12. **Outcome semantics proven so far** — three failure modes, keep them distinct:
     unsafe-success (Busy `slip` wrong key; Habituated/Busy `auto_approve`) vs safe-fail
     (Careless `timeout` / stall). Auto-approve requires a degraded mask, not specifically habituation
     (a persisted Busy user also auto-approves).

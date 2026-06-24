@@ -1,0 +1,11 @@
+/*
+  core/masks/attentive_op.spthy -- f_H for the Attentive mask, generic OPERATION action.
+  An Attentive user performs the posed operation correctly: it produces exactly the required
+  term m (= what !Op asks for). RespMask(P,'Attentive') is gated by the current-mask
+  restrictions (core/transitions/mask_state.spthy).
+*/
+
+rule Op_Attentive:
+    [ !Op(P, rid, op, m) ]
+  --[ Calc(P,'Attentive'), RespMask(P,'Attentive'), Key(P, m), Answered(rid) ]->
+    [ OpResult(P, rid, m) ]

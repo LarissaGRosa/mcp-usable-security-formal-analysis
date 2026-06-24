@@ -1,0 +1,29 @@
+theory ToyCeremony_InferredLoad
+begin
+
+/*
+  ENTRY POINT -- Experiment 10 · sigma1 HighCognitiveLoad INFERRED from the operation.
+  Profile: a minimal ceremony where Alex is posed an operation (produce kdf(Na,Nb)); the stressor
+  is inferred from the operation's term structure by core/stressors/cognitive_load_inferred.spthy
+  -- no designer 'Hard' flag. Demonstrates the "usability analyzer" direction. Self-contained
+  (does not use ceremony.base / the KDF message flow).
+  Run: check.py --prove ceremonies/alex_blake_kdf/10_inferred_load.spthy
+*/
+
+#include "../../core/types.spthy"
+
+// -- human layer (inferred stressor + generic-operation f_H) --
+#include "../../core/stressors/cognitive_load_inferred.spthy"
+#include "../../core/masks/attentive_op.spthy"
+#include "../../core/masks/busy_op.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+
+// -- protocol: init (Alex) + the operation-posing step --
+#include "protocol/init.spthy"
+#include "protocol/compute_op.spthy"
+
+// -- experiment --
+#include "experiments/10_inferred_load.spthy"
+
+end
