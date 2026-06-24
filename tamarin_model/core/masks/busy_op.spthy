@@ -8,4 +8,5 @@
 rule Op_Busy_slip:
     [ !Op(P, rid, op, m), Fr(~wrong) ]
   --[ Calc(P,'Busy'), RespMask(P,'Busy'), Mask(P,'Attentive','Busy'), Slip(P), Key(P, ~wrong), Answered(rid) ]->
-    [ OpResult(P, rid, ~wrong) ]
+    [ OpResult(P, rid, ~wrong), !Failed(P) ]   // !Failed: an objective failure outcome, read by sigma10
+

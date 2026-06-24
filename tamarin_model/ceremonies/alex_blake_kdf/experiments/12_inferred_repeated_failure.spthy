@@ -1,0 +1,23 @@
+/*
+  experiments/12_inferred_repeated_failure.spthy -- Experiment 12 · sigma10 RepeatedFailure, INFERRED.
+  Trace-inference + CHAINING: on a first compute op the inferred sigma1 drives Busy -> slip (a
+  failure, !Failed); the inferred sigma10 reads that prior failure and escalates the user to
+  Careless, who then times out on the next op. No stressor is declared. Lemmas only.
+*/
+
+// sanity: an unstressed Attentive user computes correctly.
+lemma L12_attentive_ok:
+  exists-trace
+  "Ex k #i. Calc('Alex','Attentive')@i & Key('Alex',k)@i"
+
+// CHAINING: slip (failure) -> inferred sigma10 -> Careless timeout on a later op.
+lemma L12_failure_escalates_to_careless:
+  exists-trace
+  "Ex #f #r #t. Slip('Alex')@f & RepeatedFailure('Alex')@r & Timeout('Alex')@t
+                & #f < #r & #r < #t"
+
+// inference is GROUNDED: the escalation arises only after a prior failure (a slip).
+//                                                                   [Safety: inference soundness]
+lemma L12_escalation_requires_prior_failure:
+  all-traces
+  "All p #i. RepeatedFailure(p)@i ==> (Ex #f. Slip(p)@f & #f < #i)"

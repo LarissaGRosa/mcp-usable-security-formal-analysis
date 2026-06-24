@@ -1,0 +1,16 @@
+/*
+  core/stressors/repeated_failure_inferred.spthy -- f_U for sigma10 RepeatedFailure, INFERRED.
+  Trace-inference: a prior FAILURE outcome (the persistent !Failed marker any slip/mistake leaves)
+  means the user has already failed; they escalate to disengagement. At onset emits
+  SetMask(P,'Careless'). This is the first CHAINING edge -- e.g. inferred sigma1 slip -> sigma10.
+  Reads the persistent !Failed (read-only, no reproduce). OneRepeatedFailure bounds it once/party
+  (else it re-fires on the persistent !Failed and blows up mask_state.spthy's interval reasoning).
+*/
+
+rule Detect_RepeatedFailure:
+    [ !Failed(P) ]
+  --[ RepeatedFailure(P), SetMask(P,'Careless') ]->
+    [ ]
+
+restriction OneRepeatedFailure:
+  "All p #i #j. RepeatedFailure(p)@i & RepeatedFailure(p)@j ==> #i = #j"

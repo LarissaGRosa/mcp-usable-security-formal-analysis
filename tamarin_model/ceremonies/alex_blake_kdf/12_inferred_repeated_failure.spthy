@@ -1,0 +1,30 @@
+theory ToyCeremony_InferredRepeatedFailure
+begin
+
+/*
+  ENTRY POINT -- Experiment 12 · sigma10 RepeatedFailure INFERRED (trace-inference + chaining).
+  Token-bounded multi-op ceremony: the inferred sigma1 makes the first compute slip (a failure);
+  the inferred sigma10 reads that prior failure (!Failed) and escalates the user to Careless, who
+  times out on the next op. Both stressors inferred from the run -- no declared flags.
+  Run: check.py --prove ceremonies/alex_blake_kdf/12_inferred_repeated_failure.spthy
+*/
+
+#include "../../core/types.spthy"
+
+// -- human layer: inferred sigma1 (load) + inferred sigma10 (repeated failure) --
+#include "../../core/stressors/cognitive_load_inferred.spthy"
+#include "../../core/stressors/repeated_failure_inferred.spthy"
+#include "../../core/masks/attentive_op.spthy"
+#include "../../core/masks/busy_op.spthy"
+#include "../../core/masks/careless_op.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+
+// -- protocol: init + token-bounded multi-operation harness --
+#include "protocol/init.spthy"
+#include "protocol/op_tokens.spthy"
+
+// -- experiment --
+#include "experiments/12_inferred_repeated_failure.spthy"
+
+end
