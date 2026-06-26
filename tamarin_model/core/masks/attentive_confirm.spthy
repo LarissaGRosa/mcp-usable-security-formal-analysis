@@ -1,0 +1,11 @@
+/*
+  core/masks/attentive_confirm.spthy -- f_H for the Attentive mask handling a generic DECISION (confirm).
+  Handles the decision properly. Records !Did(P,did) -- a handled decision, read by the sigma9 density
+  detector -- and Handled(P,did) for lemmas. Answered(did) gates one response per decision
+  (answered_once). RespMask Attentive gated by mask_state (only while no degrade is active).
+*/
+
+rule Confirm_Attentive:
+    [ !Decision(P, did) ]
+  --[ Confirm(P, did, 'Attentive'), RespMask(P,'Attentive'), Handled(P, did), Answered(did) ]->
+    [ !Did(P, did), DecisionDone(P, did) ]

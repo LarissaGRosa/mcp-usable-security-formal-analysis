@@ -1,0 +1,12 @@
+/*
+  core/masks/careless_confirm.spthy -- f_H for the Careless mask handling a DECISION (confirm).
+  A fatigued / disengaged user times out on the decision (no proper handling). Still records
+  !Did + Handled (the decision was "dealt with" by dismissing it) and emits Timeout (the fatigue
+  outcome). RespMask Careless gated by mask_state (requires an active degrade -- here SetMask
+  Careless from the sigma9 detector), so this can only fire once decision fatigue has set in.
+*/
+
+rule Confirm_Careless_timeout:
+    [ !Decision(P, did) ]
+  --[ Confirm(P, did, 'Careless'), RespMask(P,'Careless'), Timeout(P), Handled(P, did), Answered(did) ]->
+    [ !Did(P, did), DecisionDone(P, did) ]

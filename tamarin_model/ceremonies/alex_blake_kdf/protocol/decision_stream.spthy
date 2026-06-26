@@ -1,0 +1,21 @@
+/*
+  protocol/decision_stream.spthy -- a token-bounded STREAM of decisions (Experiment 15, sigma9).
+  Seeds 4 decision tokens (bounded so the density count terminates), each posing a confirm
+  decision !Decision(P,did). Finish_decision closes a handled decision. No crypto / In -- these
+  are pure UI confirmations, so sources stay trivially clean.
+*/
+
+rule Seed_decisions:
+    [ AlexInit(idA) ]
+  --[ Seeded('Alex') ]->
+    [ DecToken(idA), DecToken(idA), DecToken(idA), DecToken(idA) ]
+
+rule Pose_decision:
+    [ DecToken(idA), Fr(~did) ]
+  --[ PoseDecision('Alex', ~did) ]->
+    [ !Decision('Alex', ~did), DecPending(idA, ~did) ]
+
+rule Finish_decision:
+    [ DecPending(idA, did), DecisionDone('Alex', did) ]
+  --[ DoneDecision('Alex', did) ]->
+    [ ]

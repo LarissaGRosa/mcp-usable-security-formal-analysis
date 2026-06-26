@@ -1,0 +1,26 @@
+/*
+  experiments/15_inferred_alert_volume.spthy -- Experiment 15 · sigma9 AlertVolume INFERRED.
+  Closes the fully-inferable tier. Decision DENSITY is read straight from the trace: once >=3
+  distinct decisions have been handled, the detector infers decision fatigue and degrades the user
+  to Careless -- no declared stressor. A later decision then times out (the fatigue outcome). Lemmas only.
+*/
+
+// sanity: with few decisions the user handles them attentively.
+lemma L15_attentive_ok:
+  exists-trace
+  "Ex p did #i. Confirm(p, did, 'Attentive')@i"
+
+// the inference bites: >=3 decisions -> AlertVolume -> a later decision times out (Careless).
+lemma L15_volume_causes_fatigue:
+  exists-trace
+  "Ex #a #t. AlertVolume('Alex')@a & Timeout('Alex')@t & #a < #t"
+
+// SOUNDNESS: fatigue is only inferred after >=3 DISTINCT decisions were handled before it.
+//                                                          [density inference is not spurious]
+lemma L15_fatigue_requires_three_decisions:
+  all-traces
+  "All p #i. AlertVolume(p)@i ==>
+     (Ex r1 r2 r3 #a #b #c.
+         Handled(p,r1)@a & Handled(p,r2)@b & Handled(p,r3)@c
+       & #a < #i & #b < #i & #c < #i
+       & not(r1 = r2) & not(r1 = r3) & not(r2 = r3))"

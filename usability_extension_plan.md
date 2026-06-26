@@ -1,6 +1,6 @@
 # Plan: Extending Usability Stressors, Mask Transitions, and Masks
 
-> **Status (2026-06-26): Phase 0 + Experiments 02–14 are built and proven** in `tamarin_model/` — 15 experiments, 66 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded; **B: task-mediated `mistake`**, Exp 13 / AWS-S3), the recovery edge, a **stressor-inference** family (Exp 10–12), and the first **failure↔fix pair** — σ₈ prompt-bombing (Exp 02) neutralized by a number-matching **`shutout`** mitigation (Exp 14). See §0. The rest of this plan is the remaining roadmap.
+> **Status (2026-06-26): Phase 0 + Experiments 02–15 are built and proven** in `tamarin_model/` — 16 experiments, 69 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded; **B: task-mediated `mistake`**, Exp 13 / AWS-S3), the recovery edge, a **complete stressor-inference tier** (Exp 10–12, 15 — σ₁/σ₆/σ₉/σ₁₀ all inferred from the trace), and the first **failure↔fix pair** — σ₈ prompt-bombing (Exp 02) neutralized by a number-matching **`shutout`** mitigation (Exp 14). See §0. The rest of this plan is the remaining roadmap.
 
 > **Scope.** Deliverables for the Ceremony Mask framework:
 > 0. **First toy ceremony + bootstrap experiment (new — start here).** A concrete `alex_blake_kdf` ceremony (§C0) plus a vertical-experiment build/test plan (§Phase 0) that proves *one stressor → one transition → one broken property* end-to-end **before** any breadth is added.
@@ -12,25 +12,25 @@
 
 ---
 
-## 0. Current state — implemented through Experiment 14 (2026-06-26)
+## 0. Current state — implemented through Experiment 15 (2026-06-26)
 
-> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Fifteen entry-point theories** — `00_baseline.spthy` … `14_shutout_mitigation.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 66 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
+> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Sixteen entry-point theories** — `00_baseline.spthy` … `15_inferred_alert_volume.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 69 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
 
-> **Two families of experiments.** Experiments **00–09** *declare* the stressor (a `Trigger_*` wired to a named request). Experiments **10–12** are the **stressor-inference** direction (the usability-analyzer goal): the ceremony records only the **objective operation** it poses to the human (`!Op(P, rid, optag, …)`) or the **trace** of what was handled/failed, and a `core/` detector *infers* the stressor — encoding the HCI knowledge (which operations are hard/abstract; repetition; prior failure) without any designer usability flag. Two sub-techniques: **operation-inference** (Exp 10 σ₁ from `op='kdf'`, Exp 11 σ₆ from `op='verify'`) and **trace-inference** (Exp 12 σ₁₀ from a prior `!Failed`, which also gives the first **chaining** edge σ₁→σ₁₀). NB: to stay clear of Tamarin's message-derivation check, detectors key on an operation **tag**, not by destructuring the term (MEMORY.md #11).
+> **Two families of experiments.** Experiments **00–09** *declare* the stressor (a `Trigger_*` wired to a named request). Experiments **10–12 and 15** are the **stressor-inference** direction (the usability-analyzer goal): the ceremony records only the **objective operation** it poses to the human (`!Op(P, rid, optag, …)`) or the **trace** of what was handled/failed, and a `core/` detector *infers* the stressor — encoding the HCI knowledge (which operations are hard/abstract; repetition; prior failure; decision density) without any designer usability flag. Two sub-techniques: **operation-inference** (Exp 10 σ₁ from `op='kdf'`, Exp 11 σ₆ from `op='verify'`) and **trace-inference** (Exp 12 σ₁₀ from a prior `!Failed`, which also gives the first **chaining** edge σ₁→σ₁₀; Exp 15 σ₉ from decision *density* — ≥3 handled decisions → fatigue → Careless). This **closes the fully-inferable tier** (σ₁/σ₆/σ₉/σ₁₀). NB: to stay clear of Tamarin's message-derivation check, detectors key on an operation **tag**, not by destructuring the term (MEMORY.md #11).
 
 **Built vs pending (✅ done · ⬜ pending):**
 
 | Layer | ✅ Built | ⬜ Pending |
 |---|---|---|
 | Masks (`f_H`) | `Attentive`, `Busy`, `Habituated`, `Careless`, `Naive`, `Fearful` | — (**`Elder` is out of scope** — see §3: it is a persona/trait, not a stressor-induced mask) |
-| Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₃ `TimePressure`, σ₄ `MisleadingTerminology` (**Pathway B**), σ₆ `Abstraction`, σ₈ `Habituation`, `SecurityAnxiety`, σ₁₀ `RepeatedFailure`; **σ₁/σ₆/σ₁₀ also have inference detectors** | σ₅ `LackOfFeedback`, σ₇ `SecondaryTask`, σ₉ `AlertVolume` |
+| Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₃ `TimePressure`, σ₄ `MisleadingTerminology` (**Pathway B**), σ₆ `Abstraction`, σ₈ `Habituation`, σ₉ `AlertVolume`, `SecurityAnxiety`, σ₁₀ `RepeatedFailure`; **σ₁/σ₆/σ₉/σ₁₀ also have inference detectors (tier complete)** | σ₅ `LackOfFeedback`, σ₇ `SecondaryTask` |
 | Transitions (`f_M`) | Attentive→Busy (σ₁ **&** σ₃), Attentive→Careless (σ₂), Attentive→Habituated (σ₈), Attentive→Naive (σ₆), Attentive→Fearful (SecurityAnxiety); **Habituated→Attentive recovery** (warning) | chaining (e.g. Naive→Fearful); escalation; other recovery edges |
 | **Failure pathways** | **A** (stressor→mask→degraded action) ✅; **B** (task-mediated `mistake`, NO mask change — Exp 13) ✅ | — |
 | Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout`, `mistake` (both pathways), `abort`/withdrawal | `bypass` |
 | Action types | `CALC_SK`, `SEND_MSG`, `GEN_NONCE`, `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, **`SET_POLICY`** | — |
 | Ceremony (𝒫) | C0 `alex_blake_kdf` + `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, `SET_POLICY` UI phases + recovery warning | payload flags (§6); further ceremonies |
 | Mitigations (§7) | **`shutout`** (number-matching MFA, `core/mitigations.spthy`, Exp 14) + the recovery warning (Exp 05) | `shutdown`, decaying `warning`, Yee protective flags; more failure↔fix pairs |
-| Experiments | `L0_*`…`L3_*`, `LM_*`, `L5_*`…`L13_*` (14 experiments) | one file per remaining phenomenon (§9) |
+| Experiments | `L0_*`…`L3_*`, `LM_*`, `L5_*`…`L15_*` (16 experiments) | one file per remaining phenomenon (§9) |
 
 **Experiments proven so far** (each is a profile `𝓔` in the §6a sense — a minimal `#include` set):
 
@@ -51,6 +51,7 @@
 | **12** inferred_repeated_failure | σ₁₀ **inferred** from a prior `!Failed` → Careless | inference (trace) + **chaining** σ₁→σ₁₀ | three `L12_*` |
 | **13** pathwayb_s3 | σ₄ MisleadingTerminology → **Attentive `mistake`** (SET_POLICY) | **Pathway B**: task-mediated, no mask change (AWS-S3) | four `L13_*` |
 | **14** shutout_mitigation | σ₈ habituation, but injected prompt is **number-matching `shutout`** | **fix verified**: user still habituates, breach neutralized (pairs with Exp 02) | three `L14_*` |
+| **15** inferred_alert_volume | σ₉ **inferred** from decision *density* (≥3 handled) → Careless | inference (trace); **closes the inferable tier**; fatigue → `timeout` | three `L15_*` |
 
 **Key as-built deviations from the original plan text** (the prose below predates the build; trust the code where they differ):
 
@@ -324,15 +325,15 @@ Literature-grounded catalogue. Shared implementation pattern (the same shape as 
 | ✅ | σ₆ | `Abstraction` **(Exp 06)** | the abstract VERIFY_KEY fingerprint check | Whitten #2, PGP | Attentive→Naive |
 | ⬜ | σ₇ | `SecondaryTask` | participant has a competing primary-task fact | Whitten #1, Shadow AI | →bypass (Busy/Careless) |
 | ✅ | σ₈ | `Habituation` **(Experiment 02)** | **N≥2 distinct prior Attentive `APPROVE_REQ`** (history-keyed: reads two persistent `!Approved` facts, distinctness via `Neq`) | BYU RS; MFA fatigue | Attentive→Habituated |
-| ⬜ | σ₉ | `AlertVolume`/`DecisionFatigue` | ≥k requests within the trace before a `Step` | MFA prompt-bombing | →Habituated/Careless |
-| ⬜ | σ₁₀ | `RepeatedFailure` | a prior `UsabilityFailure` exists earlier | — | Busy→Careless; Fearful→abandon |
+| ✅ | σ₉ | `AlertVolume`/`DecisionFatigue` **(Exp 15, inferred)** | **≥3 distinct decisions handled in the trace** (density, read from `!Did`) | MFA prompt-bombing | Attentive→Careless (fatigue) |
+| ✅ | σ₁₀ | `RepeatedFailure` **(Exp 12, inferred)** | a prior `!Failed` exists earlier (trace-inference) | — | Busy→Careless; chaining σ₁→σ₁₀ |
 
 **Three trigger flavours** (✅ flavours 1 and 3 now have working exemplars):
 1. **Type-keyed** (σ₁ ✅): trivial — match request type / `complexity`. σ₂ ✅ is the degenerate "any request" case.
 2. **Flag-keyed** (σ₃–σ₇ ⬜): needs the payload enrichment in §6. Unlocks five stressors at once.
-3. **History-keyed** (σ₈ ✅, σ₉/σ₁₀ ⬜): *count/existence* lives in the rule LHS (σ₈ reads two distinct persistent `!Approved` facts, distinctness forced by a `Neq` restriction), while *temporal ordering* lives in the **lemma** (`#a < #h`). The lesson held: don't try to encode the ordering in the multiset LHS — only the existence of the prior events.
+3. **History-keyed** (σ₈ ✅, σ₉ ✅ Exp 15, σ₁₀ ✅ Exp 12): *count/existence* lives in the rule LHS (σ₈ reads two distinct persistent `!Approved` facts, σ₉ three distinct `!Did`, distinctness forced by a `Neq` restriction), while *temporal ordering* lives in the **lemma** (`#a < #h`). The lesson held: don't try to encode the ordering in the multiset LHS — only the existence of the prior events.
 
-**Next stressors to implement (⬜):** σ₄ `MisleadingTerminology` (cleanest demonstration of **Pathway B** — a `mistake` from an *Attentive* user, no transition), σ₅ `LackOfFeedback`, σ₇ `SecondaryTask` (→ `bypass`), σ₁₀ `RepeatedFailure` (→ chaining, e.g. Naive→Fearful). *(✅ done: σ₁, σ₂, σ₃, σ₆, σ₈, SecurityAnxiety — Experiments 01–09.)*
+**Next stressors to implement (⬜):** σ₅ `LackOfFeedback` (→ Pathway B mistake; Gulf of Evaluation), σ₇ `SecondaryTask` (→ `bypass`). *(✅ done: σ₁, σ₂, σ₃, σ₄, σ₆, σ₈, σ₉, σ₁₀, SecurityAnxiety — Experiments 01–15; σ₁/σ₆/σ₉/σ₁₀ also inferred.)*
 
 ---
 
