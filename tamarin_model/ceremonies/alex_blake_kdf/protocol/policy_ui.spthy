@@ -1,0 +1,22 @@
+/*
+  protocol/policy_ui.spthy -- PROTOCOL LAYER, a SET_POLICY step (AWS-S3-style access config).
+  The ceremony is EXTENDED with the minimal supplied info the bare protocol cannot yield: the
+  option's terminology honesty (sigma4 MisleadingTerminology is presentation, not inferable from
+  the protocol structure). One step, either 'clear' or 'misleading'. MisleadingShown marks the
+  bad-design case for the lemmas.
+*/
+
+rule UI_policy_clear:
+    [ AlexInit(idA), Fr(~pid) ]
+  --[ PolicyPrompt('Alex', ~pid, 'clear') ]->
+    [ !PolicyReq('Alex', ~pid, 'clear'), PolicyPending(idA, ~pid) ]
+
+rule UI_policy_misleading:
+    [ AlexInit(idA), Fr(~pid) ]
+  --[ PolicyPrompt('Alex', ~pid, 'misleading'), MisleadingShown(~pid) ]->
+    [ !PolicyReq('Alex', ~pid, 'misleading'), PolicyPending(idA, ~pid) ]
+
+rule A_finish_policy:
+    [ PolicyPending(idA, pid), PolicyDone('Alex', pid) ]
+  --[ Finish('Alex') ]->
+    [ ]

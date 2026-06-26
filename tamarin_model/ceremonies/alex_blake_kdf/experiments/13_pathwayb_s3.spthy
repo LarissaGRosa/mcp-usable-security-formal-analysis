@@ -1,0 +1,28 @@
+/*
+  experiments/13_pathwayb_s3.spthy -- Experiment 13 · Pathway B (sigma4 MisleadingTerminology, S3).
+  The SECOND failure pathway: a task-mediated mistake with NO mask change. An Attentive user sets
+  a SAFE policy under clear terminology, but makes a MISTAKE (unsafe policy) under misleading
+  terminology -- the AWS S3 "Any Authenticated Users" case. Lemmas only.
+*/
+
+// good design: clear terminology -> an Attentive user sets the safe policy.
+lemma L13_clear_ok:
+  exists-trace
+  "Ex p pid #i. SetPolicy(p, pid, 'safe')@i"
+
+// PATHWAY B reachable: misleading terminology -> an ATTENTIVE user makes a mistake (unsafe policy).
+lemma L13_misleading_attentive_mistake:
+  exists-trace
+  "Ex p pid #i. Mistake(p,pid)@i & RespMask(p,'Attentive')@i & SetPolicy(p,pid,'unsafe')@i"
+
+// the defining Pathway-B property: the mistake is made by an Attentive user with NO mask change
+// (no degrade SetMask ever) -- it is task-mediated, not mask-mediated.
+lemma L13_mistake_is_task_mediated_not_mask:
+  all-traces
+  "All p pid #i. Mistake(p,pid)@i ==> ( RespMask(p,'Attentive')@i & not (Ex m #s. SetMask(p,m)@s) )"
+
+// the mistake is caused by misleading terminology; clear terminology never causes it.
+//                                                                   [Safety: bad design is necessary]
+lemma L13_mistake_requires_misleading:
+  all-traces
+  "All p pid #i. Mistake(p,pid)@i ==> (Ex #j. MisleadingShown(pid)@j)"
