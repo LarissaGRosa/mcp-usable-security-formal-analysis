@@ -1,0 +1,31 @@
+theory ToyCeremony_ShutoutMitigation
+begin
+
+/*
+  ENTRY POINT -- Experiment 14 · σ₈ shutout mitigation (the "fix verified" pair to Experiment 02).
+  Same building blocks as Experiment 02 (KDF baseline + approval phase + habituation), but the
+  injected prompt is number-matching (Shutout-protected, protocol/approval_shutout_ui.spthy) and
+  core/mitigations.spthy forbids auto_approve on a shutout prompt. The user still habituates, but
+  the prompt-bombing breach is neutralized.
+  Run: check.py --prove ceremonies/alex_blake_kdf/14_shutout_mitigation.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human layer --
+#include "../../core/masks/attentive_approve.spthy"
+#include "../../core/masks/habituated_approve.spthy"
+#include "../../core/stressors/habituation.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+#include "../../core/mitigations.spthy"                 // shutout: forbids auto_approve on a protected prompt
+
+// -- protocol: inline Msg3 (KDF baseline) + session + the shutout-protected approval phase --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
+#include "protocol/approval_shutout_ui.spthy"
+
+// -- experiment --
+#include "experiments/14_shutout_mitigation.spthy"
+
+end

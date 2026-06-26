@@ -1,0 +1,18 @@
+/*
+  protocol/approval_shutout_ui.spthy -- the APPROVE_REQ phase WITH the number-matching shutout
+  mitigation (Experiment 14). Mirrors approval_ui but the adversary-injected prompt is now
+  Shutout-protected (number-matching). Reads the persistent !Session (loop-free); needs session.spthy.
+    * UI_self_prompt   -- legitimate self prompt (drives habituation as before).
+    * UI_inject_shutout -- adversary-injected prompt, but protected: marks Shutout(pid), so
+      core/mitigations.spthy forbids auto_approve on it.
+*/
+
+rule UI_self_prompt:
+    [ !Session('Alex', idA, sk), Fr(~pid) ]
+  --[ PromptShown('Alex', ~pid, 'self') ]->
+    [ !Prompt('Alex', ~pid, 'self') ]
+
+rule UI_inject_shutout:
+    [ !Session('Alex', idA, sk), In(pid) ]
+  --[ PromptShown('Alex', pid, 'injected'), Injected(pid), Shutout(pid) ]->
+    [ !Prompt('Alex', pid, 'injected') ]

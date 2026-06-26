@@ -38,10 +38,11 @@ wellformedness note in the plan's Appendix A.
 | `11_inferred_abstraction.spthy` (`ToyCeremony_InferredAbstraction`) | σ₆ **inferred** from `op='verify'` → Naive → mistake | `!Op` verify (operation-inference) | accepts a tampered fingerprint | `L11_*` (4) |
 | `12_inferred_repeated_failure.spthy` (`ToyCeremony_InferredRepeatedFailure`) | σ₁₀ **inferred** from a prior `!Failed` → Careless | token-bounded ops (trace-inference) | **chaining** σ₁→σ₁₀ | `L12_*` (3) |
 | `13_pathwayb_s3.spthy` (`ToyCeremony_PathwayB_S3`) | σ₄ MisleadingTerminology → **Attentive `mistake`** (SET_POLICY) | **Pathway B**: task-mediated, no mask change | `L13_*` (4) |
+| `14_shutout_mitigation.spthy` (`ToyCeremony_ShutoutMitigation`) | σ₈ habituation + number-matching **`shutout`** on the injected prompt | **fix verified** (pairs with Exp 02): still habituates, breach neutralized | `L14_*` (3) |
 
 Lemma prefixes `L0_`…`L3_` track the `00`…`03` ordinal; the merged experiment uses `LM_`, recovery `L5_`,
 the new ones L6_–L9_, inference L10_–L12_, Pathway-B L13_.
-All 63 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+All 66 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
 
 **Three families.** Experiments 00–09 *declare* the stressor (a trigger wired to a named request).
 Experiments **10–12** *infer* it from the ceremony itself (the usability-analyzer goal): the step

@@ -1,0 +1,15 @@
+/*
+  core/mitigations.spthy -- first-class mitigations (Poka-Yoke / Yee, plan §7).
+  A mitigation CONSTRAINS what a degraded mask can emit, so a bad mask can no longer cause a bad
+  outcome. Realized as restrictions over outcome action facts + a protection marker the ceremony's
+  protective step deposits.
+
+  shutout (Poka-Yoke "Control"): the protocol rejects an unverified response, so even a bad mask
+  cannot emit a bad outcome. Number-matching MFA = shutout: approval now requires a value only an
+  ENGAGED user supplies, so a reflexive Habituated user cannot auto_approve a shutout-protected
+  prompt. The protective step marks the prompt Shutout(pid); this restriction forbids auto_approve
+  on it -- neutralizing the sigma8 prompt-bombing breach of Experiment 02.
+*/
+
+restriction ShutoutBlocksAutoApprove:
+  "All p pid #i. AutoApprove(p,pid)@i ==> not (Ex #j. Shutout(pid)@j)"

@@ -1,6 +1,6 @@
 # Plan: Extending Usability Stressors, Mask Transitions, and Masks
 
-> **Status (2026-06-26): Phase 0 + Experiments 02–13 are built and proven** in `tamarin_model/` — 14 experiments, 63 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded action; **B: task-mediated `mistake` with no mask change**, Exp 13 / AWS-S3), the recovery edge, and (Exp 10–12) a **stressor-inference** family. See §0. The rest of this plan is the remaining roadmap.
+> **Status (2026-06-26): Phase 0 + Experiments 02–14 are built and proven** in `tamarin_model/` — 15 experiments, 66 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded; **B: task-mediated `mistake`**, Exp 13 / AWS-S3), the recovery edge, a **stressor-inference** family (Exp 10–12), and the first **failure↔fix pair** — σ₈ prompt-bombing (Exp 02) neutralized by a number-matching **`shutout`** mitigation (Exp 14). See §0. The rest of this plan is the remaining roadmap.
 
 > **Scope.** Deliverables for the Ceremony Mask framework:
 > 0. **First toy ceremony + bootstrap experiment (new — start here).** A concrete `alex_blake_kdf` ceremony (§C0) plus a vertical-experiment build/test plan (§Phase 0) that proves *one stressor → one transition → one broken property* end-to-end **before** any breadth is added.
@@ -12,9 +12,9 @@
 
 ---
 
-## 0. Current state — implemented through Experiment 13 (2026-06-26)
+## 0. Current state — implemented through Experiment 14 (2026-06-26)
 
-> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Fourteen entry-point theories** — `00_baseline.spthy` … `13_pathwayb_s3.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 63 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
+> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Fifteen entry-point theories** — `00_baseline.spthy` … `14_shutout_mitigation.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 66 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
 
 > **Two families of experiments.** Experiments **00–09** *declare* the stressor (a `Trigger_*` wired to a named request). Experiments **10–12** are the **stressor-inference** direction (the usability-analyzer goal): the ceremony records only the **objective operation** it poses to the human (`!Op(P, rid, optag, …)`) or the **trace** of what was handled/failed, and a `core/` detector *infers* the stressor — encoding the HCI knowledge (which operations are hard/abstract; repetition; prior failure) without any designer usability flag. Two sub-techniques: **operation-inference** (Exp 10 σ₁ from `op='kdf'`, Exp 11 σ₆ from `op='verify'`) and **trace-inference** (Exp 12 σ₁₀ from a prior `!Failed`, which also gives the first **chaining** edge σ₁→σ₁₀). NB: to stay clear of Tamarin's message-derivation check, detectors key on an operation **tag**, not by destructuring the term (MEMORY.md #11).
 
@@ -28,7 +28,8 @@
 | **Failure pathways** | **A** (stressor→mask→degraded action) ✅; **B** (task-mediated `mistake`, NO mask change — Exp 13) ✅ | — |
 | Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout`, `mistake` (both pathways), `abort`/withdrawal | `bypass` |
 | Action types | `CALC_SK`, `SEND_MSG`, `GEN_NONCE`, `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, **`SET_POLICY`** | — |
-| Ceremony (𝒫) | C0 `alex_blake_kdf` + `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, `SET_POLICY` UI phases + recovery warning | payload flags (§6); other mitigations (§7); further ceremonies |
+| Ceremony (𝒫) | C0 `alex_blake_kdf` + `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, `SET_POLICY` UI phases + recovery warning | payload flags (§6); further ceremonies |
+| Mitigations (§7) | **`shutout`** (number-matching MFA, `core/mitigations.spthy`, Exp 14) + the recovery warning (Exp 05) | `shutdown`, decaying `warning`, Yee protective flags; more failure↔fix pairs |
 | Experiments | `L0_*`…`L3_*`, `LM_*`, `L5_*`…`L13_*` (14 experiments) | one file per remaining phenomenon (§9) |
 
 **Experiments proven so far** (each is a profile `𝓔` in the §6a sense — a minimal `#include` set):
@@ -49,6 +50,7 @@
 | **11** inferred_abstraction | σ₆ **inferred** from `op='verify'` → Naive → mistake | inference (operation); accepts a tampered fingerprint | four `L11_*` |
 | **12** inferred_repeated_failure | σ₁₀ **inferred** from a prior `!Failed` → Careless | inference (trace) + **chaining** σ₁→σ₁₀ | three `L12_*` |
 | **13** pathwayb_s3 | σ₄ MisleadingTerminology → **Attentive `mistake`** (SET_POLICY) | **Pathway B**: task-mediated, no mask change (AWS-S3) | four `L13_*` |
+| **14** shutout_mitigation | σ₈ habituation, but injected prompt is **number-matching `shutout`** | **fix verified**: user still habituates, breach neutralized (pairs with Exp 02) | three `L14_*` |
 
 **Key as-built deviations from the original plan text** (the prose below predates the build; trust the code where they differ):
 
@@ -413,7 +415,7 @@ and instantiates *only* the masks, stressors, and `f_M` edges among them that th
 The research is as much about *fixes* as failures. Modeling mitigations lets experiments verify **"does this design change neutralize this mask?"** — far more valuable than only demonstrating failure.
 
 **Poka-Yoke levels** (the `pokayoke` flag) constrain `f_H` outputs:
-- `shutout` (Control) — protocol rejects a malformed/unverified input, so even a bad mask **cannot** emit a bad outcome. *Number-matching MFA = shutout: the Habituated user can't `auto_approve` because approval now requires a value only an engaged user can supply.*
+- `shutout` (Control) ✅ **built (Exp 14, `core/mitigations.spthy`)** — protocol rejects a malformed/unverified input, so even a bad mask **cannot** emit a bad outcome. *Number-matching MFA = shutout: the Habituated user can't `auto_approve` because approval now requires a value only an engaged user can supply.* Realized as restriction `ShutoutBlocksAutoApprove` (`AutoApprove ⇒ ¬Shutout`); proven to neutralize the Exp-02 breach (`L14_shutout_blocks_injected`).
 - `shutdown` — protocol halts on unsafe parameters (Block Public Access auto-enabled for S3).
 - `warning` — non-blocking alert; weakest, and itself subject to habituation (σ₈) — the model can show warnings *decaying* in effectiveness.
 
@@ -447,7 +449,7 @@ One self-contained file per phenomenon (lemmas only, mirroring the Phase-0 exper
 
 | File | Demonstrates |
 |---|---|
-| `exp_mfa_fatigue.spthy` | repeated `APPROVE_REQ` → Habituation → Habituated → `auto_approve` ✅ *(failure half done as `02_habituated_mfa`)*; number-matching shutout neutralizes it ⬜ |
+| `exp_mfa_fatigue.spthy` ✅ **(complete pair)** | repeated `APPROVE_REQ` → Habituation → Habituated → `auto_approve` (failure = `02_habituated_mfa`); number-matching **shutout** neutralizes it (fix = `14_shutout_mitigation`) |
 | `exp_s3_mistake.spthy` ✅ **(= Experiment 13)** | misleading terminology → **Attentive** still emits `mistake` (Pathway B); clear terminology is safe. *(`shutdown`-mitigation half still ⬜.)* |
 | `exp_pgp_naive.spthy` | bare/abstract `VERIFY_KEY` → Naive → `mistake`; guided request keeps Naive correct |
 | `exp_ehr_workaround.spthy` | TimePressure + SecondaryTask → Busy → `bypass`; path-of-least-resistance removes the incentive |
@@ -469,7 +471,7 @@ One self-contained file per phenomenon (lemmas only, mirroring the Phase-0 exper
 **Phase 1 — Breadth (each step = a failure (and where possible mitigation) lemma set).**
 1. **Outcome vocabulary (§2)** — 🟡 *partial*: `slip`, `auto_approve`, `timeout` are built; `mistake`/`bypass`/`abort` still ⬜.
 2. **Mask-signature spec (§3)** — 🟡 *partial*: Attentive/Busy/Careless/Habituated/Naive/Fearful all built (the matrix is built only for the cells the experiments exercise); `Elder` ✂️ out of scope (§3).
-3. **Habituated + MFA** — 🟡 σ₈, Attentive→Habituated, `APPROVE_REQ`, `02_habituated_mfa` ✅; **shutout mitigation still ⬜**.
+3. **Habituated + MFA** — ✅ **complete pair**: σ₈, Attentive→Habituated, `APPROVE_REQ`, breach (`02_habituated_mfa`) **and** the number-matching `shutout` fix (`14_shutout_mitigation`).
    **3b. Distraction + Careless ✅** — σ₂, Attentive→Careless, `timeout`, `03_careless_distraction` (added; demonstrates safe-fail).
 4. **Pathway B + S3 — ✅ DONE (Exp 13).** σ₄ terminology-driven `mistake` in `f_H`, `SET_POLICY`, `13_pathwayb_s3` (= `exp_s3_mistake`). Remaining ⬜: σ₅ `LackOfFeedback` (same mechanism) and the `shutdown`/clear-terminology **mitigation half**.
 5. **Naive / Fearful ⬜** — guidance-conditional actions + trait start states (Naive, Fearful) and recovery edges. *(σ₃/σ₆ and the Attentive→Naive/Fearful edges are already built — Exp 06/07/08; Elder ✂️ out of scope, §3.)*
@@ -491,7 +493,7 @@ Each entry point is independently provable (`check.py --prove ceremonies/alex_bl
 1. 🟡 **Outcome set** — *partially adopted.* `slip`/`auto_approve`/`timeout` built; `mistake`/`bypass`/`abort` still to add. No merges so far.
 2. ✅ **Pathway B** — *resolved (Exp 13).* A `mistake` without a mask change, read from the request's `terminology` flag in `f_H` (`core/masks/attentive_policy.spthy`); proven task-mediated (`L13_mistake_is_task_mediated_not_mask`). σ₅ `LackOfFeedback` would reuse the same mechanism ⬜.
 3. ✅ **`Habituated` as a mask** — *resolved: yes* (Experiment 02). `Unmotivated` is still folded into Busy/Careless (no separate mask built).
-4. 🟡 **Mitigations first-class** — *partially resolved.* The first recovery/mitigation is built: a good-usability UI warning re-engages a Habituated user to Attentive (Experiment 05, `protocol/warning_ui.spthy` emitting `SetMask(P,'Attentive')`, with the gates in `core/transitions/mask_state.spthy`). Remaining ⬜: other recovery edges (Fearful, Naive), the `pokayoke` flag levels (shutout/shutdown/decaying warning), and a general `core/mitigations.spthy`.
+4. 🟡 **Mitigations first-class** — *substantially resolved.* Two mitigations built: the recovery warning (Exp 05) and the **`shutout`** Poka-Yoke (`core/mitigations.spthy`, Exp 14 — the first verified failure↔fix pair). Remaining ⬜: `shutdown` / decaying `warning` levels, Yee protective flags, recovery edges for Fearful/Naive, and more failure↔fix pairs (EHR, Shadow AI).
 5. ⬜ **Trait start states** — still open: **Naive** (and possibly Fearful) as a selectable initial mask in `protocol/init.spthy` (today `init.spthy` carries no mask, since the mask is derived). *(Elder is ✂️ out of scope — §3.)*
 
 ---
@@ -576,7 +578,7 @@ The entry reads as a manifest of what the experiment *is*: spine + deltas. *(Dir
 |---|---|---|---|
 | a **mask** *(behavior for an action it degrades)* | new `core/masks/<mask>_<actiongroup>.spthy` per action group | +1 file each | include line in each experiment using it |
 | a **stressor + its transition** | new file in `core/stressors/` (trigger rule that emits `SetMask(P,m)` at onset + a once-bound) — the `f_M` edge lives *in the trigger*; the shared `mask_state.spthy` gates do the rest | +1 file | include line only |
-| a **mitigation** *(⬜)* | a protocol step emitting a recovery `SetMask(P,'Attentive')` (cf. `protocol/warning_ui.spthy`); a general `core/mitigations.spthy` is still ⬜ | +0–1 file | +1 protocol file |
+| a **mitigation** *(⬜)* | a protocol step emitting a recovery `SetMask(P,'Attentive')` (cf. `protocol/warning_ui.spthy`); the general `core/mitigations.spthy` exists (shutout); add restrictions there | +0–1 file | +1 protocol file |
 | an **experiment** | new file in that ceremony's `experiments/` | no | +1 file |
 | a whole **new ceremony** | new folder under `ceremonies/` (init, messages, msg3 variant, entry, experiments) | **none** | +1 folder |
 | a new **action type** | one `<mask>_<newaction>.spthy` per participating mask + a request/advance rule in the ceremony | +1 file/mask | request + UI rule |
