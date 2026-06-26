@@ -40,12 +40,14 @@ wellformedness note in the plan's Appendix A.
 | `13_pathwayb_s3.spthy` (`ToyCeremony_PathwayB_S3`) | σ₄ MisleadingTerminology → **Attentive `mistake`** (SET_POLICY) | **Pathway B**: task-mediated, no mask change | `L13_*` (4) |
 | `14_shutout_mitigation.spthy` (`ToyCeremony_ShutoutMitigation`) | σ₈ habituation + number-matching **`shutout`** on the injected prompt | **fix verified** (pairs with Exp 02): still habituates, breach neutralized | `L14_*` (3) |
 | `15_inferred_alert_volume.spthy` (`ToyCeremony_InferredAlertVolume`) | σ₉ **inferred** from decision *density* (≥3 handled `!Did`) → Careless | trace-inference; **closes the inferable tier**; fatigue → `timeout` | `L15_*` (3) |
+| `16_shutdown_keyconfirm.spthy` (`ToyCeremony_ShutdownKeyConfirm`) | σ₁ Busy slip + **`shutdown`** key-confirmation (detect & halt) | **fix verified** (pairs with Exp 01): slip caught → `ShutdownAbort`, no completion | `L16_*` (3) |
+| `17_verify_shutout.spthy` (`ToyCeremony_VerifyShutout`) | σ₆ Abstraction→Naive + **`shutout`** auto-compare of the fingerprint | **fix verified** (pairs with Exp 06): still Naive, tampered accept impossible | `L17_*` (3) |
 
 Lemma prefixes `L0_`…`L3_` track the `00`…`03` ordinal; the merged experiment uses `LM_`, recovery `L5_`,
 the new ones L6_–L9_, inference L10_–L12_, Pathway-B L13_.
-All 69 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
+All 75 lemmas verify under Tamarin 1.12 / Maude 3.5.1, each experiment in **≤2 s**.
 
-**Three families.** Experiments 00–09 *declare* the stressor (a trigger wired to a named request).
+**Families of experiments.** Experiments 00–09 *declare* the stressor (a trigger wired to a named request).
 Experiments **10–12 and 15** *infer* it from the ceremony itself (the usability-analyzer goal): the step
 records the **objective operation** `!Op(P,rid,optag,…)` or the **trace** (`!Failed` / `!Did`), and a `core/`
 detector infers the stressor — operation-inference (10: σ₁ from `'kdf'`, 11: σ₆ from `'verify'`) and
@@ -53,12 +55,14 @@ trace-inference (12: σ₁₀ from a prior failure, with chaining σ₁→σ₁�
 handled decisions → fatigue). **This closes the fully-inferable tier (σ₁/σ₆/σ₉/σ₁₀).** Detectors key on the
 operation **tag**, never by destructuring the term (MEMORY.md #11). Experiment **13** is **Pathway B**: a
 task-mediated `mistake` an *Attentive* user makes from a misleading `terminology` flag — **no mask change**.
-Experiment **14** is the first **failure↔fix pair** — a number-matching `shutout` (`core/mitigations.spthy`)
-neutralizing the Exp-02 prompt-bombing breach.
+Experiments **14, 16, 17** are **failure↔fix pairs** spanning two Poka-Yoke levels: `shutout` (Control —
+14 number-matching MFA, 17 automatic fingerprint compare; both `core/mitigations.spthy`) and `shutdown`
+(Detection — 16 key-confirmation, halts on mismatch). Each fix lemma proves the *consequence* is
+neutralized while the mask/degradation still arises (pairing with Exp 02 / 06 / 01 respectively).
 
 **Built:** masks Attentive, Busy, Careless, Habituated, Naive, Fearful (Elder ✂️ out of scope — a persona, not a stressor-induced mask); stressors σ₁
 HighCognitiveLoad, σ₂ ExternalDistraction, σ₃ TimePressure, σ₄ MisleadingTerminology, σ₆ Abstraction, σ₈ Habituation, σ₉ AlertVolume, SecurityAnxiety, σ₁₀ RepeatedFailure;
-phases CALC_SK, APPROVE_REQ, VERIFY_KEY, AUTHORIZE, SET_POLICY; outcomes slip, auto_approve, timeout, mistake (Pathways A & B), abort; mitigations shutout + recovery warning.
+phases CALC_SK, APPROVE_REQ, VERIFY_KEY, AUTHORIZE, SET_POLICY; outcomes slip, auto_approve, timeout, mistake (Pathways A & B), abort; mitigations `shutout` (Exp 14, 17) + `shutdown` (Exp 16) + recovery warning (Exp 05).
 
 **Persistent current mask (across action types).** The mask is not re-derived per action: each
 stressor emits `SetMask(p,m)` at onset and the UI warning emits `SetMask(p,'Attentive')`; the gates in

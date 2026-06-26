@@ -1,0 +1,24 @@
+/*
+  experiments/17_verify_shutout.spthy -- Experiment 17 · the sigma6 verification shutout MITIGATION.
+  The "fix verified" half of the abstraction pair: same Abstraction -> Naive as Experiment 06, but
+  the fingerprint comparison is now done by the device (core/mitigations.spthy VerifyShutout). The
+  user still becomes Naive, yet a tampered fingerprint can no longer be accepted -- Experiment 06's
+  mistake (L6_abstraction_causes_mistake) is neutralized. Lemmas only.
+*/
+
+// sanity: an Attentive user verifies a genuine fingerprint.
+lemma L17_attentive_ok:
+  exists-trace
+  "Ex p vid #i. Verify(p, vid, 'Attentive')@i"
+
+// the mitigation does NOT prevent the cognitive state: the user still becomes Naive
+// (and may still rubber-stamp a GENUINE fingerprint -- harmlessly).
+lemma L17_naive_still_arises:
+  exists-trace
+  "Ex p vid #i. Verify(p, vid, 'Naive')@i"
+
+// THE FIX: a Naive mistake can no longer land on a TAMPERED fingerprint -- the device refuses it.
+//                                                        [mitigation neutralizes the breach]
+lemma L17_no_tampered_mistake:
+  all-traces
+  "All p vid #o. Mistake(p,vid)@o ==> not (Ex #j. Tampered(vid)@j)"

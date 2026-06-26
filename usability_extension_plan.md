@@ -1,6 +1,6 @@
 # Plan: Extending Usability Stressors, Mask Transitions, and Masks
 
-> **Status (2026-06-26): Phase 0 + Experiments 02–15 are built and proven** in `tamarin_model/` — 16 experiments, 69 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded; **B: task-mediated `mistake`**, Exp 13 / AWS-S3), the recovery edge, a **complete stressor-inference tier** (Exp 10–12, 15 — σ₁/σ₆/σ₉/σ₁₀ all inferred from the trace), and the first **failure↔fix pair** — σ₈ prompt-bombing (Exp 02) neutralized by a number-matching **`shutout`** mitigation (Exp 14). See §0. The rest of this plan is the remaining roadmap.
+> **Status (2026-06-26): Phase 0 + Experiments 02–17 are built and proven** in `tamarin_model/` — 18 experiments, 75 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded; **B: task-mediated `mistake`**, Exp 13 / AWS-S3), the recovery edge, a **complete stressor-inference tier** (Exp 10–12, 15 — σ₁/σ₆/σ₉/σ₁₀ all inferred from the trace), and **three failure↔fix pairs** spanning two Poka-Yoke levels — `shutout` (σ₈ Exp 02↔14, σ₆ Exp 06↔17) and `shutdown` (σ₁ Exp 01↔16). See §0. The rest of this plan is the remaining roadmap.
 
 > **Scope.** Deliverables for the Ceremony Mask framework:
 > 0. **First toy ceremony + bootstrap experiment (new — start here).** A concrete `alex_blake_kdf` ceremony (§C0) plus a vertical-experiment build/test plan (§Phase 0) that proves *one stressor → one transition → one broken property* end-to-end **before** any breadth is added.
@@ -12,9 +12,9 @@
 
 ---
 
-## 0. Current state — implemented through Experiment 15 (2026-06-26)
+## 0. Current state — implemented through Experiment 17 (2026-06-26)
 
-> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Sixteen entry-point theories** — `00_baseline.spthy` … `15_inferred_alert_volume.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 69 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
+> **What runs today.** `tamarin_model/` holds a working model in the Appendix A two-layer layout. **Eighteen entry-point theories** — `00_baseline.spthy` … `17_verify_shutout.spthy` — each `#include` a shared `ceremony.base.spthy` spine plus only their own deltas (from `core/` + `protocol/`). **All 75 lemmas verify** under `tamarin-prover --prove` (Tamarin 1.12 / Maude 3.5.1), each experiment in **≤2 s**. The mask is a **persistent current mask that carries across action types** — `core/transitions/mask_state.spthy`. Verify with `.claude/skills/model-tamarin/check.py --prove <entry>.spthy`; per-ceremony usage is in `ceremonies/alex_blake_kdf/README.md`.
 
 > **Two families of experiments.** Experiments **00–09** *declare* the stressor (a `Trigger_*` wired to a named request). Experiments **10–12 and 15** are the **stressor-inference** direction (the usability-analyzer goal): the ceremony records only the **objective operation** it poses to the human (`!Op(P, rid, optag, …)`) or the **trace** of what was handled/failed, and a `core/` detector *infers* the stressor — encoding the HCI knowledge (which operations are hard/abstract; repetition; prior failure; decision density) without any designer usability flag. Two sub-techniques: **operation-inference** (Exp 10 σ₁ from `op='kdf'`, Exp 11 σ₆ from `op='verify'`) and **trace-inference** (Exp 12 σ₁₀ from a prior `!Failed`, which also gives the first **chaining** edge σ₁→σ₁₀; Exp 15 σ₉ from decision *density* — ≥3 handled decisions → fatigue → Careless). This **closes the fully-inferable tier** (σ₁/σ₆/σ₉/σ₁₀). NB: to stay clear of Tamarin's message-derivation check, detectors key on an operation **tag**, not by destructuring the term (MEMORY.md #11).
 
@@ -29,8 +29,8 @@
 | Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout`, `mistake` (both pathways), `abort`/withdrawal | `bypass` |
 | Action types | `CALC_SK`, `SEND_MSG`, `GEN_NONCE`, `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, **`SET_POLICY`** | — |
 | Ceremony (𝒫) | C0 `alex_blake_kdf` + `APPROVE_REQ`, `VERIFY_KEY`, `AUTHORIZE`, `SET_POLICY` UI phases + recovery warning | payload flags (§6); further ceremonies |
-| Mitigations (§7) | **`shutout`** (number-matching MFA, `core/mitigations.spthy`, Exp 14) + the recovery warning (Exp 05) | `shutdown`, decaying `warning`, Yee protective flags; more failure↔fix pairs |
-| Experiments | `L0_*`…`L3_*`, `LM_*`, `L5_*`…`L15_*` (16 experiments) | one file per remaining phenomenon (§9) |
+| Mitigations (§7) | **`shutout`** (number-matching MFA Exp 14; automatic fingerprint compare Exp 17 — both `core/mitigations.spthy`), **`shutdown`** (key-confirmation Exp 16), recovery `warning` (Exp 05) | decaying `warning`, Yee protective flags; EHR/Shadow-AI pairs |
+| Experiments | `L0_*`…`L3_*`, `LM_*`, `L5_*`…`L17_*` (18 experiments) | one file per remaining phenomenon (§9) |
 
 **Experiments proven so far** (each is a profile `𝓔` in the §6a sense — a minimal `#include` set):
 
@@ -52,6 +52,8 @@
 | **13** pathwayb_s3 | σ₄ MisleadingTerminology → **Attentive `mistake`** (SET_POLICY) | **Pathway B**: task-mediated, no mask change (AWS-S3) | four `L13_*` |
 | **14** shutout_mitigation | σ₈ habituation, but injected prompt is **number-matching `shutout`** | **fix verified**: user still habituates, breach neutralized (pairs with Exp 02) | three `L14_*` |
 | **15** inferred_alert_volume | σ₉ **inferred** from decision *density* (≥3 handled) → Careless | inference (trace); **closes the inferable tier**; fatigue → `timeout` | three `L15_*` |
+| **16** shutdown_keyconfirm | σ₁ Busy slip, but a **key-confirmation** detects it | **`shutdown` fix** (pairs with Exp 01): slip caught → abort, no completion | three `L16_*` |
+| **17** verify_shutout | σ₆ Abstraction→Naive, but the device **auto-compares** the fingerprint | **`shutout` fix** (pairs with Exp 06): still Naive, tampered accept impossible | three `L17_*` |
 
 **Key as-built deviations from the original plan text** (the prose below predates the build; trust the code where they differ):
 
@@ -416,9 +418,9 @@ and instantiates *only* the masks, stressors, and `f_M` edges among them that th
 The research is as much about *fixes* as failures. Modeling mitigations lets experiments verify **"does this design change neutralize this mask?"** — far more valuable than only demonstrating failure.
 
 **Poka-Yoke levels** (the `pokayoke` flag) constrain `f_H` outputs:
-- `shutout` (Control) ✅ **built (Exp 14, `core/mitigations.spthy`)** — protocol rejects a malformed/unverified input, so even a bad mask **cannot** emit a bad outcome. *Number-matching MFA = shutout: the Habituated user can't `auto_approve` because approval now requires a value only an engaged user can supply.* Realized as restriction `ShutoutBlocksAutoApprove` (`AutoApprove ⇒ ¬Shutout`); proven to neutralize the Exp-02 breach (`L14_shutout_blocks_injected`).
-- `shutdown` — protocol halts on unsafe parameters (Block Public Access auto-enabled for S3).
-- `warning` — non-blocking alert; weakest, and itself subject to habituation (σ₈) — the model can show warnings *decaying* in effectiveness.
+- `shutout` (Control) ✅ **built (Exp 14 & 17, `core/mitigations.spthy`)** — protocol rejects an unverified response, so even a bad mask **cannot** emit a bad outcome. *Number-matching MFA = shutout: the Habituated user can't `auto_approve` because approval requires a value only an engaged user can supply* (`ShutoutBlocksAutoApprove`, `AutoApprove ⇒ ¬Shutout`; neutralizes Exp 02, `L14_shutout_blocks_injected`). *Automatic fingerprint comparison = shutout for VERIFY_KEY: a Naive user can't accept a tampered fingerprint* (`VerifyShutout`, `Accept ⇒ ¬Tampered`; neutralizes Exp 06, `L17_no_tampered_mistake`).
+- `shutdown` (Detection) ✅ **built (Exp 16)** — protocol detects the error and **halts** before harm. *Key-confirmation = shutdown for CALC_SK: a Busy slip produces a non-`kdf` key, so the confirmation fails and the ceremony aborts (`ShutdownAbort`) instead of completing with the wrong key* — turning Exp 01's unsafe-success into a safe-fail (`L16_no_slip_completion`). Restrictions kept local (a global "no Finish without confirmation" would break every plain-finish experiment).
+- `warning` (Attention) 🟡 — the recovery warning (Exp 05) re-engages a Habituated user; a non-blocking alert is the weakest level, itself subject to habituation (σ₈) — the model can show warnings *decaying* in effectiveness (⬜).
 
 **Yee guidelines** become protective request flags / recovery triggers:
 - *Path of Least Resistance* — if the secure action is also the easy one, `SecondaryTask`/bypass stressors don't fire.
@@ -494,7 +496,7 @@ Each entry point is independently provable (`check.py --prove ceremonies/alex_bl
 1. 🟡 **Outcome set** — *partially adopted.* `slip`/`auto_approve`/`timeout` built; `mistake`/`bypass`/`abort` still to add. No merges so far.
 2. ✅ **Pathway B** — *resolved (Exp 13).* A `mistake` without a mask change, read from the request's `terminology` flag in `f_H` (`core/masks/attentive_policy.spthy`); proven task-mediated (`L13_mistake_is_task_mediated_not_mask`). σ₅ `LackOfFeedback` would reuse the same mechanism ⬜.
 3. ✅ **`Habituated` as a mask** — *resolved: yes* (Experiment 02). `Unmotivated` is still folded into Busy/Careless (no separate mask built).
-4. 🟡 **Mitigations first-class** — *substantially resolved.* Two mitigations built: the recovery warning (Exp 05) and the **`shutout`** Poka-Yoke (`core/mitigations.spthy`, Exp 14 — the first verified failure↔fix pair). Remaining ⬜: `shutdown` / decaying `warning` levels, Yee protective flags, recovery edges for Fearful/Naive, and more failure↔fix pairs (EHR, Shadow AI).
+4. ✅ **Mitigations first-class** — *resolved as a pattern.* Three **failure↔fix pairs** are built and proven, spanning two Poka-Yoke levels: **`shutout`** (Control — σ₈ number-matching MFA Exp 02↔14; σ₆ automatic fingerprint compare Exp 06↔17; both `core/mitigations.spthy`) and **`shutdown`** (Detection — σ₁ key-confirmation Exp 01↔16, halts on mismatch), plus the recovery `warning` (Exp 05). Each fix lemma proves the *consequence* is neutralized while the mask/degradation still arises. Remaining ⬜ (breadth, not mechanism): decaying `warning`, Yee protective flags, recovery edges for Fearful/Naive, and the EHR/Shadow-AI `bypass` pairs.
 5. ⬜ **Trait start states** — still open: **Naive** (and possibly Fearful) as a selectable initial mask in `protocol/init.spthy` (today `init.spthy` carries no mask, since the mask is derived). *(Elder is ✂️ out of scope — §3.)*
 
 ---

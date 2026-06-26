@@ -1,0 +1,28 @@
+theory ToyCeremony_ShutdownKeyConfirm
+begin
+
+/*
+  ENTRY POINT -- Experiment 16 · sigma1 shutdown key-confirmation (the "fix verified" pair to Exp 01).
+  Same building blocks as Experiment 01 (request/ack Msg3 + Busy-on-CALC_SK under sigma1), but the
+  request/ack variant is replaced by msg3_request_confirmed: Alex confirms the key against the
+  expected derivation and the ceremony aborts on mismatch. The Busy slip still occurs, but it can
+  no longer complete the ceremony.
+  Run: check.py --prove ceremonies/alex_blake_kdf/16_shutdown_keyconfirm.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human layer (same as Experiment 01) --
+#include "../../core/masks/attentive_calc.spthy"
+#include "../../core/masks/busy_calc.spthy"
+#include "../../core/stressors/cognitive_load.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+
+// -- Msg3 variant WITH the shutdown key-confirmation --
+#include "protocol/msg3_request_confirmed.spthy"
+
+// -- experiment --
+#include "experiments/16_shutdown_keyconfirm.spthy"
+
+end

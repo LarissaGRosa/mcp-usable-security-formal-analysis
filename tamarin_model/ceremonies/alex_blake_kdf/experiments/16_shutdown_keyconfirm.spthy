@@ -1,0 +1,23 @@
+/*
+  experiments/16_shutdown_keyconfirm.spthy -- Experiment 16 · the sigma1 shutdown MITIGATION.
+  The "fix verified" half of the cognitive-load pair: same Busy slip as Experiment 01, but a
+  key-confirmation step DETECTS the wrong key and HALTS. The slip still happens, yet the ceremony
+  can no longer complete with it -- Experiment 01's unsafe-success (L1_unsafe_completion) is turned
+  into a safe-fail (ShutdownAbort). Lemmas only.
+*/
+
+// sanity: an Attentive user computes the right key, it is confirmed, and the ceremony finishes.
+lemma L16_attentive_ok:
+  exists-trace
+  "Ex #c #f. KeyConfirmed('Alex')@c & Finish('Alex')@f"
+
+// the shutdown bites: a Busy slip is detected and the ceremony aborts (no completion).
+lemma L16_shutdown_catches_slip:
+  exists-trace
+  "Ex #s #a. Slip('Alex')@s & ShutdownAbort('Alex')@a"
+
+// THE FIX: a slip can never lead to completion -- it is always caught and halted.
+//                                       [unsafe-success of Exp 01 becomes safe-fail]
+lemma L16_no_slip_completion:
+  all-traces
+  "not (Ex #s #f. Slip('Alex')@s & Finish('Alex')@f)"

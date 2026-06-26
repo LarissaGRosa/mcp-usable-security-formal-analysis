@@ -1,0 +1,31 @@
+theory ToyCeremony_VerifyShutout
+begin
+
+/*
+  ENTRY POINT -- Experiment 17 · sigma6 verification shutout (the "fix verified" pair to Exp 06).
+  Same building blocks as Experiment 06 (KDF baseline inline + VERIFY_KEY phase under sigma6
+  Abstraction -> Naive), plus core/mitigations.spthy: the device compares the fingerprint, so a
+  tampered one cannot be accepted regardless of mask. The user still becomes Naive, but the mistake
+  can no longer land on a tampered fingerprint.
+  Run: check.py --prove ceremonies/alex_blake_kdf/17_verify_shutout.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human layer (same as Experiment 06) --
+#include "../../core/masks/attentive_verify.spthy"
+#include "../../core/masks/naive_verify.spthy"
+#include "../../core/stressors/abstraction.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+#include "../../core/mitigations.spthy"            // verify shutout: no accept of a tampered fingerprint
+
+// -- protocol: inline Msg3 (KDF baseline) + session + the VERIFY_KEY phase --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
+#include "protocol/verify_ui.spthy"
+
+// -- experiment --
+#include "experiments/17_verify_shutout.spthy"
+
+end
