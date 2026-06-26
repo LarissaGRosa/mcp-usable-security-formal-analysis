@@ -49,7 +49,7 @@ detector infers the stressor — operation-inference (10: σ₁ from `'kdf'`, 11
 trace-inference (12: σ₁₀ from a prior failure, with chaining σ₁→σ₁₀). Detectors key on the operation
 **tag**, never by destructuring the term (MEMORY.md #11).
 
-**Built:** masks Attentive, Busy, Careless, Habituated, Naive, Fearful (Elder remains); stressors σ₁
+**Built:** masks Attentive, Busy, Careless, Habituated, Naive, Fearful (Elder ✂️ out of scope — a persona, not a stressor-induced mask); stressors σ₁
 HighCognitiveLoad, σ₂ ExternalDistraction, σ₃ TimePressure, σ₆ Abstraction, σ₈ Habituation, SecurityAnxiety;
 phases CALC_SK, APPROVE_REQ, VERIFY_KEY, AUTHORIZE; outcomes slip, auto_approve, timeout, mistake, abort.
 
@@ -62,12 +62,13 @@ APPROVE_REQ until a recovery. So a user driven **Busy** on the KDF stays degrade
 strict latest-wins blows up on the merged experiment).
 
 **Experiment 05 adds the first way BACK to Attentive** (plan §5/§7 recovery): the Habituated mask
-persists across prompts (monotone `!Stressor`) until a good-usability UI warning (`Reengage`) re-engages
-the user. Modelled as derived event-ordering in `core/transitions/recovery.spthy` (no stored mask). The
-state-establishing events are bounded to once per party (`OnceHabituate`, `OnceReengage`) — without that
-the warning/habituation rules re-fire unboundedly and the recovery gates' interval reasoning never
-terminates; the bound keeps it at ≤2 s and is semantically a no-op (the persistent `!Stressor` already
-makes re-emission redundant). Modelling repeated habituate↔recover *cycles* would relax those bounds.
+persists across prompts until a good-usability UI warning (`protocol/warning_ui.spthy`) emits a recovery
+`SetMask('Alex','Attentive')` that supersedes the degrade — read by the current-mask gates in
+`core/transitions/mask_state.spthy` (no stored mask, no separate recovery file). The `SetMask`-latching
+events are bounded once per party (`OnceHabituate`, `OneSetMaskPerMask`) — without that the
+warning/habituation rules re-fire unboundedly and the gates' interval reasoning never terminates; the
+bound keeps it ≤2 s and is semantically a no-op. Modelling repeated habituate↔recover *cycles* would
+relax those bounds.
 
 **Experiment 04 is the deliberate multi-stressor "worst-case" profile** (machinery §6a/§6.5):
 it enables all three stressors and four masks on one human to study how they *interact* —

@@ -22,7 +22,7 @@
 
 | Layer | ✅ Built | ⬜ Pending |
 |---|---|---|
-| Masks (`f_H`) | `Attentive`, `Busy`, `Habituated`, `Careless`, `Naive`, `Fearful` | `Elder` |
+| Masks (`f_H`) | `Attentive`, `Busy`, `Habituated`, `Careless`, `Naive`, `Fearful` | — (**`Elder` is out of scope** — see §3: it is a persona/trait, not a stressor-induced mask) |
 | Stressors (`f_U`) | σ₁ `HighCognitiveLoad`, σ₂ `ExternalDistraction`, σ₃ `TimePressure`, σ₆ `Abstraction`, σ₈ `Habituation`, `SecurityAnxiety`, σ₁₀ `RepeatedFailure` (inferred); **σ₁/σ₆/σ₁₀ also have inference detectors** | σ₄ `MisleadingTerminology`, σ₅ `LackOfFeedback`, σ₇ `SecondaryTask`, σ₉ `AlertVolume` |
 | Transitions (`f_M`) | Attentive→Busy (σ₁ **&** σ₃), Attentive→Careless (σ₂), Attentive→Habituated (σ₈), Attentive→Naive (σ₆), Attentive→Fearful (SecurityAnxiety); **Habituated→Attentive recovery** (warning) | chaining (e.g. Naive→Fearful); escalation; other recovery edges |
 | Outcomes | valid (`kdf`), `slip`, `auto_approve`, `timeout`, `mistake`, `abort`/withdrawal | `bypass` |
@@ -222,7 +222,7 @@ Each later construct is "one more experiment," reusing the same three-kind test 
 
 - **Experiment 02 — ✅ DONE (built differently than first sketched).** σ₈ `Habituation` → `Habituated` → `auto_approve`, on a new `APPROVE_REQ` UI phase (`protocol/approval_ui.spthy`): a persistent `!Session` issues repeated prompts; an Attentive user verifies (`'self'` prompts only) while a habituated one auto-approves *any* prompt — including an adversary-`'injected'` one (the prompt-bombing breach). σ₈ is **history-keyed**: it fires after ≥2 distinct prior Attentive approvals. Five `L2_*` lemmas (sanity, breach-reachable, causality, derived-mask, and the Attentive-never-injected contrast). The **`shutout` mitigation half is still ⬜ pending** — Experiment 02 proves the failure; the number-matching fix is a later experiment (needs §7).
 - **Experiment 03 — ✅ DONE (this is the distraction/Careless experiment, *not* Pathway B).** σ₂ `ExternalDistraction` → `Careless` → `timeout`, reusing the Experiment-01 CALC_SK request flow. Establishes the **safe-fail** semantics (the ceremony stalls; Careless emits no key) versus Experiment 01/2's unsafe-success. Five `L3_*` lemmas. **Pathway B is now ⬜ unbuilt** and reassigned to a future experiment (see §10).
-- **Experiments 04–09 — ✅ DONE.** Multi-stressor (04), recovery (05), Abstraction→Naive (06), SecurityAnxiety→Fearful (07), TimePressure→Busy (08), and the maximal all-stressors ceremony (09). **Highest-value remaining ⬜:** **Pathway B** (σ₄ `MisleadingTerminology` → `mistake` from an *Attentive* user, no transition — the second failure pathway), **chaining** (σ₁₀ RepeatedFailure → Naive→Fearful), `bypass`/σ₇, and the `Elder` trait mask.
+- **Experiments 04–09 — ✅ DONE.** Multi-stressor (04), recovery (05), Abstraction→Naive (06), SecurityAnxiety→Fearful (07), TimePressure→Busy (08), and the maximal all-stressors ceremony (09). **Highest-value remaining ⬜:** **Pathway B** (σ₄ `MisleadingTerminology` → `mistake` from an *Attentive* user, no transition — the second failure pathway), **chaining** (σ₁₀ RepeatedFailure → Naive→Fearful), and `bypass`/σ₇.
 - **Payload enrichment (§6) + the full `core/` split** have already happened structurally; what remains is the six-field `flags` tuple, needed once a flag-keyed stressor (σ₃–σ₇) lands.
 
 ---
@@ -233,7 +233,7 @@ This is the bridge: each HCI framework maps to a concrete object in the Tamarin 
 
 | Literature | Core idea | Becomes in the model |
 |---|---|---|
-| **Norman — Slip** | correct intent, failed execution (distraction, automaticity) | outcome `slip()`; produced by Busy/Careless/Elder under load |
+| **Norman — Slip** | correct intent, failed execution (distraction, automaticity) | outcome `slip()`; produced by Busy/Careless under load |
 | **Norman — Mistake** | wrong intent from a wrong mental model | outcome `mistake()`; **can be produced even by Attentive** when the request is misleading — a failure pathway that bypasses mask transitions |
 | **Norman — Gulf of Execution/Evaluation** | "how do I act?" / "did it work?" | request **flags** `guidance` and `feedback`; their absence is what triggers mistakes |
 | **Whitten & Tygar — Unmotivated user** | security is a secondary task | stressor `SecondaryTask`; drives bypass/skip |
@@ -278,7 +278,7 @@ Cranor's four honest-user types map cleanly onto the masks; the mapping both val
 | Cranor type | Mask | Fit |
 |---|---|---|
 | Clueless (unaware action is security-relevant) | **Naive** | strong |
-| Cognitively-limited (motivated, capable, but memory/complexity-bound) | **Elder** (+ Busy under load) | strong — reframes Elder as *cognitive-barrier*, not age per se |
+| Cognitively-limited (motivated, capable, but memory/complexity-bound) | ~~Elder~~ → **Busy / Naive** (stressor-induced) | Elder descoped (persona, not stressor-induced — see below); the cognitive-barrier effects are covered by Busy (pace/load) and Naive (complexity) |
 | Unmotivated (knows, but friction not worth it) | **Careless** (+ proposed split) | partial — see Habituated/bypass |
 | Malicious | — | out of scope (honest-but-erring model) |
 
@@ -295,10 +295,12 @@ Outcomes per `f_H(mask, action)`. **Built cells are marked** `✅` with the file
 | ✅ | **Careless** | `timeout` | ✅ `timeout` | `timeout` | ✅ `timeout` (`careless_approve`; was `auto_approve` — revised: Careless dismisses) | `bypass` | "I don't engage with security; I skip, dismiss, or take the shortcut." |
 | ✅ | **Fearful** | valid (slow) | `abort`/`timeout` | `abort` on sensitive sends | `abort` (rejects all, even valid) | `abort` | ✅ built on the new **AUTHORIZE** phase (Exp 07): Fearful `abort`. "I don't trust this; on anything security-critical I hesitate, back out, or refuse." |
 | ✅ | **Naive** | valid *iff* guided | `mistake` (no mental model) | valid (follows literally) | `auto_approve` (doesn't grasp the risk) | `mistake` | ✅ built on the new **VERIFY_KEY** phase (Exp 06): Naive `mistake` (accepts tampered). "I do exactly what the screen says; lost when a step assumes knowledge I lack." |
-| ⬜ | **Elder** | valid *iff* untimed | `slip`/`timeout` under pace | valid untimed, `timeout` rushed | valid (slow) | `mistake` | "Careful when unhurried; dense or fast steps cause slips and missed deadlines." |
+| ✂️ | **Elder** *(out of scope)* | — | — | — | — | — | *Descoped: Elder is a persona/trait (who the user is), not a mask induced by a ceremony stressor like the others. See note below.* |
 | ✅ | **Habituated** | valid | valid | valid | ✅ **`auto_approve`** (reflexive yes) | valid | "I've seen this prompt a hundred times; I click through without reading to make it stop." |
 
 **On `Habituated`** — ✅ **built (Experiment 02)**; the §11 decision to add it is resolved *yes*. Empirically the strongest single addition the research supports (BYU fMRI repetition-suppression; MFA fatigue at Uber/Cisco/MGM). It is *not* Careless — both are built and the contrast is now *proven*: the Careless user disengages (`timeout`, Experiment 03, safe-fail), the Habituated user **actively approves** (`auto_approve`, Experiment 02, unsafe-success) — the exact behavior prompt-bombing weaponizes. Note: only the cells exercised by an experiment are built; the other cells in the Busy/Careless/Habituated rows (e.g. their `SET_POLICY`/`bypass` behavior) remain target design.
+
+**On `Elder` — ✂️ out of scope (decided 2026-06-26).** Unlike the other masks, Elder is a *persona/trait* — a property of *who the user is* (age, memory/complexity limits), not a transient mask *induced by a ceremony stressor*. Our model derives masks from the ceremony's stressors (and the analyzer infers them from steps); a trait the user brings to the ceremony belongs to a separate "starting persona" mechanism (cf. trait start states, §11.5) rather than the stressor→mask machinery. The *effects* often attributed to Elder are already covered by stressor-induced masks (pace → Busy via σ₃ TimePressure; complexity → Naive/Busy). So Elder is not built; the cognitive-barrier phenomena are modelled through the existing masks.
 
 **Optional split — `Unmotivated`/`Pragmatic`** (Shadow AI, clinical workarounds): a user who *understands* the control but routes around it (`bypass`). Folded into Busy/Careless in the target matrix. Decide in §11 whether it warrants its own mask.
 
@@ -340,8 +342,7 @@ Literature-grounded catalogue. Shared implementation pattern (the same shape as 
      │ └─────Distraction───────────────────▶ Careless ◀──RepeatedFailure─┘
      └───────Habituation (N≥2 prompts)─────▶ Habituated ──(more prompts)──▶ auto_approve
 
-  Trait start states (init.spthy):  Naive · Elder · (Fearful)
-  Elder ──TimePressure/StepDensity──▶ Fearful
+  Trait start states (init.spthy):  Naive · (Fearful)        [Elder ✂️ out of scope — §3]
 
   RECOVERY (new direction, via Poka-Yoke / Yee — §7):
   Habituated ──NumberMatching (shutout)──▶ Attentive   (re-engagement forced)
@@ -358,12 +359,12 @@ Literature-grounded catalogue. Shared implementation pattern (the same shape as 
 | ✅ | Attentive | `SecurityAnxiety` **(Exp 07)** | Fearful | low trust |
 | ✅ | Attentive | `Habituation` (N≥2) **(Experiment 02)** | **Habituated** | BYU / MFA fatigue |
 | ⬜ | Naive | `RepeatedFailure` | Fearful | confusion → withdrawal |
-| ⬜ | Elder | `TimePressure`/`StepDensity` | Fearful | pace pressure |
+| ✂️ | ~~Elder~~ | `TimePressure`/`StepDensity` | Fearful | **out of scope** (Elder descoped — §3) |
 | ⬜ | Busy | `RepeatedFailure` | Careless | errors → disengagement |
 | ⬜ | Habituated | more prompts | (terminal `auto_approve`) | prompt-bombing payoff |
 | ✅/⬜ | Naive / Fearful / **Habituated ✅** | **recovery condition** (Habituated via UI warning, Exp 05) | Attentive | mitigations work (§7) |
 
-> **As-built mechanics differ from the row sketch.** The three ✅ edges are *not* `MaskShift` rules consuming a `HumanState`. In the derived-mask style each edge is a **monotone gate restriction** living in `core/transitions/from_attentive*.spthy`: the correct/Attentive response is *forbidden once the triggering stressor has fired*, so afterwards only the degraded mask's `f_H` is enabled (e.g. `AttentiveOnlyBeforeLoad`, `ApproveAttentiveOnlyBeforeHabituation`, `AttentiveOnlyBeforeDistraction`). No stored mask, no LHS negation, monotone. **Recovery** is now built for one edge (**Habituated→Attentive**, Experiment 05, `core/transitions/recovery.spthy`): in the same derived style it is realized by *event ordering* — an Attentive response is re-enabled once a `Reengage` (good-usability UI warning) post-dates the `Habituate`, and the degraded response is re-enabled only by a *later* stressor. The state-establishing events are bounded to once per party (`OnceHabituate`/`OnceReengage`) to keep the interval reasoning terminating (≤2 s). Other recovery edges, **trait start states** (⬜) and **chaining** (⬜) are unbuilt. **Branching caution** still holds — keep per-experiment stressor sets small (the profile/state-space discipline is in §6a).
+> **As-built mechanics (current).** Edges are *not* `MaskShift` rules over a stored `HumanState`. The mask is a **persistent current mask derived from `SetMask(P,m)` events** (`core/transitions/mask_state.spthy`): each stressor emits `SetMask` at its onset (inside the trigger rule), the recovery warning emits `SetMask(P,'Attentive')`, and the gates (`RespondDegradedRequiresActive`, `AttentiveRequiresNoActiveDegrade`) make every `f_H` respond as the current mask, which **persists across action types until a recovery**. So an edge `Attentive→X` is just "stressor X's trigger emits `SetMask(P,'X')`"; the **recovery** edge (Habituated→Attentive, Exp 05) is the warning emitting `SetMask(P,'Attentive')` that supersedes the degrade. Encoded as *"degrade active until recovery"* (not strict latest-wins — the tractable choice; machinery §6.8). All `SetMask`-latching events are bounded once per party (`OneStressPerParty`, `OnceHabituate`, `OneSetMaskPerMask`, …) so the interval reasoning terminates (≤2 s). The per-edge `from_attentive*.spthy` gate files and the separate `recovery.spthy` of earlier drafts **no longer exist** — they were folded into the trigger's `SetMask` + `mask_state.spthy`. Remaining: other recovery edges (Fearful/Naive→Attentive) ⬜, **chaining** (only σ₁→σ₁₀→Careless, via the `!Failed` detector, is built) 🟡, **trait start states** ⬜. **Branching caution** still holds — keep per-experiment stressor sets small (§6a).
 
 ---
 
@@ -449,7 +450,7 @@ One self-contained file per phenomenon (lemmas only, mirroring the Phase-0 exper
 | `exp_pgp_naive.spthy` | bare/abstract `VERIFY_KEY` → Naive → `mistake`; guided request keeps Naive correct |
 | `exp_ehr_workaround.spthy` | TimePressure + SecondaryTask → Busy → `bypass`; path-of-least-resistance removes the incentive |
 | `exp_warning_habituation.spthy` | warning effectiveness decays with repetition; polymorphic warning resists |
-| `exp_elder_pace.spthy` | untimed Elder succeeds; under TimePressure fails (pace, not capability) |
+| ~~`exp_elder_pace.spthy`~~ | ✂️ **out of scope** — Elder descoped (§3); the pace effect is covered by σ₃ TimePressure → Busy (Exp 08) |
 | `exp_cascade.spthy` | Attentive→Busy→(RepeatedFailure)→Careless |
 | `exp_recovery.spthy` | Fearful/Naive/Habituated → Attentive via `!Mitigation` |
 
@@ -465,11 +466,11 @@ One self-contained file per phenomenon (lemmas only, mirroring the Phase-0 exper
 
 **Phase 1 — Breadth (each step = a failure (and where possible mitigation) lemma set).**
 1. **Outcome vocabulary (§2)** — 🟡 *partial*: `slip`, `auto_approve`, `timeout` are built; `mistake`/`bypass`/`abort` still ⬜.
-2. **Mask-signature spec (§3)** — 🟡 *partial*: **Habituated** ✅ and **Careless** ✅ added; the matrix is built only for the cells the experiments exercise; `Fearful`/`Naive`/`Elder` ⬜.
+2. **Mask-signature spec (§3)** — 🟡 *partial*: Attentive/Busy/Careless/Habituated/Naive/Fearful all built (the matrix is built only for the cells the experiments exercise); `Elder` ✂️ out of scope (§3).
 3. **Habituated + MFA** — 🟡 σ₈, Attentive→Habituated, `APPROVE_REQ`, `02_habituated_mfa` ✅; **shutout mitigation still ⬜**.
    **3b. Distraction + Careless ✅** — σ₂, Attentive→Careless, `timeout`, `03_careless_distraction` (added; demonstrates safe-fail).
 4. **Pathway B + S3 ⬜** — σ₄/σ₅, terminology-driven `mistake` in `f_H`, `SET_POLICY`, `exp_s3_mistake`. *(This is the original "Experiment 03" idea, now unbuilt — the built Experiment 03 is distraction/Careless instead.)*
-5. **Naive / Elder / Fearful ⬜** — guidance/pace-conditional actions, trait start states, σ₃/σ₆, their experiments.
+5. **Naive / Fearful ⬜** — guidance-conditional actions + trait start states (Naive, Fearful) and recovery edges. *(σ₃/σ₆ and the Attentive→Naive/Fearful edges are already built — Exp 06/07/08; Elder ✂️ out of scope, §3.)*
 6. **Chaining & recovery ⬜** — σ₁₀, Busy→Careless, `!Mitigation` recovery, `exp_cascade` + `exp_recovery`. *(The σ₈ `shutout` is the natural first recovery edge.)*
 7. **Payload enrichment (§6) ⬜ / `core/`+`ceremonies/` reorg ✅** — the structural split is already in place (it paid off immediately, not "only here"). What remains is the six-field `flags` tuple, needed once a flag-keyed stressor (σ₃–σ₇) lands; re-run all `L*` lemmas as regression then.
 8. **Remaining stressors / cases ⬜** (Shadow AI bypass, warning polymorphism) as needed.
@@ -488,8 +489,8 @@ Each entry point is independently provable (`check.py --prove ceremonies/alex_bl
 1. 🟡 **Outcome set** — *partially adopted.* `slip`/`auto_approve`/`timeout` built; `mistake`/`bypass`/`abort` still to add. No merges so far.
 2. ⬜ **Pathway B** — still open: failures (mistakes) without a mask change, read from request flags in `f_H`. Unbuilt; the biggest remaining architectural step. (The built Experiment 03 took distraction/Careless instead.)
 3. ✅ **`Habituated` as a mask** — *resolved: yes* (Experiment 02). `Unmotivated` is still folded into Busy/Careless (no separate mask built).
-4. 🟡 **Mitigations first-class** — *partially resolved.* The first recovery/mitigation is built: a good-usability UI warning re-engages a Habituated user to Attentive (Experiment 05, `core/transitions/recovery.spthy` + `protocol/warning_ui.spthy`), realized as a derived `Reengage` event rather than a `!Mitigation` fact. Remaining ⬜: other recovery edges (Fearful, Naive), the `pokayoke` flag levels, and a general `core/mitigations.spthy`.
-5. ⬜ **Trait start states** — still open: Naive/Elder as selectable initial masks in `init.spthy` (not built; current `init.spthy` carries no mask, since the mask is derived).
+4. 🟡 **Mitigations first-class** — *partially resolved.* The first recovery/mitigation is built: a good-usability UI warning re-engages a Habituated user to Attentive (Experiment 05, `protocol/warning_ui.spthy` emitting `SetMask(P,'Attentive')`, with the gates in `core/transitions/mask_state.spthy`). Remaining ⬜: other recovery edges (Fearful, Naive), the `pokayoke` flag levels (shutout/shutdown/decaying warning), and a general `core/mitigations.spthy`.
+5. ⬜ **Trait start states** — still open: **Naive** (and possibly Fearful) as a selectable initial mask in `protocol/init.spthy` (today `init.spthy` carries no mask, since the mask is derived). *(Elder is ✂️ out of scope — §3.)*
 
 ---
 
@@ -506,22 +507,24 @@ tamarin_model/
 ├── core/                              # HUMAN LAYER — reusable across all ceremonies
 │   ├── types.spthy                    # ✅ kdf/2 + OneInstancePerHuman restriction
 │   ├── masks/                         #   f_H — ACTION-SCOPED: <mask>_<actiongroup>.spthy (see note)
-│   │   ├── attentive_calc.spthy       # ✅ Attentive · CALC_SK
-│   │   ├── attentive_approve.spthy    # ✅ Attentive · APPROVE_REQ
-│   │   ├── busy_calc.spthy            # ✅ Busy · CALC_SK (slip)
-│   │   ├── careless_calc.spthy        # ✅ Careless · CALC_SK (timeout)
-│   │   ├── habituated_approve.spthy   # ✅ Habituated · APPROVE_REQ (auto_approve)
-│   │   └── {fearful,naive,elder}_*.spthy   # ⬜
+│   │   ├── attentive_{calc,approve,verify,authorize,op,verify_op}.spthy   # ✅ Attentive, per action
+│   │   ├── busy_{calc,approve,op}.spthy        # ✅ Busy (slip / auto_approve / op-slip)
+│   │   ├── careless_{calc,approve,op}.spthy    # ✅ Careless (timeout / dismiss)
+│   │   ├── habituated_approve.spthy            # ✅ Habituated (auto_approve)
+│   │   ├── naive_{verify,verify_op}.spthy      # ✅ Naive (mistake)
+│   │   ├── fearful_authorize.spthy             # ✅ Fearful (abort)
+│   │   └── (elder ✂️ out of scope — §3)
 │   ├── stressors/                     #   f_U — one trigger rule (+ its restriction) per file
-│   │   ├── cognitive_load.spthy       # ✅ σ₁  (+ OneStressPerParty)
-│   │   ├── external_distraction.spthy # ✅ σ₂  (+ OneDistractPerParty)
-│   │   ├── habituation.spthy          # ✅ σ₈  (+ Inequality)
-│   │   └── {time_pressure,…}.spthy    # ⬜
-│   └── transitions/                   #   f_M — one file per edge (monotone GATE restriction)
-│       ├── from_attentive.spthy            # ✅ Attentive→Busy (AttentiveOnlyBeforeLoad, OneAnswer)
-│       ├── from_attentive_habituation.spthy# ✅ Attentive→Habituated (+ OneApproval)
-│       ├── from_attentive_distraction.spthy# ✅ Attentive→Careless
-│       └── recovery.spthy / chaining.spthy # ⬜  (+ mitigations.spthy ⬜, §7)
+│   │   ├── cognitive_load.spthy · time_pressure.spthy        # ✅ σ₁ · σ₃  (→ SetMask Busy)
+│   │   ├── external_distraction.spthy                        # ✅ σ₂  (→ SetMask Careless)
+│   │   ├── abstraction.spthy · habituation.spthy             # ✅ σ₆ · σ₈
+│   │   ├── security_anxiety.spthy                            # ✅ SecurityAnxiety (→ Fearful)
+│   │   ├── *_inferred.spthy (cognitive_load, abstraction, repeated_failure)  # ✅ inferred detectors (Exp 10–12)
+│   │   └── {misleading_terminology, lack_of_feedback, secondary_task, alert_volume}.spthy  # ⬜
+│   └── transitions/                   #   f_M — the current-mask GATES (edges live in the triggers' SetMask)
+│       ├── mask_state.spthy           # ✅ OneSetMaskPerMask + RespondDegradedRequiresActive + AttentiveRequiresNoActiveDegrade
+│       ├── answered_once.spthy        # ✅ AnsweredOnce
+│       └── (no per-edge files: each f_M edge = its stressor trigger emitting SetMask; recovery = SetMask 'Attentive')
 │
 ├── ceremonies/                        # PROTOCOL LAYER — one folder per ceremony
 │   └── alex_blake_kdf/                #   the toy ceremony C0 (§C0): SK = kdf(N_A, N_B)
@@ -553,9 +556,11 @@ theory ToyCeremony_HabituatedMFA begin
   #include "ceremony.base.spthy"                                  // core types + init + Msg1/Msg2
   #include "../../core/masks/attentive_approve.spthy"
   #include "../../core/masks/habituated_approve.spthy"
-  #include "../../core/stressors/habituation.spthy"
-  #include "../../core/transitions/from_attentive_habituation.spthy"
+  #include "../../core/stressors/habituation.spthy"               // sigma8 trigger emits SetMask 'Habituated'
+  #include "../../core/transitions/mask_state.spthy"              // current-mask gates
+  #include "../../core/transitions/answered_once.spthy"
   #include "protocol/msg3_inline.spthy"
+  #include "protocol/session.spthy"
   #include "protocol/approval_ui.spthy"
   #include "experiments/02_habituated_mfa.spthy"
 end
@@ -568,9 +573,8 @@ The entry reads as a manifest of what the experiment *is*: spine + deltas. *(Dir
 | To add… | Create / edit | Touches `core/`? | Touches ceremonies? |
 |---|---|---|---|
 | a **mask** *(behavior for an action it degrades)* | new `core/masks/<mask>_<actiongroup>.spthy` per action group | +1 file each | include line in each experiment using it |
-| a **stressor** | new file in `core/stressors/` (trigger rule + its restriction) | +1 file | include line only |
-| a **transition** | new `core/transitions/from_<src>_<stressor>.spthy` (the monotone gate restriction) | +1 file | include line only |
-| a **mitigation** *(⬜)* | a rule in `core/mitigations.spthy` + a `recovery.spthy` gate | +1–2 files | include line only |
+| a **stressor + its transition** | new file in `core/stressors/` (trigger rule that emits `SetMask(P,m)` at onset + a once-bound) — the `f_M` edge lives *in the trigger*; the shared `mask_state.spthy` gates do the rest | +1 file | include line only |
+| a **mitigation** *(⬜)* | a protocol step emitting a recovery `SetMask(P,'Attentive')` (cf. `protocol/warning_ui.spthy`); a general `core/mitigations.spthy` is still ⬜ | +0–1 file | +1 protocol file |
 | an **experiment** | new file in that ceremony's `experiments/` | no | +1 file |
 | a whole **new ceremony** | new folder under `ceremonies/` (init, messages, msg3 variant, entry, experiments) | **none** | +1 folder |
 | a new **action type** | one `<mask>_<newaction>.spthy` per participating mask + a request/advance rule in the ceremony | +1 file/mask | request + UI rule |
@@ -578,7 +582,7 @@ The entry reads as a manifest of what the experiment *is*: spine + deltas. *(Dir
 **Naming conventions** (keep grep-able):
 - Mask f_H rules: `<Action>_<Mask>[_<outcome>]` — e.g. `Calc_Attentive`, `Calc_Busy_slip`, `Approve_Habituated`. Files: `<mask>_<actiongroup>.spthy`.
 - Stressor rules: `Trigger_<StressorName>`; files `core/stressors/<snake_case>.spthy`.
-- Transitions: in the **derived-mask** style an edge is a **gate restriction** (`<Mask>OnlyBefore<Stressor>`), not a `MaskShift` rule; file `from_<src>_<stressor>.spthy`. Recovery (⬜) will be `Recover_<From>_<Mitigation>`.
+- Transitions: in the **current-mask** style an `f_M` edge is its **stressor trigger emitting `SetMask(P,m)`** at onset (rule `Trigger_<Stressor>` / `Detect_<Stressor>`); the shared gates live in `core/transitions/mask_state.spthy`. There are no per-edge `from_*` files and no separate `recovery.spthy` — recovery is a step emitting `SetMask(P,'Attentive')`.
 
 > **Wellformedness constraint (the reason files are action-scoped).** Tamarin rejects a theory in which a rule's left-hand-side fact is never produced by any right-hand side (`WELL-FORMEDNESS FAILED: Facts occur in the LHS but not in any RHS`) — it is a hard failure, not a warning, so `check.py` exits 1. Therefore **every assembled experiment must be *closed***: it may include a mask file only if it also provides that file's premises. A single per-mask file holding both `Calc_*` (needs `!Req`) and `Approve_*` (needs `!Prompt`) would force *every* including experiment to supply *both* action types. Splitting `f_H` by **(mask × action group)** keeps each fragment's premises tied to one action type, so an experiment includes exactly what it can close. The cost — a mask's behavior spans several files — is the price of §6.1 minimal-profile includes under this constraint, and is the deliberate inversion of the earlier "one file per mask" guidance.
 
