@@ -22,6 +22,14 @@
       "requirement": "Implementations MUST require an engaged-user value (e.g. number matching) on security-critical approval prompts, so that a habituated or time-pressured user cannot approve an adversary-injected prompt."
     },
     {
+      "id": "REQ-PUSH-MFA-NUMBER-MATCH",
+      "title": "Number matching on push-based MFA (real signature protocol)",
+      "risk_text": "On a signature-based push-MFA (real crypto), a habituated user auto-approves an attacker-triggered ('injected') login; the device signs the attacker's challenge and the attacker authenticates -- an account takeover with NO crypto break.",
+      "vulnerable": [{"profile": "tamarin_model/ceremonies/fido_auth/FidoVuln.spthy", "lemma": "Fido_injected_auth_reachable"}],
+      "removed_by": {"profile": "tamarin_model/ceremonies/fido_auth/FidoHardened.spthy", "lemma": "FidoHardened_no_injected_auth", "lever": "mandatory number matching (an engaged-user value on every prompt) that blocks the reflexive auto-approval"},
+      "requirement": "Push-based MFA implementations MUST require number matching (an engaged-user value) on every approval, so a habituated user cannot approve an attacker-triggered login."
+    },
+    {
       "id": "REQ-KEY-CONFIRM",
       "title": "Detect-and-halt key confirmation",
       "risk_text": "A user under high cognitive load / time pressure slips and computes a wrong key; without a check, the ceremony completes with the wrong key (unsafe success).",

@@ -1,0 +1,54 @@
+/*
+  ceremonies/fido_auth/protocol.spthy -- a REAL-crypto push/challenge-response authentication (ROADMAP #7,
+  attach-to-real-protocol). A signature-based MFA: the server issues a fresh challenge, the device signs it
+  ONLY if the human approves on the prompt, the server accepts a valid signature. The human layer attaches
+  with NOTHING but the agnostic interface: the approval prompt emits !Step('Alex',n,'confirm') + !StepData
+  (self|injected), the SHARED core confirm masks decide, and the device signature is gated on the masks'
+  Confirmed output. So the same masks/stressors/mitigations that ran on the toy KDF run here, over genuine
+  signature reasoning -- demonstrating the interface composes with standard Tamarin crypto.
+
+  The attack of interest is MFA fatigue / push-bombing: an attacker (who has the password) triggers logins;
+  a habituated human auto-approves an attacker-triggered ('injected') login, the device signs the attacker's
+  challenge, and the attacker authenticates as the human -- a takeover with NO crypto break.
+*/
+
+// device key; the human 'Alex' owns it. Start('Alex') + OneInstancePerHuman (core/types) bound the human.
+rule Setup:
+    [ Fr(~idA), Fr(~skC) ]
+  --[ Start('Alex'), Setup() ]->
+    [ !Party('Alex', ~idA), !Ltk('Alex', ~skC), !Pk('Alex', pk(~skC)), Out(pk(~skC)) ]
+
+// stress-enable for the human (Stage B), so the habituation detector can target Alex.
+rule Enable_stress:
+    [ !Party('Alex', id) ] --[ StressOn('Alex') ]-> [ !StressEnable('Alex') ]
+restriction OnceStress:
+  "All #i #j. StressOn('Alex')@i & StressOn('Alex')@j ==> #i = #j"
+
+// a login the HUMAN initiated -> a 'self' approval prompt over a fresh server challenge.
+rule Login_self:
+    [ !Party('Alex', idA), Fr(~n) ]
+  --[ Challenge(~n, 'self') ]->
+    [ ServerPending(~n), DevicePending('Alex', ~n), !ChallengeShown('Alex', ~n),
+      !Step('Alex', ~n, 'confirm'), !StepData('Alex', ~n, 'self') ]
+
+// a login the ATTACKER triggered (it has the password) -> an 'injected' approval prompt (push-bombing).
+rule Login_injected:
+    [ !Party('Alex', idA), Fr(~n) ]
+  --[ Challenge(~n, 'injected'), Injected(~n) ]->
+    [ ServerPending(~n), DevicePending('Alex', ~n), !ChallengeShown('Alex', ~n),
+      !Step('Alex', ~n, 'confirm'), !StepData('Alex', ~n, 'injected') ]
+
+// the device signs the challenge ONLY once the human's confirm mask has approved (Confirmed gate).
+rule Device_sign:
+    [ Confirmed('Alex', n, mask), DevicePending('Alex', n), !Ltk('Alex', skC) ]
+  --[ Signed('Alex', n) ]->
+    [ Out(sign(n, skC)) ]
+
+// the server accepts a valid signature over a challenge it issued.
+rule Server_accept:
+    [ ServerPending(n), !Pk('Alex', pubk), In(sig) ]
+  --[ Authenticated('Alex', n), Eq(verify(sig, n, pubk), true) ]->
+    [ ]
+// generic equality restriction (the reducible 'verify' is evaluated in the rule's action fact, not here).
+restriction Eq:
+  "All x y #i. Eq(x, y)@i ==> x = y"

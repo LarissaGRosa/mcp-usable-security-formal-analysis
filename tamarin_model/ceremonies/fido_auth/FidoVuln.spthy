@@ -1,0 +1,41 @@
+theory FidoVuln
+begin
+
+/*
+  PROFILE FidoVuln -- signature-based push-MFA WITHOUT number matching (ROADMAP #7, attach-to-real-protocol).
+  Real signature crypto (builtins: signing) + the SHARED human layer attached via !Step. The habituation
+  stressor (sigma8) is in play: an attacker triggers logins, the human habituates and auto-approves an
+  attacker-triggered ('injected') login, the device signs it, and the attacker authenticates -- an account
+  takeover with no crypto break. Contrast FidoHardened (number matching). Run: check.py --prove this file.
+*/
+
+builtins: signing
+
+#include "../../core/types.spthy"                       // OneInstancePerHuman
+#include "protocol.spthy"
+
+// -- the SHARED human layer, attached verbatim --
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+#include "../../core/masks/outcome_policy.spthy"
+#include "../../core/masks/confirm_behavior.spthy"
+#include "../../core/stressors/habituation.spthy"       // sigma8: >=2 prompts -> Habituated
+
+// CRYPTO SOUNDNESS: an authentication requires the human to have approved (the crypto is sound; the
+// human is the gate). The adversary cannot forge the signature, so it cannot authenticate alone.
+lemma Fido_auth_requires_human_approval:
+  all-traces
+  "All n #a. Authenticated('Alex', n)@a ==> (Ex mask #o. Approve('Alex', n, mask)@o & #o < #a)"
+
+// HUMAN-FACTORS ATTACK: an attacker-triggered (injected) login is authenticated -- the takeover.
+lemma Fido_injected_auth_reachable:
+  exists-trace
+  "Ex n #a #j. Authenticated('Alex', n)@a & Injected(n)@j"
+
+// ...and it is exactly an auto-approval (habituation), not a crypto failure (attribution).
+lemma Fido_injected_auth_is_autoapprove:
+  all-traces
+  "All n #a #j. Authenticated('Alex', n)@a & Injected(n)@j
+     ==> (Ex #o. AutoApprove('Alex', n)@o)"
+
+end
