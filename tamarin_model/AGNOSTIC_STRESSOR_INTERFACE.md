@@ -1,14 +1,20 @@
 # Agnostic stressor collection — design
 
-**Status:** design only (2026-06-29). Nothing here is implemented yet. Decision log at the end.
-**Companion:** [`STRESSORS.md`](STRESSORS.md) describes the layer *as built*; this document proposes
-how to change the **trigger interface** — the seam where a `core/stressors/*` detector (the `f_U`
-function, machinery §6) reaches into a ceremony to "collect" its stressor. Two goals, from the
+**Status:** ✅ **IMPLEMENTED** (2026-06-29). All seven collection detectors now read the agnostic
+`!Step` interface; all 9 profiles / 56 lemma checks prove green. See §6 for what landed and the
+commits. §1–§4 below are the original design rationale (the "today" they describe is the pre-migration
+state); §5–§7 record the realisation. **Companion:** [`STRESSORS.md`](STRESSORS.md) documents the
+layer *as built*.
+
+This document changed the **trigger interface** — the seam where a `core/stressors/*` detector (the
+`f_U` function, machinery §6) reaches into a ceremony to "collect" its stressor. Two goals, from the
 request that prompted it:
 
-1. **Most agnostic possible** — a `core/` detector should not know any ceremony's task names.
+1. **Most agnostic possible** — a `core/` detector should not know any ceremony's task names. *(Met:
+   no detector names a task; a new ceremony participates by emitting `!Step` in the fixed taxonomy.)*
 2. **Reflect usability research** — the thing a detector reads should be a recognised usability /
-   workload construct, with a citation, not an ad-hoc protocol flag.
+   workload construct, with a citation, not an ad-hoc protocol flag. *(Met: NASA-TLX + cited
+   non-TLX constructs, in [`core/lexicon_tlx.spthy`](core/lexicon_tlx.spthy).)*
 
 ---
 
@@ -191,39 +197,69 @@ masks, outcomes are untouched. The risks are all on the new LHS:
   once per ceremony (a tiny `lexicon.spthy` include), read-only — same loop-free discipline as the
   current `!Req` (no consume/reproduce → no sources loop; repo MEMORY.md lesson §6.2). It must be
   seeded by an unconditional rule so the theory stays **closed** (Appendix-A wellformedness).
-- **Thresholds (σ₈/σ₉).** Replace rule arity with `k` distinct `!Step(...,'confirm')` premises
-  *named* as a parameter in the rule header comment, keeping the `Neq` + `Inequality` distinctness
-  pattern already used by σ₉/σ₈ ([`alert_volume_inferred.spthy`](core/stressors/alert_volume_inferred.spthy)).
-  Changing `k` is then a documented one-line edit, not a silent arity.
-- **Partial deconstructions.** Adding a generic `!Step` read across all detectors risks new partial
-  deconstructions; budget a `sources` lemma pass. Re-prove **all 49 lemmas** (40 in `alex_blake_kdf`
-  + 9 in `secure_email`) — the §6a worst-case profile P3 is the canonical blow-up canary.
+- **Thresholds (σ₈/σ₉).** `k` distinct `!Step(...,'confirm')` / `!Step(...,'decide')` premises with
+  the `Neq` + `Inequality` distinctness pattern. *As built:* `k` stays realised as arity (Tamarin
+  counts distinct facts by premise count) but is **documented** as the threshold parameter in each
+  detector header (σ₈ k=2, σ₉ k=3) — bump it by adding/removing a premise. `Inequality` is identically
+  named in both, so they must not share a theory (kept apart: σ₈ in P2/P6, σ₉ in P4/S1).
+- **Partial deconstructions.** Adding a generic `!Step` read risked new partial deconstructions; in
+  practice none arose. Re-proved **all 56 lemma checks** (P0–P6 in `alex_blake_kdf` + S0/S1 in
+  `secure_email`) after every single detector — the §6a worst-case profile P3 is the canonical blow-up
+  canary and stayed green.
 - **Keep keying on tags, never terms** (repo MEMORY.md lessons §11/§12): `action` and `dimension`
   are public constants; never destructure a function term like `kdf(x,y)`.
 
 ---
 
-## 6. Migration sketch (when/if this moves past design)
+## 6. Implementation (as built)
 
-Smallest safe first step is the **pilot already scoped**: convert σ₃ only.
+Done as a strangler migration — one detector per step, re-proving all 56 lemma checks each time, the
+`!Step` emissions added *additively* alongside the existing facts (which the masks still need). Each
+detector's final input:
 
-1. Add `core/lexicon_tlx.spthy` — the `!Demands(...)` seed rows + the citation header.
-2. Rewrite `time_pressure.spthy` to the Layer-3 shape (§4); **delete** `time_pressure_share.spthy`.
-3. Add a Layer-1 `!Step(P,sid,'compute')` emission to each ceremony's CALC/SHARE producer (alongside
-   the existing facts at first — *additive*, so nothing else breaks).
-4. Re-prove both ceremonies. If green, repeat per stressor (σ₁, σ₆, σ₉, σ₈, σ₂, anxiety, σ₁₀),
-   retiring the bespoke `!Req`/`!Op`/`!VerifyReq`/`!AuthReq` reads as each is replaced.
-5. When every detector reads only `!Step` + `!Demands`, the ceremonies stop emitting the bespoke
-   facts and Smell 2 is gone: a new ceremony only emits `!Step` in the fixed taxonomy.
+| Detector | Mask | Reads | Layer-2 construct (citation) |
+|---|---|---|---|
+| σ₃ TimePressure | Busy | `!Step` + `!Demands('compute','TemporalDemand','hi')` | NASA-TLX Temporal Demand |
+| σ₁ HighCognitiveLoad | Busy | `!Step` + `!Demands('compute','MentalDemand','hi')` | NASA-TLX Mental Demand / Sweller 1988 |
+| σ₆ Abstraction | Naive | `!Step` + `!Demands('compare','Effort','hi')` | NASA-TLX Effort / Whitten & Tygar 1999 |
+| SecurityAnxiety | Fearful | `!Step` + `!Demands('authorize','Arousal','hi')` | Yerkes–Dodson 1908 (non-TLX) |
+| σ₉ AlertVolume | Careless | 3× `!Step(_,_,'decide')` (density, k=3) | alarm fatigue / Cvach 2012 |
+| σ₈ Habituation | Habituated | 2× `!Step(_,_,'confirm')` (density, k=2) | warning habituation / Anderson & Vance 2015 |
+| σ₂ ExternalDistraction | Careless | any `!Step` (action-generic, no lexicon) | Wickens' MRT 2008 |
+| σ₁₀ RepeatedFailure | Careless | `!Failed` — **intentionally outside** the interface | frustration; chaining on a mask outcome |
 
-`STRESSORS.md` §2's "five trigger flavours" section gets replaced by "one agnostic interface" once
-this lands.
+**Lookup vs density vs generic vs chaining.** Four detector *shapes* emerged: the lookup detectors
+(σ₃/σ₁/σ₆/anxiety) read `!Step` + a `!Demands` row (the lexicon is consulted); the density detectors
+(σ₈/σ₉) count `k` distinct `!Step` of one action (no lexicon — a count, not a per-step level); σ₂ is
+action-generic (any `!Step`, no lexicon); σ₁₀ is a **chaining** detector whose trigger is a failure
+*outcome* (`!Failed`, emitted by `busy_op`), not a presented step — so it correctly sits outside the
+Layer-1 interface and was not migrated, only renamed to drop its `_inferred` suffix.
+
+**Three clone pairs collapsed:** `time_pressure_share`, `cognitive_load_inferred`, `abstraction_inferred`
+were deleted (declared+inferred tiers became one agnostic detector each); `alert_volume_inferred` and
+`repeated_failure_inferred` were renamed without the suffix.
+
+**Scope boundary — masks unchanged.** The masks (`f_H`, the *response* layer) still read
+`!Req`/`!Op`/`!VerifyReq`/`!AuthReq` — those carry the *content* a response needs (which key, which
+fingerprint), which is the response layer, not stressor *collection*. So Smell 2 is resolved at the
+**collection** seam (no detector names a task); fully converting the masks to `!Step` would be a
+separate effort and is out of scope for this goal.
+
+**Commits:** `d44f877` (consolidation + σ₃/σ₁/σ₆), `64d1e91` (σ₉/σ₈/anxiety/σ₁₀), `b10acfd` (σ₂).
 
 ---
 
 ## 7. Decision log
 
-- **Scope = design only** (this document); no `.spthy` changed. (User, 2026-06-29.)
+- **Scope = design only → then implemented in full.** Started as a design doc (no `.spthy`), then the
+  user approved building it detector-by-detector; all seven collection detectors migrated, green.
+  (User, 2026-06-29.)
+- **Present-time vs handle-time counting (σ₈/σ₉).** Count `!Step` at the moment the ceremony *presents*
+  the step (not when a mask handles it), so Layer 1 stays ceremony-emitted. For σ₈ this dropped the old
+  "prior **Attentive**" filter — judged *more* faithful to prompt-bombing, and the prover confirmed the
+  shutout block + recovery causality are independent of how σ₈ triggers. (2026-06-29.)
+- **σ₁₀ left on `!Failed`** rather than forced onto `!Step` — a failure is an internal outcome, not a
+  presented step. (2026-06-29.)
 - **Grounding = NASA-TLX spine + inline citations** — structure Layer 2 on the six TLX subscales,
   cite TLX / cognitive-load theory / alarm-fatigue / Yerkes–Dodson / MRT / GEMS in file headers;
   *not* the heavier multi-instrument encoding (TLX + Cognitive Dimensions + GEMS as separate

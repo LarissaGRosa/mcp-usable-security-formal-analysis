@@ -3,6 +3,14 @@
 This document describes the Tamarin model in this folder. It draws only on the
 files under `tamarin_model/`.
 
+> **Note (2026-06-29):** the **stressor trigger interface was migrated to be ceremony-agnostic** — every
+> `core/stressors/*` detector now reads a generic `!Step(P,sid,action)` (+ the `core/lexicon_tlx.spthy`
+> lexicon), not a ceremony-specific `!Req`/`!Op`/`!VerifyReq`/`!AuthReq` fact. The declared/inferred tiers
+> were collapsed (three clone files deleted). The **current reference** for the stressor layer is
+> [`STRESSORS.md`](STRESSORS.md) and [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md);
+> where the sections below show a detector reading `!Req(...,'Hard')` or `!Op(...,'kdf',...)`, that is the
+> *pre-migration* shape (the masks still read those facts — only the detectors changed).
+
 ## 1. What the model is
 
 The model encodes a security ceremony — a two-party key-derivation handshake —
@@ -40,9 +48,10 @@ tamarin_model/
 │   │   ├── busy_calc.spthy
 │   │   ├── habituated_approve.spthy
 │   │   └── … (one file per mask × action)
-│   ├── stressors/                     # f_U: what triggers a mask shift
-│   │   ├── cognitive_load.spthy           # declared (designer flag)
-│   │   ├── cognitive_load_inferred.spthy  # inferred (from the operation)
+│   ├── lexicon_tlx.spthy              # Layer 2: action → NASA-TLX dimension + level (the cited verdict)
+│   ├── stressors/                     # f_U: what triggers a mask shift (agnostic — reads !Step)
+│   │   ├── cognitive_load.spthy           # σ1: !Step + !Demands(_,'MentalDemand','hi')
+│   │   ├── time_pressure.spthy            # σ3: !Step + !Demands(_,'TemporalDemand','hi')
 │   │   └── …
 │   └── transitions/
 │       ├── mask_state.spthy           # persistent current-mask rules

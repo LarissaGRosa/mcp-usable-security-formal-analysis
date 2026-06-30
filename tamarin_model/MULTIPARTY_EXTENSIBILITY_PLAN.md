@@ -1,5 +1,12 @@
 # Iteration plan — multi-participant masks + multi-stressor profiles
 
+> **Note (2026-06-29):** this plan is **complete** (P0–P6 profiles + phase bundles shipped). Since it was
+> written, the stressor trigger interface was migrated to be ceremony-agnostic and two detector files were
+> renamed (`*_inferred` suffix dropped): `repeated_failure_inferred`→`repeated_failure`,
+> `alert_volume_inferred`→`alert_volume`; the detectors now read `!Step` + `core/lexicon_tlx.spthy`. See
+> [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md). The illustrative include blocks below
+> keep their original detector names for historical fidelity.
+
 This plan adds two capabilities to the `alex_blake_kdf` model:
 
 1. **Every participant is subject to mask change**, Blake included. A stressor
