@@ -167,7 +167,14 @@ Fully realize the "analyzer direction": infer stressful steps from protocol stru
 two long opaque values is high-Effort; a step under a timeout is temporally demanding), proposing the
 annotations the designer confirms.
 
-### 9. Proof-results → RFC-text generator  ·  *status: not started*
+### 9. Proof-results → RFC-text generator  ·  *status: ✅ DONE — the deliverable*
+
+> `tools/rfc_requirements.json` (manifest: 7 requirements, each = risk lemma + removed_by lemma + lever)
+> + `tools/rfc_gen.py` (re-runs Tamarin, confirms each risk REACHABLE and each fix HOLDS, emits the
+> requirement backed by the verified lemmas; UNVERIFIED if proofs don't line up). Output: `RFC_GUIDANCE.md`,
+> 7/7 proven — low-effort fingerprint compare, number-matching MFA, key-confirmation, device-side compare,
+> out-of-band secret, verified identity binding, least-skilled population. Every MUST/SHOULD traces to named
+> lemmas in named profiles. Commit 68160ef.
 
 The end artifact: a report turning proven lemmas into normative language ("MUST display fingerprint
 diff", "SHOULD require number-matching"). This is what makes the tool *for RFC authors*.
@@ -212,5 +219,5 @@ Tier 3 to scale and produce the RFC deliverable.
 | 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
 | 7 | Attach-to-real-protocol + termination playbook | 3 | not started |
 | 8 | Static analyzer (propose `!Step` + lexicon) | 3 | not started |
-| 9 | Proof-results → RFC-text generator | 3 | not started |
+| 9 | Proof-results → RFC-text generator | 3 | ✅ done — tools/rfc_gen.py + RFC_GUIDANCE.md (7/7 proven) |
 | 10 | Validation against real incidents | 3 | not started |
