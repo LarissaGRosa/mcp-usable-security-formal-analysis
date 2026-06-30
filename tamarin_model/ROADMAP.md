@@ -121,7 +121,14 @@ Masks model degraded *execution*; they do not model **wrong beliefs** (the human
 the bank / that the key is verified). Most real usability-security failures — phishing, spoofed-origin
 acceptance — live there. Add a belief-state layer; Pathway B (misleading terminology) is the toehold.
 
-### 6. Adversary-induced stressors  ·  *status: not started (toehold: injected prompts)*
+### 6. Adversary-induced stressors  ·  *status: ✅ DONE (worked example)*
+
+> The dual of #2: the adversary RAISES a step's demand to induce a stressor (vs a good interface lowering
+> it). `core/adversary.spthy` (inject urgency → !Urgent) + `core/stressors/time_pressure_induced.spthy`
+> (adversary-induced σ₃, fires on !Urgent not the lexicon) + profile `P8_adversary`: a calm approval prompt
+> where the adversary's urgency injection is the ONLY route to Busy → auto-approves the injected prompt.
+> Proves the attack reachable AND attribution (SetMask(Busy) and AutoApprove both trace to a prior
+> InjectUrgency). Defence = number-matching/shutout (P6). Commit c4d5752.
 
 Stressors are environmental today. MFA-fatigue and prompt-bombing are the attacker **driving** the
 human into a degraded mask. Let the Dolev–Yao adversary *cause* selected stressors (bomb prompts →
@@ -184,7 +191,7 @@ Tier 3 to scale and produce the RFC deliverable.
 | 3 | Usability-security property library | 1 | ✅ done — core/usability_properties (2 generic + 4 templates) |
 | 4 | Calibrate the lexicon (empirical levels, populations) | 2 | not started |
 | 5 | Mental-model / belief state | 2 | not started |
-| 6 | Adversary-induced stressors | 2 | not started |
+| 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
 | 7 | Attach-to-real-protocol + termination playbook | 3 | not started |
 | 8 | Static analyzer (propose `!Step` + lexicon) | 3 | not started |
 | 9 | Proof-results → RFC-text generator | 3 | not started |
