@@ -1,0 +1,26 @@
+/*
+  experiments/P9_population.spthy -- Profile P9 · per-population calibration (ROADMAP #4, Tier 2).
+  The SAME CALC_SK phase + sigma1/sigma3 workload detectors as the baseline, but analysed for the EXPERT
+  population (core/population_expert.spthy: compute = low Mental + Temporal demand). The workload stressors
+  cannot fire, so the expert completes correctly and never slips.
+
+  RFC argument (the population PAIR): under the NOVICE/baseline profile the slip is reachable
+  (P1_slip_reachable, exists-trace); under the EXPERT profile it is unreachable (P9_no_slip, all-traces).
+  Hence "a ceremony safe for experts may be unsafe for novices -- the analysis MUST cover the least-skilled
+  intended population (or the interface MUST lower the step's demand for everyone; cf. P7)."
+*/
+
+// the expert completes the ceremony correctly.
+lemma P9_completes:
+  exists-trace
+  "Ex #f. Finish('Alex')@f"
+
+// the workload stressor never onsets for the expert...
+lemma P9_no_load:
+  all-traces
+  "not (Ex p #i. Load(p)@i)"
+
+// ...so the expert never slips (contrast: P1_slip_reachable under the novice/baseline profile).
+lemma P9_no_slip:
+  all-traces
+  "not (Ex p #i. Slip(p)@i)"

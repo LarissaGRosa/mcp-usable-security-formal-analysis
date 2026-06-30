@@ -1,0 +1,28 @@
+/*
+  core/population_expert.spthy -- a PER-POPULATION demand profile (ROADMAP #4, lexicon calibration).
+
+  A population is a demand profile, like an interface (#2) but a property of the USER rather than the
+  system: for the SAME step, an expert experiences LOWER demand than a novice. The baseline lexicon
+  (core/lexicon_tlx.spthy) is the NOVICE/default profile -- compute is high Mental + Temporal demand, so
+  the workload stressors sigma1/sigma3 fire and the user can slip (cf. P1). This EXPERT profile lowers
+  those to 'lo', so sigma1/sigma3 cannot fire: the expert is not overwhelmed and does not slip.
+
+  Calibration note: the workload stressors (sigma1 Mental, sigma3 Temporal, sigma6 Effort) are
+  population-sensitive -- they read the demand levels, which a population shifts. The density / generic
+  stressors (sigma2 distraction, sigma8 habituation, sigma9 alert-volume) are environmental and NOT
+  workload-calibrated, so a population does not change them. RFC use: a ceremony safe for experts may be
+  UNSAFE for novices, so "the analysis MUST consider the least-skilled intended population." See
+  CALIBRATION.md for level provenance and the sensitivity method.
+
+  Include INSTEAD of core/lexicon_tlx.spthy to analyse the ceremony for the expert population.
+*/
+
+rule Seed_population_expert:
+    [ ]
+  --[ SeedPopulation('expert') ]->
+    [ !Demands('compute', 'MentalDemand',   'lo'),
+      !Demands('compute', 'TemporalDemand', 'lo'),
+      !Population('expert') ]
+
+restriction OncePopulationExpert:
+  "All #i #j. SeedPopulation('expert')@i & SeedPopulation('expert')@j ==> #i = #j"

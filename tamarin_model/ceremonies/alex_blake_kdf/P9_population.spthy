@@ -1,0 +1,34 @@
+theory ToyCeremony_P9_Population
+begin
+
+/*
+  PROFILE P9 · per-population lexicon calibration (ROADMAP #4, Tier 2). The CALC_SK phase with the
+  sigma1/sigma3 workload detectors, analysed for the EXPERT population (core/population_expert.spthy,
+  included INSTEAD of the baseline lexicon): compute is low Mental+Temporal demand, so the workload
+  stressors cannot fire and the expert never slips. Contrast P1 (novice/baseline): slip reachable.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P9_population.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human-layer plumbing (gates + answer discipline + Alex enable) --
+#include "bundles/human_common.spthy"
+
+// -- the POPULATION under analysis: expert (low compute demand). Swap for core/lexicon_tlx.spthy to
+//    analyse the novice/baseline population, where the slip becomes reachable. --
+#include "../../core/population_expert.spthy"
+#include "../../core/masks/outcome_policy.spthy"
+
+// -- CALC_SK producer + the agnostic compute masks --
+#include "protocol/msg3_request.spthy"
+#include "../../core/masks/compute_behavior.spthy"
+#include "protocol/compute_keyresult.spthy"
+
+// -- workload stressors only (population-sensitive); sigma2 distraction is environmental, omitted to
+//    isolate the population effect --
+#include "../../core/stressors/cognitive_load.spthy"
+#include "../../core/stressors/time_pressure.spthy"
+
+#include "experiments/P9_population.spthy"
+
+end
