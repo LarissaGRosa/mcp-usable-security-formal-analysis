@@ -42,7 +42,10 @@ rule Pose_verify_tampered:
 rule Pose_decision:
     [ DecToken(idA), Fr(~did) ]
   --[ PoseDecision('Alex', ~did) ]->
-    [ !Decision('Alex', ~did), DecPending(idA, ~did) ]
+    [ !Decision('Alex', ~did), DecPending(idA, ~did),
+      // Layer-1 objective step (agnostic interface): a UI decision is a 'decide' action -- the
+      // migrated sigma9 counts these (>=3 distinct -> Careless), not the handled !Did markers.
+      !Step('Alex', ~did, 'decide') ]
 
 // closers (consume the pending slot once the human's f_H has produced its state fact)
 rule Finish_op:

@@ -6,7 +6,7 @@
     sigma6 Abstraction      <- 'compare' !Step + lexicon (agnostic, not 'verify' op) from confirm_key -> Naive
     sigma1 HighCognitiveLoad<- !Op(_,'kdf',_)      posed by the set_passphrase step-> Busy
     sigma3 TimePressure     <- 'compute' !Step + lexicon (agnostic, not SHARE_PW) from set_passphrase -> Busy
-    sigma9 AlertVolume      <- three !Did          from the choose_method decisions-> Careless
+    sigma9 AlertVolume      <- three 'decide' !Steps from the choose_method decisions -> Careless
 
   The masks that ANSWER the resulting state are the same as S0: attentive/naive verify (PGP key
   check), attentive/careless/busy share (password handling), and attentive confirm (turns each
@@ -26,7 +26,7 @@
 #include "../../../core/stressors/abstraction.spthy"
 // agnostic sigma1 (was cognitive_load_inferred): reads the 'compute' !Step + lexicon, not the 'kdf' op
 #include "../../../core/stressors/cognitive_load.spthy"
-#include "../../../core/stressors/alert_volume_inferred.spthy"
+#include "../../../core/stressors/alert_volume.spthy"
 // Agnostic sigma3 (was time_pressure_share): reads the 'compute' !Step posed by set_passphrase + the
 // lexicon, instead of the 'SHARE_PW' task name. See AGNOSTIC_STRESSOR_INTERFACE.md.
 #include "../../../core/lexicon_tlx.spthy"

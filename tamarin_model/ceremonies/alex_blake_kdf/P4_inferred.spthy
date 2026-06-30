@@ -20,8 +20,8 @@ begin
 // -- inferred stressors (operation-inference + trace-inference) --
 #include "../../core/stressors/cognitive_load.spthy"
 #include "../../core/stressors/abstraction.spthy"
-#include "../../core/stressors/repeated_failure_inferred.spthy"
-#include "../../core/stressors/alert_volume_inferred.spthy"
+#include "../../core/stressors/repeated_failure.spthy"
+#include "../../core/stressors/alert_volume.spthy"
 
 // -- masks: generic op (compute), verify op, and decision (confirm) --
 #include "../../core/masks/attentive_op.spthy"

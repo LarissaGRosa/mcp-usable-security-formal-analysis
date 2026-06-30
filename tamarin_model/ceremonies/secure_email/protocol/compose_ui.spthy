@@ -30,7 +30,10 @@ restriction OnceSeedMenu:
 rule UI_method_option:
     [ MenuTok('Alex'), Fr(~did) ]
   --[ PoseDecision('Alex', ~did) ]->
-    [ !Decision('Alex', ~did) ]
+    [ !Decision('Alex', ~did),
+      // Layer-1 objective step (agnostic interface): weighing a method is a 'decide' action -- the
+      // migrated sigma9 counts these (>=3 distinct -> Careless), not the handled !Did markers.
+      !Step('Alex', ~did, 'decide') ]
 
 // ===== confirm_key : PGP "enable encryption + confirm the recipient's key" (abstract crypto) =====
 rule UI_confirm_key_genuine:

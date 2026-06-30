@@ -7,4 +7,7 @@
 rule UI_authorize_request:
     [ !Session('Alex', idA, sk), Fr(~aid) ]
   --[ AuthPrompt('Alex', ~aid) ]->
-    [ !AuthReq('Alex', ~aid) ]
+    [ !AuthReq('Alex', ~aid),
+      // Layer-1 objective step (agnostic interface): granting a sensitive op is an 'authorize'
+      // action the lexicon marks high-Arousal -> SecurityAnxiety reads it, not !AuthReq.
+      !Step('Alex', ~aid, 'authorize') ]

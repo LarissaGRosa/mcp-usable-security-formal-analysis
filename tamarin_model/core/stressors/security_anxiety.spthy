@@ -1,13 +1,25 @@
 /*
-  core/stressors/security_anxiety.spthy -- f_U for the NEW stressor SecurityAnxiety (low-trust;
-  the Fearful trigger from the plan's §5 f_M graph; unnumbered in the §4 sigma-catalogue).
-  A sensitive, high-stakes step (the AUTHORIZE request) provokes low-trust anxiety. At onset it
-  emits SetMask(P,'Fearful') -- the f_M transition Attentive->Fearful (core/transitions/mask_state.spthy).
-  Reads the persistent !AuthReq to bind P. OnceSecurityAnxiety caps it to one onset per party.
+  core/stressors/security_anxiety.spthy -- f_U for SecurityAnxiety, CEREMONY-AGNOSTIC.
+  (The Fearful trigger from the machinery §5 f_M graph; unnumbered in the §4 sigma-catalogue.)
+
+  Migrated to the agnostic interface (AGNOSTIC_STRESSOR_INTERFACE.md). A presence detector (like
+  sigma1/sigma3/sigma6 it is a lexicon lookup, not a count), so it reads:
+
+    * !Step(P, sid, action)            -- Layer 1: an OBJECTIVE interaction step (no task name)
+    * !Demands(action,'Arousal','hi')  -- Layer 2: the usability verdict, from core/lexicon_tlx
+
+  instead of the old !AuthReq(P,aid) match. An 'authorize' step (granting a sensitive operation) is
+  marked high-Arousal by the lexicon, so this fires with no !AuthReq token in the rule.
+
+  Yerkes-Dodson (1908): past the peak of the arousal-performance curve the user freezes / refuses. At
+  onset it emits SetMask(P,'Fearful') -- everything below SetMask is UNCHANGED. !StressEnable(P) gates
+  per party (Stage B); OnceSecurityAnxiety bounds the onset per party.
 */
 
 rule Trigger_SecurityAnxiety:
-    [ !AuthReq(P, aid), !StressEnable(P) ]
+    [ !Step(P, sid, action),
+      !Demands(action, 'Arousal', 'hi'),
+      !StressEnable(P) ]
   --[ SecurityAnxiety(P), SetMask(P,'Fearful') ]->
     [ ]
 

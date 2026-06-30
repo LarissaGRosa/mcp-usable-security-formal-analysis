@@ -74,12 +74,12 @@ tag and infers the stressor — the HCI judgment lives in the detector, not a de
 (repo `MEMORY.md` lesson 12). The step also poses the same S0 trigger fact, so the real verify/share
 masks answer it and drive the real `aenc`/`senc`/`Oob` outcome in `deliver.spthy`.
 
-| Composer step | Objective op posed | Detector (core/stressors) | Stressor → mask | Outcome |
+| Composer step | Objective step posed (Layer 1) | Detector (core/stressors) | Stressor → mask | Outcome |
 |---|---|---|---|---|
-| **choose_method** (weigh TLS/PGP/password) | `!Decision` ×3 | `alert_volume_inferred` | σ9 AlertVolume → Careless | in-band password leak |
-| **confirm_key** (PGP key/fingerprint) | `!Op(_,'verify',_)` | `abstraction_inferred` | σ6 Abstraction → Naive | accept substituted key → encrypt to adversary |
-| **set_passphrase** (derive sym key) | `!Op(_,'kdf',_)` | `cognitive_load_inferred` | σ1 HighCognitiveLoad → Busy | wrong-recipient slip |
-| **send** (deadline on the SHARE_PW req) | `!Req(_,'SHARE_PW',_)` | `time_pressure_share` | σ3 TimePressure → Busy | rushed leak |
+| **choose_method** (weigh TLS/PGP/password) | `!Step` ×3 `'decide'` | `alert_volume` | σ9 AlertVolume → Careless | in-band password leak |
+| **confirm_key** (PGP key/fingerprint) | `!Step(_,_,'compare')` | `abstraction` | σ6 Abstraction → Naive | accept substituted key → encrypt to adversary |
+| **set_passphrase** (derive sym key) | `!Step(_,_,'compute')` | `cognitive_load` | σ1 HighCognitiveLoad → Busy | wrong-recipient slip |
+| **send** (deadline on the compose step) | `!Step(_,_,'compute')` | `time_pressure` | σ3 TimePressure → Busy | rushed leak |
 | **phish_confirm** (recipient side, `deliver.spthy`) | `!Req('Blake',…)` | `time_pressure_share` | σ3 → Busy | recipient re-discloses pw |
 
 The headline lemma `S1_degrade_from_interface_step` proves the analyzer direction: **every mask

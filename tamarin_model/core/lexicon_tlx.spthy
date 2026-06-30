@@ -25,6 +25,12 @@
       & Tygar 1999, the PGP key metaphor; Green & Petre's "hard mental operations"). Stated once here
       instead of as a !VerifyReq match (old declared sigma6) or a 'verify' op match (old inferred).
 
+    Demands('authorize', 'Arousal', 'hi')        -- read by SecurityAnxiety
+      NON-TLX construct (this lexicon is the single "action -> usability construct" table, not only
+      NASA-TLX). An 'authorize' step -- granting a sensitive, high-stakes operation -- provokes
+      high low-trust AROUSAL; past the peak of the Yerkes-Dodson (1908) arousal-performance curve the
+      user freezes / refuses -> Fearful. Stated once here instead of an !AuthReq match (old sigma).
+
   Levels are ordered constants 'lo' < 'med' < 'hi' (AGNOSTIC_STRESSOR_INTERFACE.md S5). Tamarin has
   no built-in order on public atoms, so detectors EXACT-MATCH the level they fire on -- no ordering
   relation is needed yet. As more dimensions/levels are seeded (sigma1 MentalDemand, sigma6 Effort,
@@ -38,9 +44,10 @@
 rule Seed_lexicon_tlx:
     [ ]
   --[ SeedLexicon() ]->
-    [ !Demands('compute', 'TemporalDemand', 'hi'),
-      !Demands('compute', 'MentalDemand',   'hi'),
-      !Demands('compare', 'Effort',         'hi') ]
+    [ !Demands('compute',   'TemporalDemand', 'hi'),
+      !Demands('compute',   'MentalDemand',   'hi'),
+      !Demands('compare',   'Effort',         'hi'),
+      !Demands('authorize', 'Arousal',        'hi') ]
 
 restriction OnceLexicon:
   "All #i #j. SeedLexicon()@i & SeedLexicon()@j ==> #i = #j"

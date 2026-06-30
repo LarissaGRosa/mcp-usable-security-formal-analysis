@@ -11,12 +11,14 @@
       modelling MFA prompt-bombing. Injected(pid) marks it for the lemmas.
 */
 
+// !Step('Alex',_,'confirm'): Layer-1 objective step (agnostic interface). An approval prompt is a
+// 'confirm' action -- the migrated sigma8 counts these (>=2 distinct -> Habituated), not !Approved.
 rule UI_issue_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
-    [ !Prompt('Alex', ~pid, 'self') ]
+    [ !Prompt('Alex', ~pid, 'self'), !Step('Alex', ~pid, 'confirm') ]
 
 rule UI_inject_prompt:
     [ !Session('Alex', idA, sk), In(pid) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid) ]->
-    [ !Prompt('Alex', pid, 'injected') ]
+    [ !Prompt('Alex', pid, 'injected'), !Step('Alex', pid, 'confirm') ]
