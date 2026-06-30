@@ -168,7 +168,12 @@ Toy ceremonies don't make RFCs; FIDO2 / TLS / OAuth do. `!Step` makes attachment
 but the §6a state-explosion at real scale needs a documented narrowing strategy (cap enabled stressors
 per party; per-phase compositional proofs).
 
-### 8. Static analyzer: propose `!Step` + lexicon from the protocol  ·  *status: not started*
+### 8. Static analyzer: propose `!Step` + lexicon from the protocol  ·  *status: ✅ DONE*
+
+> `tools/step_analyzer.py`: scans a `.spthy` protocol's rules and, from keyword signals, proposes the
+> agnostic annotation per human step (action tag + `!Step` fact + lexicon rows); cross-checks rules already
+> carrying `!Step`. Validated against the hand annotations (recovers compose_ui / verify_ui / fido logins);
+> recall-biased proposer (over-flags machine steps, designer rejects). Commit d3708c1.
 
 Fully realize the "analyzer direction": infer stressful steps from protocol structure (a step comparing
 two long opaque values is high-Effort; a step under a timeout is temporally demanding), proposing the
@@ -186,7 +191,13 @@ annotations the designer confirms.
 The end artifact: a report turning proven lemmas into normative language ("MUST display fingerprint
 diff", "SHOULD require number-matching"). This is what makes the tool *for RFC authors*.
 
-### 10. Validation against real incidents  ·  *status: not started*
+### 10. Validation against real incidents  ·  *status: ✅ DONE*
+
+> `INCIDENTS.md`: maps each modeled outcome to a documented real incident/study (MFA fatigue — Uber 2022 /
+> 0ktapus; credential phishing — DBIR; PGP key-verification — Why Johnny Can't Encrypt; TLS warning fatigue;
+> AWS S3 terminology; misdirected email), the lemma, and the proven mitigation. Establishes the failures are
+> real and the model independently derives the levers industry adopted (number matching, FIDO2 origin
+> binding). Commit 54fb4ce.
 
 Map modeled outcomes to real CVEs / incidents (MFA-fatigue attacks, TLS warning click-through, PGP
 misuse) so the "usability problems arising from the ceremony" are grounded in reality.
@@ -195,11 +206,15 @@ misuse) so the "usability problems arising from the ceremony" are grounded in re
 
 ## Recommended sequence
 
-**Tiers 1 and 2 are COMPLETE.** Tier 1: ✅ #1 agnostic masks, ✅ #2 first-class interfaces, ✅ #3 property
-library (+ dead facts retired). Tier 2: ✅ #4 lexicon calibration, ✅ #5 belief state, ✅ #6 adversary-induced
-stressors. A unifying through-line emerged — #2 (interface), #4 (population), #5 (identity interface), #6
-(adversary) are all the SAME lever: a demand/belief profile a good interface lowers, an adversary raises, and
-a population shifts. **Next: Tier 3 (scale + the RFC-text deliverable).** A designer can now apply the framework to a ceremony by emitting `!Step`
+**ALL THREE TIERS ARE COMPLETE (10/10 items).** Tier 1: ✅ #1 agnostic masks, ✅ #2 first-class interfaces,
+✅ #3 property library (+ dead facts retired). Tier 2: ✅ #4 lexicon calibration, ✅ #5 belief state, ✅ #6
+adversary-induced stressors. Tier 3: ✅ #7 attach-to-real-protocol + termination, ✅ #8 static analyzer, ✅ #9
+proof→RFC-text generator, ✅ #10 incident validation. **16 profiles / 80 lemma checks green.** A unifying
+through-line emerged — #2 (interface), #4 (population), #5 (identity interface), #6 (adversary) are all the
+SAME lever: a demand/belief profile a good interface lowers, an adversary raises, and a population shifts.
+The end-to-end loop is closed: ceremony + `!Step` annotations (proposable by #8) → masks/stressors degrade
+under usability problems → property templates → `tools/rfc_gen.py` → `RFC_GUIDANCE.md`, every requirement
+traced to incidents (`INCIDENTS.md`) and machine-checked proofs. A designer can now apply the framework to a ceremony by emitting `!Step`
 (+ `!StepData`), picking an interface (demand profile), and instantiating the property templates. Next is
 Tier 2 (credibility) — **#6 adversary-induced stressors** is the standout — then Tier 3 (scale + the
 RFC-text deliverable). Original sequencing notes:
@@ -225,6 +240,6 @@ Tier 3 to scale and produce the RFC deliverable.
 | 5 | Mental-model / belief state | 2 | ✅ done — ceremonies/phishing (PhishWeak/PhishStrong) |
 | 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
 | 7 | Attach-to-real-protocol + termination playbook | 3 | ✅ done — ceremonies/fido_auth (signature MFA) + TERMINATION.md |
-| 8 | Static analyzer (propose `!Step` + lexicon) | 3 | not started |
-| 9 | Proof-results → RFC-text generator | 3 | ✅ done — tools/rfc_gen.py + RFC_GUIDANCE.md (7/7 proven) |
-| 10 | Validation against real incidents | 3 | not started |
+| 8 | Static analyzer (propose `!Step` + lexicon) | 3 | ✅ done — tools/step_analyzer.py |
+| 9 | Proof-results → RFC-text generator | 3 | ✅ done — tools/rfc_gen.py + RFC_GUIDANCE.md (8/8 proven) |
+| 10 | Validation against real incidents | 3 | ✅ done — INCIDENTS.md |
