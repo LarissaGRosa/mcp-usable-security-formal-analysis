@@ -1,0 +1,35 @@
+theory ToyCeremony_P8_Adversary
+begin
+
+/*
+  PROFILE P8 · adversary-induced stressor (ROADMAP #6, Tier 2). An Attentive inline KDF brings up the
+  session; then an APPROVE_REQ prompt with NO environmental stressor. The adversary injects urgency
+  (core/adversary.spthy) on a prompt it controls -> the adversary-induced TimePressure detector
+  (core/stressors/time_pressure_induced.spthy) -> Busy -> Confirm_autoapprove auto-approves the injected
+  prompt. The degradation is attributable to the adversary (see experiments/P8_adversary.spthy).
+  Run: check.py --prove ceremonies/alex_blake_kdf/P8_adversary.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human-layer plumbing (gates + answer discipline + Alex enable) --
+#include "bundles/human_common.spthy"
+
+// -- outcome policy (the confirm masks' behaviour matrix) --
+#include "../../core/masks/outcome_policy.spthy"
+
+// -- Attentive inline KDF brings up the session --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
+
+// -- APPROVE_REQ prompt + the agnostic confirm masks (NO environmental stressor on it) --
+#include "protocol/approval_ui.spthy"
+#include "../../core/masks/confirm_behavior.spthy"
+
+// -- the adversary capability + the adversary-induced TimePressure detector --
+#include "../../core/adversary.spthy"
+#include "../../core/stressors/time_pressure_induced.spthy"
+
+#include "experiments/P8_adversary.spthy"
+
+end

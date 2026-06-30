@@ -1,0 +1,28 @@
+/*
+  experiments/P8_adversary.spthy -- Profile P8 · ADVERSARY-INDUCED stressor (ROADMAP #6, Tier 2).
+  An Attentive inline KDF brings up the session; then a single approval prompt. There is NO environmental
+  stressor on the prompt (no habituation here, no base time-pressure on a 'confirm' step). The ONLY route
+  to a degraded mask is the ADVERSARY injecting urgency (core/adversary.spthy) on a prompt it controls,
+  which fires the adversary-induced TimePressure detector -> Busy -> the rushed user auto-approves the
+  adversary's own injected prompt. So the stressor is weaponised, not merely environmental.
+
+  RFC value: this is a real attack VECTOR (MFA-fatigue-style urgency). The attribution lemmas prove the
+  auto-approval traces to the adversary's urgency injection. The defence is the same as for habituation --
+  number-matching MFA (the shutout mitigation, P6: ShutoutBlocksAutoApprove blocks AutoApprove on a
+  Shutout-protected prompt regardless of WHY the user is degraded) -> "implementations MUST use it".
+*/
+
+// the attack is reachable: the adversary gets its INJECTED prompt auto-approved.
+lemma P8_adv_autoapprove_reachable:
+  exists-trace
+  "Ex pid #o #j. AutoApprove('Alex', pid)@o & Injected(pid)@j"
+
+// the induced degradation is real: Busy is reachable here ONLY via the adversary.
+lemma P8_busy_requires_adv_urgency:
+  all-traces
+  "All p #s. SetMask(p, 'Busy')@s ==> (Ex u #i. InjectUrgency(u)@i & #i < #s)"
+
+// ATTRIBUTION: every auto-approval traces to a prior adversary urgency injection (no environmental cause).
+lemma P8_autoapprove_requires_adv:
+  all-traces
+  "All p pid #o. AutoApprove(p, pid)@o ==> (Ex u #i. InjectUrgency(u)@i & #i < #o)"
