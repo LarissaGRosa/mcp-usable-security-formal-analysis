@@ -1,0 +1,32 @@
+theory ToyCeremony_P7_Interface
+begin
+
+/*
+  PROFILE P7 · the interface lever (ROADMAP #2 -- first-class interfaces as demand-transformers).
+  An Attentive inline KDF brings up the session; then the VERIFY_KEY phase runs under the HARDENED
+  interface (core/interface_hardened_verify.spthy), which lowers the compare step's Effort so sigma6
+  Abstraction never fires -> no Naive -> no tampered-key mistake. Contrast with the baseline interface
+  (P2/P3/S0), where the same phase + detector make the mistake reachable. The pair is the RFC argument.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P7_interface.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human-layer plumbing (gates + answer discipline + Alex enable) --
+#include "bundles/human_common.spthy"
+
+// -- the INTERFACE under test: hardened verify (compare = low Effort). Swap for lexicon_tlx to get
+//    the baseline (high-Effort) interface and the mistake becomes reachable. --
+#include "../../core/interface_hardened_verify.spthy"
+#include "../../core/masks/outcome_policy.spthy"
+
+// -- Attentive inline KDF brings up the session --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
+
+// -- the VERIFY_KEY phase (sigma6 detector + agnostic compare masks) --
+#include "bundles/verify_phase.spthy"
+
+#include "experiments/P7_interface.spthy"
+
+end

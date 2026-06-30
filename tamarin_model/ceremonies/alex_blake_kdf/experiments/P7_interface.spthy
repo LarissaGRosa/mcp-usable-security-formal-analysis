@@ -1,0 +1,33 @@
+/*
+  experiments/P7_interface.spthy -- Profile P7 · the INTERFACE lever (ROADMAP #2, first-class interfaces).
+  Same VERIFY_KEY phase + sigma6 Abstraction detector as the baseline (cf. P2 / P3 / S0), but the compare
+  step is presented via the HARDENED interface (core/interface_hardened_verify.spthy: Effort 'lo'). The
+  point: an interface that lowers a step's demand prevents the stressor from firing AT ALL -- upstream of
+  the Poka-Yoke mitigations (P6), which block the bad outcome after the stressor fires.
+
+  RFC argument (the proof PAIR): under the BASELINE interface the tampered-key mistake is reachable
+  (P2_mistake_reachable, exists-trace); under THIS hardened interface it is unreachable (P7_no_mistake,
+  all-traces). Hence the normative requirement: "implementations MUST present the fingerprint comparison
+  via a low-Effort affordance (e.g. a side-by-side visual diff), not a raw hex string."
+*/
+
+// the ceremony still works: a genuine key is accepted (happy path).
+lemma P7_genuine_verify_ok:
+  exists-trace
+  "Ex p vid #i. Accept(p, vid)@i"
+
+// the hardened interface fires the stressor's PRECONDITION away: sigma6 never onsets.
+lemma P7_no_abstraction:
+  all-traces
+  "not (Ex p #i. Abstraction(p)@i)"
+
+// consequently the Naive mask never arises...
+lemma P7_no_naive_verify:
+  all-traces
+  "not (Ex p vid #i. Verify(p, vid, 'Naive')@i)"
+
+// ...and the tampered-key mistake is UNREACHABLE -- without any outcome-blocking mitigation,
+// purely because the better interface kept the user Attentive. (Contrast: P2_mistake_reachable.)
+lemma P7_no_mistake:
+  all-traces
+  "not (Ex p vid #i. Mistake(p, vid)@i)"
