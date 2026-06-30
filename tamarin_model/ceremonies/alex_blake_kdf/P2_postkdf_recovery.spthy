@@ -17,6 +17,8 @@ begin
 
 // -- usability lexicon (Layer 2): the agnostic sigma6 reads !Demands from here --
 #include "../../core/lexicon_tlx.spthy"
+// -- outcome policy (the mask behaviour matrix): the agnostic compare masks read it --
+#include "../../core/masks/outcome_policy.spthy"
 
 // -- Attentive KDF (inline) brings up the session --
 #include "protocol/msg3_inline.spthy"

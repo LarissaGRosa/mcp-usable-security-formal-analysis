@@ -32,14 +32,17 @@ rule Pose_verify_genuine:
     [ !Op('Alex', ~vid, 'verify', ~fp), !Genuine(~vid), Pending(idA, ~vid),
       // Layer-1 objective step (agnostic interface): a verify is a 'compare' action -- the migrated
       // sigma6 reads this + the lexicon, not the 'verify' op tag.
-      !Step('Alex', ~vid, 'compare') ]
+      !Step('Alex', ~vid, 'compare'),
+      // !StepData = the ground truth for the compare masks (genuine here; Compare_attentive accepts it).
+      !StepData('Alex', ~vid, 'genuine') ]
 
 // verify operation, adversary-supplied (tampered) fingerprint
 rule Pose_verify_tampered:
     [ OpToken(idA), Fr(~vid), In(fp) ]
   --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
     [ !Op('Alex', ~vid, 'verify', fp), Pending(idA, ~vid),
-      !Step('Alex', ~vid, 'compare') ]
+      !Step('Alex', ~vid, 'compare'),
+      !StepData('Alex', ~vid, 'tampered') ]
 
 // UI decision (sigma9 inferred from decision DENSITY -- >=3 handled !Did)
 rule Pose_decision:

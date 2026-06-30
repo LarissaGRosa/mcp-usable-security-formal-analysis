@@ -9,6 +9,8 @@
   Adding a new verify stressor = one include line here.
 */
 
-#include "../../../core/masks/attentive_verify.spthy"
-#include "../../../core/masks/naive_verify.spthy"
+// agnostic compare behaviour + !KeyChecked adapter (replaces attentive_verify / naive_verify);
+// outcome_policy comes from the profile entry (S0).
+#include "../../../core/masks/compare_behavior.spthy"
+#include "../../../core/masks/compare_keychecked.spthy"
 #include "../../../core/stressors/abstraction.spthy"

@@ -24,6 +24,9 @@ begin
 #include "bundles/human_common.spthy"
 #include "protocol/stress_blake.spthy"
 
+// -- outcome policy (the mask behaviour matrix): the agnostic compare masks read it --
+#include "../../core/masks/outcome_policy.spthy"
+
 // -- interface-driven (inferred) stressors + the masks that answer them --
 #include "bundles/interface_inferred.spthy"
 

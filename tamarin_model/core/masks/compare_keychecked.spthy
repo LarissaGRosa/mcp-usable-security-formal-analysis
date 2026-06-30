@@ -1,0 +1,11 @@
+/*
+  core/masks/compare_keychecked.spthy -- thin EFFECT ADAPTER for the agnostic compare behaviour.
+  Manifests the generic Checked(P,vid) as !KeyChecked (the verify-phase / PGP-pathway output that
+  A_send_pgp consumes; in alex_blake it is produced and simply not consumed downstream). Shared by both
+  ceremonies' verify paths. A theory includes EITHER this or compare_verifydone, never both.
+*/
+
+rule Checked_to_KeyChecked:
+    [ Checked(P, vid) ]
+  -->
+    [ !KeyChecked(P, vid) ]

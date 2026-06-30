@@ -12,9 +12,13 @@
 rule UI_verify_genuine:
     [ !Session('Alex', idA, sk), Fr(~vid) ]
   --[ VerifyPrompt('Alex', ~vid, 'genuine') ]->
-    [ !VerifyReq('Alex', ~vid, 'genuine'), !Step('Alex', ~vid, 'compare') ]
+    [ !VerifyReq('Alex', ~vid, 'genuine'), !Step('Alex', ~vid, 'compare'),
+      // !StepData = the ground truth for the compare masks: this artifact is genuine
+      // (Compare_attentive accepts only a 'genuine' one; see compare_behavior.spthy).
+      !StepData('Alex', ~vid, 'genuine') ]
 
 rule UI_verify_tampered:
     [ !Session('Alex', idA, sk), In(vid) ]
   --[ VerifyPrompt('Alex', vid, 'tampered'), Tampered(vid) ]->
-    [ !VerifyReq('Alex', vid, 'tampered'), !Step('Alex', vid, 'compare') ]
+    [ !VerifyReq('Alex', vid, 'tampered'), !Step('Alex', vid, 'compare'),
+      !StepData('Alex', vid, 'tampered') ]

@@ -38,8 +38,10 @@ begin
 
 // -- VERIFY phase (sigma6) under verify-shutout --
 #include "protocol/verify_ui.spthy"
-#include "../../core/masks/attentive_verify.spthy"
-#include "../../core/masks/naive_verify.spthy"
+// agnostic compare behaviour + !KeyChecked adapter (replaces attentive_verify / naive_verify);
+// outcome_policy already included above (compute cluster).
+#include "../../core/masks/compare_behavior.spthy"
+#include "../../core/masks/compare_keychecked.spthy"
 #include "../../core/stressors/abstraction.spthy"
 
 #include "experiments/P6_mitigations.spthy"

@@ -28,8 +28,9 @@ begin
 #include "../../core/masks/outcome_policy.spthy"
 #include "../../core/masks/compute_behavior.spthy"
 #include "protocol/compute_opresult.spthy"
-#include "../../core/masks/attentive_verify_op.spthy"
-#include "../../core/masks/naive_verify_op.spthy"
+// agnostic compare behaviour + VerifyDone adapter (replaces attentive_verify_op / naive_verify_op)
+#include "../../core/masks/compare_behavior.spthy"
+#include "../../core/masks/compare_verifydone.spthy"
 #include "../../core/masks/attentive_confirm.spthy"
 #include "../../core/masks/careless_confirm.spthy"
 

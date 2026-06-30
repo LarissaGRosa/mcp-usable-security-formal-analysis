@@ -44,7 +44,8 @@ rule UI_confirm_key_genuine:
       !Op('Alex', ~vid, 'verify', ~vid),
       // Layer-1 objective step (agnostic interface): confirming the key is a 'compare' action the
       // lexicon marks high-Effort -> the migrated sigma6 reads it, not the 'verify' op.
-      !Step('Alex', ~vid, 'compare') ]
+      !Step('Alex', ~vid, 'compare'),
+      !StepData('Alex', ~vid, 'genuine') ]
 
 rule UI_confirm_key_tampered:
     [ AlexInit(idA), !RecipientKey('Blake', pkB), In(badkey) ]
@@ -53,7 +54,8 @@ rule UI_confirm_key_tampered:
     [ AlexVerifying(idA, badkey, badkey),
       !VerifyReq('Alex', badkey, 'tampered'),
       !Op('Alex', badkey, 'verify', badkey),
-      !Step('Alex', badkey, 'compare') ]
+      !Step('Alex', badkey, 'compare'),
+      !StepData('Alex', badkey, 'tampered') ]
 
 // ===== set_passphrase : password "set a passphrase + hint" (derive a symmetric key) =====
 rule UI_set_passphrase:

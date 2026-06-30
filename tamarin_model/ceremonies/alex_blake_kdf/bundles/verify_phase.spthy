@@ -10,9 +10,10 @@
 // -- producer --
 #include "../protocol/verify_ui.spthy"
 
-// -- masks (every f_H for VERIFY_KEY) --
-#include "../../../core/masks/attentive_verify.spthy"
-#include "../../../core/masks/naive_verify.spthy"
+// -- masks: the agnostic compare behaviour (Attentive discerning / Naive credulous) + the !KeyChecked
+//    effect adapter (replaces attentive_verify / naive_verify). outcome_policy comes from the profile. --
+#include "../../../core/masks/compare_behavior.spthy"
+#include "../../../core/masks/compare_keychecked.spthy"
 
 // -- stressors targeting VERIFY_KEY --
 #include "../../../core/stressors/abstraction.spthy"

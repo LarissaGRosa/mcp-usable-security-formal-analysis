@@ -25,6 +25,9 @@ begin
 #include "bundles/human_common.spthy"
 #include "protocol/stress_blake.spthy"
 
+// -- outcome policy (the mask behaviour matrix): the agnostic compare masks read it --
+#include "../../core/masks/outcome_policy.spthy"
+
 // -- phase repertoires (masks + stressors) --
 #include "bundles/pgp_phase.spthy"
 #include "bundles/pw_phase.spthy"

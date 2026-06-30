@@ -14,8 +14,10 @@
 */
 
 // -- masks (the f_H that answer the trigger facts) --
-#include "../../../core/masks/attentive_verify.spthy"
-#include "../../../core/masks/naive_verify.spthy"
+// agnostic compare behaviour + !KeyChecked adapter (replaces attentive_verify / naive_verify);
+// outcome_policy comes from the profile entry (S1).
+#include "../../../core/masks/compare_behavior.spthy"
+#include "../../../core/masks/compare_keychecked.spthy"
 #include "../../../core/masks/attentive_share.spthy"
 #include "../../../core/masks/careless_share.spthy"
 #include "../../../core/masks/busy_share.spthy"
