@@ -1,0 +1,12 @@
+/*
+  protocol/stress_alex.spthy -- make the SENDER (Alex) a stress target (Stage B targeting).
+  Local copy of the alex_blake_kdf idiom: every core/stressors rule reads !StressEnable(P), so a
+  stressor fires only for an ENABLED party. This produces !StressEnable('Alex') off !Party('Alex',_).
+  OnceStressAlex bounds the onset (StressEnable is persistent; the bound keeps StressOn finite).
+*/
+
+rule Enable_Stress_Alex:
+    [ !Party('Alex', id) ] --[ StressOn('Alex') ]-> [ !StressEnable('Alex') ]
+
+restriction OnceStressAlex:
+  "All #i #j. StressOn('Alex')@i & StressOn('Alex')@j ==> #i = #j"

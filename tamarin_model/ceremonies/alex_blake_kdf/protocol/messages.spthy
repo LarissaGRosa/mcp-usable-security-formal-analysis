@@ -1,11 +1,14 @@
 /*
   protocol/messages.spthy -- PROTOCOL LAYER, Msg1 + Msg2 (shared by all experiments).
     Msg1  A->B : N_A           (GEN_NONCE; Easy)
-    Msg2  B->A : N_B           (GEN_NONCE + CALC_SK)
-  Blake computes SK = kdf(N_A,N_B) inline and stays Attentive -- the one-stressed-human
-  convention (§6.5): only Alex's Msg3 is put under stress, so any disagreement is
-  attributable to Alex. Msg3 differs per experiment (see protocol/msg3_*.spthy). Pulled in by
-  ceremony.base.spthy.
+    Msg2  B->A : N_B           (GEN_NONCE), then Blake's CALC_SK
+  Blake no longer computes SK inline. He sends N_B and leaves BlakeWait(idB,<Na,Nb>); his
+  CALC_SK is answered by a separate fragment, so Blake is now ALSO subject to the mask machinery
+  (point 1 of the multi-party plan). The DEFAULT answer is Attentive (protocol/blake_calc.spthy,
+  pulled in by ceremony.base.spthy) -- identical to the old inline behaviour, so every existing
+  experiment is unchanged. A Blake-stressing experiment instead pulls protocol/blake_calc_stressable.spthy
+  (a 'Hard' request that a stressor + core mask can degrade). Alex's Msg3 still differs per
+  experiment (see protocol/msg3_*.spthy). Pulled in by ceremony.base.spthy.
 */
 
 rule A_send_Na:
@@ -15,6 +18,5 @@ rule A_send_Na:
 
 rule B_recv_Na_send_Nb:
     [ BlakeInit(idB), In(Na), Fr(~Nb) ]
-  --[ Gen('Blake','Attentive'), Calc('Blake','Attentive'),
-      Key('Blake', kdf(Na,~Nb)), Send('Blake',~Nb) ]->
-    [ BlakeDone(idB, kdf(Na,~Nb)), Out(~Nb) ]
+  --[ Gen('Blake','Attentive'), Send('Blake',~Nb) ]->
+    [ BlakeWait(idB, <Na,~Nb>), Out(~Nb) ]

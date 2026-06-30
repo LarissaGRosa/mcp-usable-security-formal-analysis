@@ -1,0 +1,46 @@
+/*
+  core/lexicon_tlx.spthy -- Layer 2 of the agnostic stressor interface (AGNOSTIC_STRESSOR_INTERFACE.md).
+  The USABILITY VERDICT, stated ONCE: it maps an objective interaction action (Layer 1 -- the !Step
+  tag a ceremony emits) to a NASA-TLX workload dimension + magnitude. The HCI knowledge lives HERE,
+  with a citation, instead of being baked into each detector's premise (the old sigma3 hard-coded the
+  task name 'CALC_SK' / 'SHARE_PW' in two separate detector files).
+
+  NASA-TLX (Hart & Staveland 1988) -- six workload subscales. This lexicon seeds the dimensions the
+  migrated detectors read:
+
+    Demands('compute', 'TemporalDemand', 'hi')   -- read by sigma3 TimePressure
+      a 'compute' step -- deriving a key / composing ciphertext, work the human cannot do in-head --
+      carries HIGH temporal demand (the cryptographic work is slow, so the step is under deadline).
+      Both ceremonies' time-pressured step (KDF CALC_SK; the email password compose) is a 'compute'.
+
+    Demands('compute', 'MentalDemand', 'hi')     -- read by sigma1 HighCognitiveLoad
+      the SAME 'compute' step is also high MENTAL demand -- this is the HCI judgment "a key
+      derivation / passphrase setup is hard" (cognitive load theory, Sweller 1988), stated ONCE here
+      instead of as a designer 'Hard' flag (old declared sigma1) or a 'kdf' op match (old inferred
+      sigma1). Both of those collapse into the single agnostic detector that reads this row.
+
+    Demands('compare', 'Effort', 'hi')           -- read by sigma6 Abstraction
+      a 'compare' step -- judging a key fingerprint / device certificate authentic -- is high EFFORT:
+      crypto has no physical analog and the abstract comparison overwhelms the mental model (Whitten
+      & Tygar 1999, the PGP key metaphor; Green & Petre's "hard mental operations"). Stated once here
+      instead of as a !VerifyReq match (old declared sigma6) or a 'verify' op match (old inferred).
+
+  Levels are ordered constants 'lo' < 'med' < 'hi' (AGNOSTIC_STRESSOR_INTERFACE.md S5). Tamarin has
+  no built-in order on public atoms, so detectors EXACT-MATCH the level they fire on -- no ordering
+  relation is needed yet. As more dimensions/levels are seeded (sigma1 MentalDemand, sigma6 Effort,
+  ...), add one row per (action, dimension) here; the detectors stay ceremony-blind.
+
+  Seeded by an unconditional rule so any theory that includes a migrated detector stays CLOSED. The
+  fact is persistent + read-only -> no consume/reproduce, no sources loop (repo MEMORY.md S6.2).
+  OnceLexicon bounds the seed (the empty-premise rule could otherwise re-fire unboundedly).
+*/
+
+rule Seed_lexicon_tlx:
+    [ ]
+  --[ SeedLexicon() ]->
+    [ !Demands('compute', 'TemporalDemand', 'hi'),
+      !Demands('compute', 'MentalDemand',   'hi'),
+      !Demands('compare', 'Effort',         'hi') ]
+
+restriction OnceLexicon:
+  "All #i #j. SeedLexicon()@i & SeedLexicon()@j ==> #i = #j"

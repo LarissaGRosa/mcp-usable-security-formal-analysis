@@ -1,0 +1,35 @@
+theory ToyCeremony_P2_PostKdfRecovery
+begin
+
+/*
+  PROFILE P2 · the post-KDF phases under stress, with recovery.
+  Profile = < C0 + APPROVE + VERIFY + AUTHORIZE + recovery,
+              {Attentive,Habituated,Naive,Fearful}, {sigma8, sigma6, SecurityAnxiety} >.
+  Consolidates old 02 / 05 / 06 / 07. Attentive inline KDF brings the session up; the three
+  post-KDF phase bundles each add their stressor; warning_ui adds the recovery edge.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human-layer plumbing (gates + answer discipline + Alex enable) --
+#include "bundles/human_common.spthy"
+
+// -- usability lexicon (Layer 2): the agnostic sigma6 reads !Demands from here --
+#include "../../core/lexicon_tlx.spthy"
+
+// -- Attentive KDF (inline) brings up the session --
+#include "protocol/msg3_inline.spthy"
+#include "protocol/session.spthy"
+
+// -- the three post-KDF phases, each a one-line bundle (sigma8 / sigma6 / SecurityAnxiety) --
+#include "bundles/approve_phase.spthy"
+#include "bundles/verify_phase.spthy"
+#include "bundles/authorize_phase.spthy"
+
+// -- recovery: the good-usability warning (SetMask Attentive) --
+#include "protocol/warning_ui.spthy"
+
+#include "experiments/P2_postkdf_recovery.spthy"
+
+end

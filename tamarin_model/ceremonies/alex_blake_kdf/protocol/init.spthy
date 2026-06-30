@@ -2,10 +2,16 @@
   protocol/init.spthy -- PROTOCOL LAYER, participant initialization (shared by all experiments).
   The mask is a label (§6.2), so Init carries no mask fact; Start(P) keys
   OneInstancePerHuman (core/types.spthy). Pulled in by ceremony.base.spthy.
+
+  Each Init ALSO deposits a persistent participant fact !Party(p,id) (additive -- the linear
+  AlexInit/BlakeInit flow is unchanged). !Party is the read-only handle for the per-participant
+  stress-enable (protocol/stress_alex.spthy / stress_blake.spthy): a rule may read who the
+  participants are without consuming the linear init token. Bounded once per party by
+  OneInstancePerHuman on Start(p).
 */
 
 rule Init_Alex:
-    [ Fr(~idA) ] --[ Start('Alex') ]-> [ AlexInit(~idA) ]
+    [ Fr(~idA) ] --[ Start('Alex') ]-> [ AlexInit(~idA), !Party('Alex', ~idA) ]
 
 rule Init_Blake:
-    [ Fr(~idB) ] --[ Start('Blake') ]-> [ BlakeInit(~idB) ]
+    [ Fr(~idB) ] --[ Start('Blake') ]-> [ BlakeInit(~idB), !Party('Blake', ~idB) ]

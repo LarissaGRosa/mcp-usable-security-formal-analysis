@@ -10,7 +10,7 @@
 */
 
 rule Trigger_Habituation:
-    [ !Approved(P, pid1, 'Attentive'), !Approved(P, pid2, 'Attentive') ]
+    [ !Approved(P, pid1, 'Attentive'), !Approved(P, pid2, 'Attentive'), !StressEnable(P) ]
   --[ Habituate(P), Neq(pid1, pid2), SetMask(P,'Habituated') ]->
     [ ]
 

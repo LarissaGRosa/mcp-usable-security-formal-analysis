@@ -1,0 +1,25 @@
+theory ToyCeremony_P5_PathwayB
+begin
+
+/*
+  PROFILE P5 · Pathway B (sigma4 MisleadingTerminology, AWS-S3 mistake).
+  Profile = < C0 + SET_POLICY, {Attentive}, {} (no stressor) >. The task-mediated pathway: the
+  mistake is read from the request's terminology flag in f_H, with NO mask change. Kept distinct
+  from the mask-mediated profiles (it is the second pathway, not a third stressor). Replaces old 13.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P5_pathwayb.spthy
+*/
+
+#include "../../core/types.spthy"
+
+// -- human layer: Attentive SET_POLICY f_H (mistake on misleading terminology) --
+#include "../../core/masks/attentive_policy.spthy"
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+
+// -- protocol: init + the SET_POLICY step --
+#include "protocol/init.spthy"
+#include "protocol/policy_ui.spthy"
+
+#include "experiments/P5_pathwayb.spthy"
+
+end

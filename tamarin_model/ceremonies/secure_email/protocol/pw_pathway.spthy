@@ -1,0 +1,38 @@
+/*
+  protocol/pw_pathway.spthy -- PROTOCOL LAYER, Method 3 (password-based, for a KEYLESS recipient).
+
+  The message is encrypted symmetrically with a fresh passphrase ~pw and put on the network
+  (Out(senc(m,pw))) -- the adversary sees the ciphertext, exactly as for a real secure link.
+  Everything now rests on the guide's headline caveat: "A password must always travel over a
+  channel OTHER than the email." We model the side channel as the private linear fact Oob(...),
+  which the Dolev-Yao adversary cannot read; leaking the password means putting it on Out instead.
+
+  The human decision is the SHARE_PW action, answered by the share masks (core/masks share files):
+    * Attentive : pw via Oob to the intended recipient        -> secret stays off the wire.
+    * Careless  : pw ALSO onto Out (in-band leak)             -> adversary decrypts; recipient still reads
+                  (silent compromise).                           (LeakPw)
+    * Busy      : pw onto Out to a WRONG recipient, none Oob  -> adversary decrypts AND the intended
+                  to the intended one (fat-fingered address)     recipient is locked out. (MisdeliveredPw)
+
+  Both parties are mask-capable here (multi-party goal): after the recipient reads, an adversary
+  phishing lure (In) prompts Blake to "confirm" the password on a fake page -- a SECOND SHARE_PW
+  request, now for Blake. A degraded recipient re-emits pw onto Out; an Attentive recipient keeps
+  it off the wire. So a leak can originate at EITHER end, and both are attributed by the lemmas.
+
+  AlexInit / BlakeKeyless / BlakeHasSecret are linear and consumed once, so the trace is bounded.
+*/
+
+// -- sender composes the symmetric ciphertext and poses the SHARE_PW decision --
+rule A_compose_pw:
+    [ AlexInit(idA), !Keyless('Blake'), !Party('Blake', idB), Fr(~m), Fr(~pw), Fr(~rid) ]
+  --[ Branch('Alex','PW'), Send('Alex','PW', ~m), Secret(~m),
+      Request('Alex', ~rid, 'SHARE_PW') ]->
+    [ Out(senc(~m, ~pw)), Posted('Alex','PW', ~m),
+      !Req('Alex', ~rid, 'SHARE_PW', <idB, ~pw>, 'Easy'),
+      // Layer-1 objective step (agnostic interface): composing the encrypted message under a
+      // deadline is a 'compute' action -- the SAME tag the KDF ceremony emits, so the one
+      // migrated sigma3 (time_pressure) fires here too, with no 'SHARE_PW' task name in the detector.
+      !Step('Alex', ~rid, 'compute') ]
+
+// The recipient read + recipient-side phishing OUTCOMES are shared with profile S1 and live in
+// protocol/deliver.spthy (B_read_pw / B_phish_prompt). This file is just the sender's compose producer.

@@ -1,0 +1,18 @@
+/*
+  bundles/authorize_phase.spthy -- the AUTHORIZE phase repertoire in one include.
+  Producer (the authorization request) + the Attentive/Fearful answers + the SecurityAnxiety
+  stressor (Attentive->Fearful). Fearful aborts -- an active refusal (safe-fail).
+
+  Requires a !Session, so pair with protocol/session.spthy and a CALC producer plus
+  bundles/human_common.spthy. Adding a new AUTHORIZE stressor = one include line here.
+*/
+
+// -- producer --
+#include "../protocol/authorize_ui.spthy"
+
+// -- masks (every f_H for AUTHORIZE) --
+#include "../../../core/masks/attentive_authorize.spthy"
+#include "../../../core/masks/fearful_authorize.spthy"
+
+// -- stressors targeting AUTHORIZE --
+#include "../../../core/stressors/security_anxiety.spthy"

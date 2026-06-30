@@ -1,0 +1,15 @@
+/*
+  protocol/stress_alex.spthy -- make ALEX a stress target (Stage B, per-participant targeting).
+  Every stressor (under core/stressors) now reads !StressEnable(P), so a stressor fires only for a
+  party that has been ENABLED. This fragment produces !StressEnable('Alex') off the persistent
+  !Party('Alex',_); an experiment includes it to put Alex under stress. An experiment that omits
+  it leaves Alex un-enabled, so no stressor can fire for Alex (provable as an all-traces invariant).
+  Targeting is thus a one-line include, independent of who poses a request. OnceStressAlex bounds
+  the onset (StressEnable is persistent, so re-firing is a no-op; the bound keeps StressOn finite).
+*/
+
+rule Enable_Stress_Alex:
+    [ !Party('Alex', id) ] --[ StressOn('Alex') ]-> [ !StressEnable('Alex') ]
+
+restriction OnceStressAlex:
+  "All #i #j. StressOn('Alex')@i & StressOn('Alex')@j ==> #i = #j"

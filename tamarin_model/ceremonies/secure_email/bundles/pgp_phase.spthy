@@ -1,0 +1,14 @@
+/*
+  bundles/pgp_phase.spthy -- the VERIFY_KEY repertoire for Method 2, one include.
+  Producer is protocol/pgp_pathway.spthy (the genuine/tampered candidate-key fetch + aenc send +
+  recipient decrypt). This bundle adds every f_H that answers the fingerprint check plus the
+  stressor that degrades it:
+    * attentive_verify : accepts ONLY 'genuine'.
+    * naive_verify     : accepts a 'tampered' key too (Mistake) -> encrypts to the adversary.
+    * sigma6 Abstraction : the key/fingerprint metaphor overwhelms -> SetMask Naive.
+  Adding a new verify stressor = one include line here.
+*/
+
+#include "../../../core/masks/attentive_verify.spthy"
+#include "../../../core/masks/naive_verify.spthy"
+#include "../../../core/stressors/abstraction.spthy"

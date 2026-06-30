@@ -8,6 +8,25 @@
 ## Project state (keep current)
 - Tamarin **1.12.0** + Maude **3.5.1** at `~/.local/bin` (`export PATH="$HOME/.local/bin:$PATH"`).
 - Harness: `.claude/skills/model-tamarin/check.py` — `--prove` proves, default lints (~0.2 s).
+- **Second ceremony C1 `ceremonies/secure_email/`** (profile S0, 9 lemmas, ~2 s): models
+  `secure-email-generic-guide.html` — sender (Alex) + recipient (Blake) in one theory, with the
+  PGP pathway (keyed recipient, `aenc(m, pk(skB))`) and the password pathway (keyless recipient,
+  `senc(m, pw)`) BOTH reachable, both parties mask-capable. Reuses `core/` verbatim; adds
+  `protocol/crypto.spthy` (asym+sym builtins, kept out of `core/types.spthy`), share masks
+  `core/masks/{attentive,careless,busy}_share.spthy`, and `core/stressors/time_pressure_share.spthy`.
+  Out-of-band channel = private `Oob(...)` fact the DY adversary can't read; "leak" = put the
+  secret on `Out`. The reused VERIFY_KEY machinery (`*_verify` + σ6 Abstraction + `Tampered`) IS the
+  PGP key-substitution model. Headline lemmas: `S0_attentive_keeps_secret` (no degrade ⇒ no leak) +
+  `S0_message_secrecy_attribution` (adversary access ⇒ `Mistake` | `LeakPw` | `MisdeliveredPw`).
+  Re-confirmed lesson 2: `/*` in a comment (`core/masks/*_share`) killed the parser.
+- **C1 profile S1 `S1_interface.spthy`** (7 lemmas, ~3 s): the sending INTERFACE generates the
+  stressors (analyzer/inferred direction, lesson 12). `protocol/compose_ui.spthy` poses each
+  composer step's OBJECTIVE op + the S0 trigger fact: choose_method→`!Decision`×3→σ9 (Careless),
+  confirm_key→`!Op('verify')`→σ6 (Naive), set_passphrase→`!Op('kdf')`→σ1 (Busy), send→`!Req SHARE_PW`→σ3.
+  Reuses core inferred detectors + S0 masks verbatim. S0's send/decrypt OUTCOMES were extracted to
+  `protocol/deliver.spthy` (shared by S0+S1). Headline `S1_degrade_from_interface_step`: every
+  `SetMask(p,m≠Attentive)` is preceded by a `UIStep(p,_)` — required labelling the recipient
+  phishing prompt `UIStep('Blake','phish_confirm')` to cover Blake's recipient-side σ3.
 - **6 experiments, 29 lemmas, all verify ≤2 s.** Entry points: `ceremonies/alex_blake_kdf/NN_*.spthy`
   (00 baseline, 01 busy_under_load, 02 habituated_mfa, 03 careless_distraction,
   04 multi_stressor, 05 warning_recovery).

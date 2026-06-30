@@ -11,7 +11,7 @@
 */
 
 rule Trigger_ExternalDistraction:
-    [ !Req(P, rid, t, m, c) ]
+    [ !Req(P, rid, t, m, c), !StressEnable(P) ]
   --[ Distract(P), SetMask(P,'Careless') ]->
     [ ]
 

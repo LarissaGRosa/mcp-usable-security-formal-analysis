@@ -1,0 +1,45 @@
+theory ToyCeremony_P4_Inferred
+begin
+
+/*
+  PROFILE P4 · the fully-inferred stressor tier.
+  Profile = < C0 (op/decision harness), {Attentive,Busy,Careless,Naive},
+              inferred {sigma1, sigma6, sigma10, sigma9} >.
+  Consolidates old 10 / 11 / 12 / 15. Self-contained (does not use ceremony.base / the KDF message
+  flow): a token-bounded harness poses compute, verify and decision operations; the core detectors
+  infer each stressor from the objective operation / trace, with no declared flags.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P4_inferred.spthy
+*/
+
+#include "../../core/types.spthy"
+#include "protocol/init.spthy"
+
+// -- usability lexicon (Layer 2): the agnostic sigma1 reads !Demands from here --
+#include "../../core/lexicon_tlx.spthy"
+
+// -- inferred stressors (operation-inference + trace-inference) --
+#include "../../core/stressors/cognitive_load.spthy"
+#include "../../core/stressors/abstraction.spthy"
+#include "../../core/stressors/repeated_failure_inferred.spthy"
+#include "../../core/stressors/alert_volume_inferred.spthy"
+
+// -- masks: generic op (compute), verify op, and decision (confirm) --
+#include "../../core/masks/attentive_op.spthy"
+#include "../../core/masks/busy_op.spthy"
+#include "../../core/masks/careless_op.spthy"
+#include "../../core/masks/attentive_verify_op.spthy"
+#include "../../core/masks/naive_verify_op.spthy"
+#include "../../core/masks/attentive_confirm.spthy"
+#include "../../core/masks/careless_confirm.spthy"
+
+// -- transitions + Alex stress-enable --
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+#include "protocol/stress_alex.spthy"
+
+// -- the merged op/verify/decision harness --
+#include "protocol/infer_harness.spthy"
+
+#include "experiments/P4_inferred.spthy"
+
+end

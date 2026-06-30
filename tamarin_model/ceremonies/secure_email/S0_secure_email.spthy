@@ -1,0 +1,34 @@
+theory SecureEmail_S0
+begin
+
+/*
+  PROFILE S0 -- secure_email ceremony (C1), BOTH pathways in one experiment, BOTH parties masked.
+  The recipient comes keyed (PGP / Method 2) or keyless (password / Method 3); the sender chooses
+  the matching pathway, and the SAME masks + stressors degrade the human step on either pathway and
+  at either end. Models secure-email-generic-guide.html (Methods 2 and 3) under the ceremony-mask
+  framework: human layer reused verbatim from core/ (mask_state, answered_once, verify masks,
+  Abstraction, ExternalDistraction); ceremony-specific crypto + share masks added.
+  Run: check.py --prove ceremonies/secure_email/S0_secure_email.spthy
+*/
+
+// -- crypto + framework declarations (builtins/functions first) --
+#include "protocol/crypto.spthy"
+#include "../../core/types.spthy"
+
+// -- protocol spine: parties, both pathways --
+#include "protocol/init.spthy"
+#include "protocol/pgp_pathway.spthy"
+#include "protocol/pw_pathway.spthy"
+#include "protocol/deliver.spthy"
+
+// -- human-layer plumbing + stress BOTH parties --
+#include "bundles/human_common.spthy"
+#include "protocol/stress_blake.spthy"
+
+// -- phase repertoires (masks + stressors) --
+#include "bundles/pgp_phase.spthy"
+#include "bundles/pw_phase.spthy"
+
+#include "experiments/S0_secure_email.spthy"
+
+end

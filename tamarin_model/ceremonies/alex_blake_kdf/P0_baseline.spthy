@@ -1,0 +1,14 @@
+theory ToyCeremony_P0_Baseline
+begin
+
+/*
+  PROFILE P0 · baseline (walking skeleton). Profile = < C0, {Attentive}, {} >.
+  No stressor: the unperturbed ceremony the other profiles perturb. Replaces old Experiment 00.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P0_baseline.spthy
+*/
+
+#include "ceremony.base.spthy"
+#include "protocol/msg3_inline.spthy"
+#include "experiments/P0_baseline.spthy"
+
+end

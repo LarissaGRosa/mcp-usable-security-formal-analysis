@@ -1,13 +1,27 @@
 /*
-  core/stressors/abstraction.spthy -- f_U for the NEW stressor sigma6 Abstraction.
-  Crypto has no physical analog (Whitten & Tygar #2; the PGP key metaphor): the abstract
-  VERIFY_KEY fingerprint check overwhelms the user's mental model. At onset it emits
-  SetMask(P,'Naive') -- the f_M transition Attentive->Naive (core/transitions/mask_state.spthy).
-  Reads the persistent !VerifyReq to bind P. OnceAbstraction caps it to one onset per party.
+  core/stressors/abstraction.spthy -- f_U for sigma6 Abstraction, CEREMONY-AGNOSTIC.
+
+  Migrated to the agnostic interface (AGNOSTIC_STRESSOR_INTERFACE.md). sigma6 used to exist in TWO
+  files keyed on ceremony specifics: this one matched !VerifyReq(P,vid,kind), and
+  abstraction_inferred.spthy (now deleted) matched the objective op !Op(P,_,'verify',_). Both encoded
+  the same judgment -- "this comparison is abstract / effortful" -- in the detector. That judgment now
+  lives ONCE in the lexicon, so the two collapse into this single detector, which reads:
+
+    * !Step(P, sid, action)            -- Layer 1: an OBJECTIVE interaction step (no task name)
+    * !Demands(action,'Effort','hi')   -- Layer 2: the usability verdict, from core/lexicon_tlx
+
+  A 'compare' step (verify a key fingerprint / device certificate) is high-effort per the lexicon, so
+  this fires for both ceremonies with no !VerifyReq / 'verify' token in the rule.
+
+  Crypto has no physical analog (Whitten & Tygar 1999, the PGP key metaphor); NASA-TLX Effort
+  (Hart & Staveland 1988). At onset it emits SetMask(P,'Naive') -- everything below SetMask is
+  UNCHANGED. !StressEnable(P) gates per party (Stage B); OnceAbstraction bounds the onset per party.
 */
 
 rule Trigger_Abstraction:
-    [ !VerifyReq(P, vid, kind) ]
+    [ !Step(P, sid, action),
+      !Demands(action, 'Effort', 'hi'),
+      !StressEnable(P) ]
   --[ Abstraction(P), SetMask(P,'Naive') ]->
     [ ]
 

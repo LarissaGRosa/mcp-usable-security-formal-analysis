@@ -1,0 +1,45 @@
+theory ToyCeremony_P6_Mitigations
+begin
+
+/*
+  PROFILE P6 · three Poka-Yoke mitigations in one ceremony.
+  Profile = < C0(confirmed) + APPROVE(shutout) + VERIFY, {Attentive,Busy,Habituated,Naive},
+              {sigma1, sigma8, sigma6} + mitigations >.
+  Consolidates old 14 / 16 / 17. The stressors still degrade the user; the mitigations neutralize
+  each consequence. Uses the key-confirmation Msg3 (shutdown), the shutout-protected approval UI,
+  and core/mitigations.spthy (which also blocks tampered acceptance in VERIFY).
+  Run: check.py --prove ceremonies/alex_blake_kdf/P6_mitigations.spthy
+*/
+
+#include "ceremony.base.spthy"
+
+// -- human-layer plumbing --
+#include "bundles/human_common.spthy"
+
+// -- the mitigation restrictions (shutout auto-approve block + verify-shutout) --
+#include "../../core/mitigations.spthy"
+
+// -- CALC_SK with key-confirmation shutdown + the masks/stressor that produce the slip --
+#include "protocol/msg3_request_confirmed.spthy"
+#include "../../core/masks/attentive_calc.spthy"
+#include "../../core/masks/busy_calc.spthy"
+// usability lexicon (Layer 2): the agnostic sigma1 reads !Demands from here
+#include "../../core/lexicon_tlx.spthy"
+#include "../../core/stressors/cognitive_load.spthy"
+
+// -- session + shutout-protected APPROVE phase (sigma8) --
+#include "protocol/session.spthy"
+#include "protocol/approval_shutout_ui.spthy"
+#include "../../core/masks/attentive_approve.spthy"
+#include "../../core/masks/habituated_approve.spthy"
+#include "../../core/stressors/habituation.spthy"
+
+// -- VERIFY phase (sigma6) under verify-shutout --
+#include "protocol/verify_ui.spthy"
+#include "../../core/masks/attentive_verify.spthy"
+#include "../../core/masks/naive_verify.spthy"
+#include "../../core/stressors/abstraction.spthy"
+
+#include "experiments/P6_mitigations.spthy"
+
+end

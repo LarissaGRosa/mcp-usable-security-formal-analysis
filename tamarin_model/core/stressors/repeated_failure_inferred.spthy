@@ -8,7 +8,7 @@
 */
 
 rule Detect_RepeatedFailure:
-    [ !Failed(P) ]
+    [ !Failed(P), !StressEnable(P) ]
   --[ RepeatedFailure(P), SetMask(P,'Careless') ]->
     [ ]
 

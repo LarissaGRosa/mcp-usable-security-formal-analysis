@@ -1,0 +1,27 @@
+/*
+  bundles/calc_phase.spthy -- the CALC_SK phase repertoire in one include.
+  Producer (Alex poses a 'Hard' CALC_SK request) + every mask that answers it + every stressor
+  that targets it. Composing this bundle gives an experiment THREE stressors at once (sigma1
+  HighCognitiveLoad, sigma3 TimePressure, sigma2 ExternalDistraction) and the Attentive/Busy/Careless
+  answers. Adding a new CALC stressor = add ONE include line here, and every experiment that uses
+  this bundle inherits it.
+
+  Pair with bundles/human_common.spthy. The producer is msg3_request (Alex's 'Hard' request);
+  an experiment that wants Attentive-only CALC uses protocol/msg3_inline.spthy instead of this bundle.
+*/
+
+// -- producer --
+#include "../protocol/msg3_request.spthy"
+
+// -- masks (every f_H for CALC_SK) --
+#include "../../../core/masks/attentive_calc.spthy"
+#include "../../../core/masks/busy_calc.spthy"
+#include "../../../core/masks/careless_calc.spthy"
+
+// -- usability lexicon (Layer 2): the agnostic sigma3 reads !Demands from here --
+#include "../../../core/lexicon_tlx.spthy"
+
+// -- stressors targeting CALC_SK --
+#include "../../../core/stressors/cognitive_load.spthy"
+#include "../../../core/stressors/time_pressure.spthy"
+#include "../../../core/stressors/external_distraction.spthy"

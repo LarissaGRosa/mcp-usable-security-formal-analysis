@@ -1,0 +1,37 @@
+theory ToyCeremony_P3_WorstCase
+begin
+
+/*
+  PROFILE P3 · the maximal worst case, on BOTH participants (§6a).
+  Profile = < C0 + all post-KDF phases, all masks, all CALC + post-KDF stressors, on Alex AND Blake >.
+  Consolidates old 04 / 09 / 20. Does NOT use ceremony.base.spthy: it assembles the spine +
+  blake_calc_stressable so Blake's CALC is degradable, then the four phase bundles. The deliberate
+  state-space worst case -- if this stops terminating, that is the §6a blow-up; narrow the enabled
+  set (drop a bundle or stress one party).
+  Run: check.py --prove ceremonies/alex_blake_kdf/P3_worstcase.spthy
+*/
+
+// -- spine (NOT ceremony.base: Blake must be degradable) --
+#include "../../core/types.spthy"
+#include "protocol/init.spthy"
+#include "protocol/messages.spthy"
+#include "protocol/blake_calc_stressable.spthy"
+
+// -- human-layer plumbing --
+#include "bundles/human_common.spthy"
+
+// -- CALC_SK phase (Alex producer + masks + sigma1/sigma3/sigma2) --
+#include "bundles/calc_phase.spthy"
+
+// -- session + the three post-KDF phases --
+#include "protocol/session.spthy"
+#include "bundles/approve_phase.spthy"
+#include "bundles/verify_phase.spthy"
+#include "bundles/authorize_phase.spthy"
+
+// -- enable Blake too --
+#include "protocol/stress_blake.spthy"
+
+#include "experiments/P3_worstcase.spthy"
+
+end

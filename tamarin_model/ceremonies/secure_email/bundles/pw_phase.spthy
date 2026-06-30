@@ -1,0 +1,23 @@
+/*
+  bundles/pw_phase.spthy -- the SHARE_PW repertoire for Method 3, one include.
+  Producer is protocol/pw_pathway.spthy (senc compose + the SHARE_PW prompt(s) + recipient read +
+  the recipient-side phishing prompt). This bundle adds every f_H that answers the share decision
+  plus the two stressors that degrade it:
+    * attentive_share        : pw out-of-band (off the wire).
+    * careless_share         : pw in-band leak (Out) -- silent compromise (LeakPw).
+    * busy_share             : pw to a wrong recipient (Out), recipient locked out (MisdeliveredPw).
+    * sigma2 ExternalDistraction : action-generic -> SetMask Careless on the pending SHARE_PW.
+    * sigma3 TimePressure        : agnostic ('compute' !Step + lexicon, not SHARE_PW) -> SetMask Busy.
+  Because the share masks are party-generic and pw_pathway poses a SHARE_PW request for BOTH the
+  sender (compose) and the recipient (phishing confirm), this one bundle makes EITHER party's
+  password handling degradable.
+*/
+
+#include "../../../core/masks/attentive_share.spthy"
+#include "../../../core/masks/careless_share.spthy"
+#include "../../../core/masks/busy_share.spthy"
+#include "../../../core/stressors/external_distraction.spthy"
+// Agnostic sigma3 (was time_pressure_share): reads the 'compute' !Step posed by A_compose_pw + the
+// lexicon, instead of the 'SHARE_PW' task name. See AGNOSTIC_STRESSOR_INTERFACE.md.
+#include "../../../core/lexicon_tlx.spthy"
+#include "../../../core/stressors/time_pressure.spthy"

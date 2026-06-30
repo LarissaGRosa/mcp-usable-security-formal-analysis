@@ -1,0 +1,38 @@
+/*
+  protocol/pgp_pathway.spthy -- PROTOCOL LAYER, Method 2 (OpenPGP end-to-end).
+
+  This is the "verified public key" pathway. The human decision that matters is the guide's
+  named weak point: "Security rests on the correct key plus a verified fingerprint. Skipping
+  verification is the usual weak point." We REUSE the existing VERIFY_KEY machinery verbatim:
+    * core/masks/attentive_verify.spthy : accepts ONLY a 'genuine' fingerprint.
+    * core/masks/naive_verify.spthy     : accepts ANY fingerprint, incl. a 'tampered' one (Mistake).
+    * core/stressors/abstraction.spthy  : sigma6 -> SetMask Naive (the crypto-key metaphor overwhelms).
+  Those f_H rules read !VerifyReq(P,vid,kind) and emit !KeyChecked(P,vid). Here we BIND vid to the
+  candidate public key (CandKey) and, once the key is checked, encrypt the secret to it.
+
+  Two candidate-key sources mirror alex_blake_kdf/protocol/verify_ui.spthy:
+    * A_fetch_genuine  -- the recipient's real key pk(skB) from !RecipientKey (vid fresh, 'genuine').
+    * A_fetch_tampered -- an adversary-substituted key from In (a hijacked keyserver / MITM'd WKD);
+      Tampered(badkey) marks it. Since badkey comes from In, the adversary may instantiate it as
+      pk(k) for a k it knows -- so encrypting to it hands the plaintext to the adversary.
+
+  AlexInit is linear and consumed by exactly one fetch, so each trace takes one branch and sends
+  one message (bounded -- no unbounded request spawning; repo MEMORY.md lesson 5).
+*/
+
+// -- candidate-key acquisition (the sender picks the PGP pathway) --
+
+// !Step('Alex',_,'compare'): Layer-1 objective step (agnostic interface). Verifying the recipient's
+// PGP key is a 'compare' action the lexicon marks high-Effort -> the migrated sigma6 reads it.
+rule A_fetch_genuine:
+    [ AlexInit(idA), !RecipientKey('Blake', pkB), Fr(~vid) ]
+  --[ Branch('Alex','PGP'), KeyOffered('Alex', ~vid, 'genuine') ]->
+    [ AlexVerifying(idA, ~vid, pkB), !VerifyReq('Alex', ~vid, 'genuine'), !Step('Alex', ~vid, 'compare') ]
+
+rule A_fetch_tampered:
+    [ AlexInit(idA), !RecipientKey('Blake', pkB), In(badkey) ]
+  --[ Branch('Alex','PGP'), KeyOffered('Alex', badkey, 'tampered'), Tampered(badkey) ]->
+    [ AlexVerifying(idA, badkey, badkey), !VerifyReq('Alex', badkey, 'tampered'), !Step('Alex', badkey, 'compare') ]
+
+// The compose+send and recipient-decrypt OUTCOMES are shared with profile S1 and live in
+// protocol/deliver.spthy (A_send_pgp / B_read_pgp). This file is just the candidate-key producers.

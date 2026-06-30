@@ -1,0 +1,42 @@
+/*
+  experiments/P2_postkdf_recovery.spthy -- Profile P2 · post-KDF phases + recovery (L_P2_*).
+  Consolidates old 02 (sigma8 habituation / auto-approve), 06 (sigma6 abstraction / mistake),
+  07 (SecurityAnxiety / abort) and 05 (the UI-warning recovery) into one profile: an Attentive KDF
+  (inline), then the APPROVE / VERIFY / AUTHORIZE phases under their three stressors, plus the
+  good-usability warning that returns the user to Attentive. Broad lemmas.
+*/
+
+// sanity: a fully-attentive user completes through to authorization.
+lemma P2_happy_path:
+  exists-trace
+  "Ex aid #i. Authorized('Alex', aid)@i"
+
+// each post-KDF failure mode is reachable:
+lemma P2_autoapprove_injected_reachable:
+  exists-trace "Ex pid #o #j. AutoApprove('Alex',pid)@o & Injected(pid)@j"
+
+lemma P2_mistake_reachable:
+  exists-trace "Ex vid #o #t. Mistake('Alex',vid)@o & Tampered(vid)@t"
+
+lemma P2_abort_reachable:
+  exists-trace "Ex aid #o. Abort('Alex',aid)@o"
+
+// RECOVERY (old 05): habituate -> auto-approve -> UI warning -> re-engaged Attentive approval.
+lemma P2_recovery_reachable:
+  exists-trace
+  "Ex p1 p2 #h #o #w #a.
+       Habituate('Alex')@h & AutoApprove('Alex',p1)@o
+     & WarningShown('Alex')@w & Approve('Alex',p2,'Attentive')@a
+     & #h < #o & #o < #w & #w < #a"
+
+// recovery is CAUSED by the warning: no spontaneous return to Attentive after habituation.
+//                                                            [Safety: recovery causality]
+lemma P2_recovery_requires_warning:
+  all-traces
+  "All p pid #a #h. Approve(p,pid,'Attentive')@a & Habituate(p)@h & #h < #a
+                    ==> (Ex #w. WarningShown(p)@w & #h < #w & #w < #a)"
+
+// composition preserves per-stressor safety: a mistake requires its abstraction stressor.
+lemma P2_mistake_requires_abstraction:
+  all-traces
+  "All p vid #o. Mistake(p,vid)@o ==> (Ex #s. Abstraction(p)@s & #s < #o)"

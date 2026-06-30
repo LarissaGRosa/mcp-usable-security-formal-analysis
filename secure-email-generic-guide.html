@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sending secure email — a generic guide</title>
+<style>
+  body { max-width: 880px; margin: 0 auto; padding: 44px 24px 80px; background: #fff;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #2c2c2a; line-height: 1.65; }
+  h1 { font-size: 27px; font-weight: 600; margin: 0 0 4px; }
+  .lede { color: #5f5e5a; font-size: 15px; margin: 0 0 28px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 44px 0 14px; padding-bottom: 6px;
+    border-bottom: 1px solid #e5e3da; }
+  h3 { font-size: 16px; font-weight: 600; margin: 22px 0 6px; }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; background: #f1efe8;
+    padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  a { color: #185fa5; }
+  .note { background: #faeeda; border-left: 4px solid #ba7517; padding: 10px 14px;
+    border-radius: 0 6px 6px 0; font-size: 14px; margin: 16px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 14px 0; }
+  th, td { border: 1px solid #d3d1c7; padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: #f1efe8; font-weight: 600; }
+  figure { margin: 20px 0 8px; text-align: center; }
+  figcaption { font-size: 13px; color: #5f5e5a; margin-top: 6px; }
+  .figs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .figs figure { flex: 1 1 360px; min-width: 320px; }
+  svg { max-width: 100%; height: auto; }
+  .bx-coral  { fill: #faece7; stroke: #993c1d; stroke-width: .75; }
+  .bx-blue   { fill: #e6f1fb; stroke: #185fa5; stroke-width: .75; }
+  .bx-teal   { fill: #e1f5ee; stroke: #0f6e56; stroke-width: .75; }
+  .bx-purple { fill: #eeedfe; stroke: #534ab7; stroke-width: .75; }
+  .bx-dash   { stroke-dasharray: 4 4; }
+  .t-title { font: 500 14px -apple-system, "Segoe UI", sans-serif; }
+  .t-sub   { font: 400 12px -apple-system, "Segoe UI", sans-serif; }
+  .coral-t{fill:#712b13} .coral-s{fill:#993c1d}
+  .blue-t{fill:#0c447c}  .blue-s{fill:#185fa5}
+  .teal-t{fill:#085041}  .teal-s{fill:#0f6e56}
+  .purple-t{fill:#3c3489} .purple-s{fill:#534ab7}
+  .leg { font: 400 12px -apple-system, "Segoe UI", sans-serif; fill: #5f5e5a; }
+  .arrow { stroke: #888780; stroke-width: 1.5; fill: none; }
+  .dash-coral { stroke: #d85a30; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+  .leader { stroke: #b4b2a9; stroke-width: 1; fill: none; stroke-dasharray: 3 3; }
+  @media print {
+    body { padding: 0; max-width: none; }
+    a { color: inherit; text-decoration: none; }
+    h2 { page-break-after: avoid; }
+    figure, table, .figs { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ag" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+  <marker id="ac" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#d85a30" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs></svg>
+
+<h1>Sending secure email — a generic guide</h1>
+<p class="lede">A provider-agnostic view of how to send secure email, drawn from three privacy-focused providers — <strong>Proton Mail</strong>, <strong>Mailfence</strong>, and <strong>mailbox.org</strong>. Their interfaces differ, but the ways to actually send a secure message reduce to the same three methods, all built on the open standards <strong>TLS</strong> and <strong>OpenPGP</strong>.</p>
+
+<div class="note">Each provider labels features differently and changes its interface over time. This guide describes the shared concepts and flows; for exact button names and current options, check each provider's help center (linked at the end).</div>
+
+<h2>The three providers in brief</h2>
+<ul>
+  <li><strong>Proton Mail</strong> — automates key management most aggressively: messages between two Proton users are end-to-end encrypted with no setup, because Proton publishes and fetches public keys through its own key server. External encryption uses standard OpenPGP (imported keys or Web Key Directory).</li>
+  <li><strong>Mailfence</strong> — standards-explicit OpenPGP built into the webmail, with an integrated <em>keystore</em> for generating, importing, publishing, and managing keys, plus a symmetric "encrypt with a password" option.</li>
+  <li><strong>mailbox.org</strong> — provides <em>Guard</em>, an in-browser OpenPGP system, and also supports <em>S/MIME</em> and an <em>encrypted mailbox</em> (incoming mail re-encrypted to your key for storage at rest), plus a password-protected option for keyless recipients.</li>
+</ul>
+
+<h2>The core idea</h2>
+<p>Every secure-email method comes down to getting a <strong>key or a secret</strong> to the other person over a channel you can trust. The three methods differ only in how that happens — and that single difference explains everything about their setup cost and strength.</p>
+
+<h2>What encryption protects (and what it does not)</h2>
+<ul>
+  <li><strong>Protected:</strong> the message body and attachments, when end-to-end or password encryption is in effect.</li>
+  <li><strong>Not protected:</strong> the <strong>subject line</strong> and <strong>envelope metadata</strong> (sender, recipient, timestamps). These route the mail and are not encrypted end-to-end in any of the three. Keep sensitive details out of the subject line.</li>
+</ul>
+
+<h2>Method 1 — Transport encryption (TLS)</h2>
+<h3>How it works</h3>
+<p>The baseline that every modern email gets automatically: the connection between mail servers is encrypted with TLS, so the message is protected <em>while in transit</em>. It is <strong>not</strong> end-to-end — each provider can read the message on its servers (unless a mailbox-at-rest encryption option is enabled). All three providers do this for ordinary mail with no action from you.</p>
+<h3>Before you start</h3>
+<ul><li>Nothing. Both the sending and receiving providers support TLS — which virtually all do today.</li></ul>
+<h3>Secondary / out-of-band channel</h3>
+<ul><li><strong>None.</strong> The providers negotiate the encrypted connection automatically.</li></ul>
+
+<div class="figs">
+<figure>
+<svg viewBox="0 0 680 390" role="img" aria-label="Sender flow for transport encryption">
+  <rect class="bx-coral" x="160" y="18" width="12" height="12" rx="3"/><text class="leg" x="180" y="28">Your part / setup</text>
+  <rect class="bx-blue" x="320" y="18" width="12" height="12" rx="3"/><text class="leg" x="340" y="28">Handled by providers</text>
+  <rect class="bx-coral" x="160" y="50" width="360" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="74" text-anchor="middle">No setup required</text>
+  <text class="t-sub coral-s" x="340" y="92" text-anchor="middle">both servers support TLS</text>
+  <line x1="340" y1="106" x2="340" y2="136" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-blue" x="160" y="136" width="360" height="56" rx="8"/>
+  <text class="t-title blue-t" x="340" y="160" text-anchor="middle">Compose normally</text>
+  <text class="t-sub blue-s" x="340" y="178" text-anchor="middle">no encryption options</text>
+  <line x1="340" y1="192" x2="340" y2="222" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-blue" x="160" y="222" width="360" height="56" rx="8"/>
+  <text class="t-title blue-t" x="340" y="246" text-anchor="middle">Send</text>
+  <text class="t-sub blue-s" x="340" y="264" text-anchor="middle">encrypted in transit (TLS)</text>
+  <line x1="340" y1="278" x2="340" y2="308" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-blue" x="160" y="308" width="360" height="56" rx="8"/>
+  <text class="t-title blue-t" x="340" y="332" text-anchor="middle">Stored on the servers</text>
+  <text class="t-sub blue-s" x="340" y="350" text-anchor="middle">readable by the providers</text>
+</svg>
+<figcaption>Sender — transport encryption</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 680 390" role="img" aria-label="Recipient flow for transport encryption">
+  <rect class="bx-coral" x="160" y="18" width="12" height="12" rx="3"/><text class="leg" x="180" y="28">Your part / setup</text>
+  <rect class="bx-blue" x="320" y="18" width="12" height="12" rx="3"/><text class="leg" x="340" y="28">Handled by providers</text>
+  <rect class="bx-coral" x="160" y="50" width="360" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="74" text-anchor="middle">A mailbox at any provider</text>
+  <text class="t-sub coral-s" x="340" y="92" text-anchor="middle">that supports TLS</text>
+  <line x1="340" y1="106" x2="340" y2="136" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-blue" x="160" y="136" width="360" height="56" rx="8"/>
+  <text class="t-title blue-t" x="340" y="160" text-anchor="middle">Message is delivered</text>
+  <text class="t-sub blue-s" x="340" y="178" text-anchor="middle">decrypted at the server</text>
+  <line x1="340" y1="192" x2="340" y2="222" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-blue" x="160" y="222" width="360" height="56" rx="8"/>
+  <text class="t-title blue-t" x="340" y="246" text-anchor="middle">Open and read</text>
+  <text class="t-sub blue-s" x="340" y="264" text-anchor="middle">nothing special to do</text>
+  <line x1="340" y1="278" x2="340" y2="308" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-blue" x="160" y="308" width="360" height="56" rx="8"/>
+  <text class="t-title blue-t" x="340" y="332" text-anchor="middle">Reply normally</text>
+  <text class="t-sub blue-s" x="340" y="350" text-anchor="middle">also TLS in transit</text>
+</svg>
+<figcaption>Recipient — transport encryption (no secondary channel)</figcaption>
+</figure>
+</div>
+
+<h3>Trust model and caveats</h3>
+<ul>
+  <li>Protects against eavesdroppers on the network, not against the providers themselves.</li>
+  <li>If either server does not enforce TLS, the message may travel unencrypted. Use Method 2 or 3 when the content is sensitive.</li>
+</ul>
+
+<h2>Method 2 — End-to-end with OpenPGP</h2>
+<h3>How it works</h3>
+<p>The strongest, standards-based method, supported by all three providers (and interoperable with any OpenPGP user anywhere). You encrypt to the recipient's <strong>public key</strong> and sign with your <strong>private key</strong>; only their private key can decrypt. The provider never sees the plaintext. Proton does this automatically between Proton users; Mailfence and mailbox.org expose explicit key management in the webmail.</p>
+<h3>Before you start</h3>
+<ul>
+  <li>You have your own key pair (generated or stored in the provider's webmail/keystore).</li>
+  <li>The recipient has their own key pair and a client that can decrypt with their private key.</li>
+</ul>
+<h3>Secondary / out-of-band channel</h3>
+<ul>
+  <li><strong>The recipient's public key</strong> — obtained from them directly, from a public keyserver, or auto-discovered via Web Key Directory (WKD).</li>
+  <li><strong>Fingerprint verification</strong> — confirm the key really belongs to that person through a separate channel. Holding a key does not by itself prove identity.</li>
+  <li><strong>Reciprocal:</strong> for the recipient to verify your signature or reply encrypted, they need <em>your</em> public key.</li>
+</ul>
+
+<div class="figs">
+<figure>
+<svg viewBox="0 0 680 474" role="img" aria-label="Sender flow for OpenPGP end-to-end encryption">
+  <rect class="bx-coral" x="120" y="18" width="12" height="12" rx="3"/><text class="leg" x="140" y="28">Out-of-band / setup</text>
+  <rect class="bx-purple" x="320" y="18" width="12" height="12" rx="3"/><text class="leg" x="340" y="28">In your webmail</text>
+  <rect class="bx-coral" x="140" y="50" width="400" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="74" text-anchor="middle">You have a PGP key pair</text>
+  <text class="t-sub coral-s" x="340" y="92" text-anchor="middle">generated/stored in webmail</text>
+  <line x1="340" y1="106" x2="340" y2="136" class="dash-coral" marker-end="url(#ac)"/>
+  <rect class="bx-coral" x="140" y="136" width="400" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="160" text-anchor="middle">Get recipient's public key</text>
+  <text class="t-sub coral-s" x="340" y="178" text-anchor="middle">from them, keyserver, or WKD</text>
+  <line x1="340" y1="192" x2="340" y2="222" class="dash-coral" marker-end="url(#ac)"/>
+  <rect class="bx-coral" x="140" y="222" width="400" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="246" text-anchor="middle">Verify the fingerprint</text>
+  <text class="t-sub coral-s" x="340" y="264" text-anchor="middle">over a separate channel</text>
+  <line x1="340" y1="278" x2="340" y2="308" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-purple" x="140" y="308" width="400" height="56" rx="8"/>
+  <text class="t-title purple-t" x="340" y="332" text-anchor="middle">Encrypt + sign, compose</text>
+  <text class="t-sub purple-s" x="340" y="350" text-anchor="middle">enable in the composer</text>
+  <line x1="340" y1="364" x2="340" y2="394" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-purple" x="140" y="394" width="400" height="56" rx="8"/>
+  <text class="t-title purple-t" x="340" y="418" text-anchor="middle">Send</text>
+  <text class="t-sub purple-s" x="340" y="436" text-anchor="middle">end-to-end encrypted to them</text>
+</svg>
+<figcaption>Sender — OpenPGP (out-of-band key exchange first)</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 680 474" role="img" aria-label="Recipient flow for OpenPGP end-to-end encryption">
+  <rect class="bx-coral" x="120" y="18" width="12" height="12" rx="3"/><text class="leg" x="140" y="28">Out-of-band / setup</text>
+  <rect class="bx-purple" x="320" y="18" width="12" height="12" rx="3"/><text class="leg" x="340" y="28">In your webmail/client</text>
+  <rect class="bx-coral" x="140" y="50" width="400" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="74" text-anchor="middle">You have a PGP key pair</text>
+  <text class="t-sub coral-s" x="340" y="92" text-anchor="middle">generated/stored in webmail</text>
+  <line x1="340" y1="106" x2="340" y2="136" class="dash-coral" marker-end="url(#ac)"/>
+  <rect class="bx-coral" x="140" y="136" width="400" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="160" text-anchor="middle">You shared your public key</text>
+  <text class="t-sub coral-s" x="340" y="178" text-anchor="middle">sender verified the fingerprint</text>
+  <line x1="340" y1="192" x2="340" y2="222" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-purple" x="140" y="222" width="400" height="56" rx="8"/>
+  <text class="t-title purple-t" x="340" y="246" text-anchor="middle">Encrypted email arrives</text>
+  <text class="t-sub purple-s" x="340" y="264" text-anchor="middle">in your webmail or client</text>
+  <line x1="340" y1="278" x2="340" y2="308" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-purple" x="140" y="308" width="400" height="56" rx="8"/>
+  <text class="t-title purple-t" x="340" y="332" text-anchor="middle">Decrypted with your key</text>
+  <text class="t-sub purple-s" x="340" y="350" text-anchor="middle">your private key unlocks it</text>
+  <line x1="340" y1="364" x2="340" y2="394" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-purple" x="140" y="394" width="400" height="56" rx="8"/>
+  <text class="t-title purple-t" x="340" y="418" text-anchor="middle">Read, verify, reply</text>
+  <text class="t-sub purple-s" x="340" y="436" text-anchor="middle">reply needs sender's public key</text>
+</svg>
+<figcaption>Recipient — OpenPGP</figcaption>
+</figure>
+</div>
+
+<h3>Trust model and caveats</h3>
+<ul>
+  <li>Strongest method; the provider cannot read the message. Interoperable across providers and standalone PGP tools.</li>
+  <li>Security rests on the <strong>correct key</strong> plus a <strong>verified fingerprint</strong>. Skipping verification is the usual weak point.</li>
+  <li>Most setup of the three; both sides need keys and compatible software.</li>
+</ul>
+
+<h2>Method 3 — Password-based encryption</h2>
+<h3>How it works</h3>
+<p>The fallback for reaching someone who has <strong>no keys</strong>. You protect the message with a passphrase; it is encrypted symmetrically and delivered either as an encrypted message or as a secure link. The recipient enters the password — obtained separately — to read it, and can usually reply securely. All three providers offer a version of this.</p>
+<h3>Before you start</h3>
+<ul><li>The recipient needs only an email address, a browser, and internet access — no account, keys, or software.</li></ul>
+<h3>Secondary / out-of-band channel</h3>
+<ul>
+  <li><strong>The password.</strong> Share it over a channel separate from the email (call, text, Signal, in person). Never send it by email.</li>
+  <li>Any hint that travels in the email must be meaningless to outsiders.</li>
+</ul>
+
+<div class="figs">
+<figure>
+<svg viewBox="0 0 680 474" role="img" aria-label="Sender flow for password-based encryption">
+  <rect class="bx-coral" x="160" y="18" width="12" height="12" rx="3"/><text class="leg" x="180" y="28">Out-of-band / setup</text>
+  <rect class="bx-teal" x="320" y="18" width="12" height="12" rx="3"/><text class="leg" x="340" y="28">In webmail</text>
+  <rect class="bx-coral" x="160" y="50" width="360" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="74" text-anchor="middle">Recipient needs no keys</text>
+  <text class="t-sub coral-s" x="340" y="92" text-anchor="middle">any address + a browser</text>
+  <line x1="340" y1="106" x2="340" y2="136" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-teal" x="160" y="136" width="360" height="56" rx="8"/>
+  <text class="t-title teal-t" x="340" y="160" text-anchor="middle">Choose "encrypt with password"</text>
+  <text class="t-sub teal-s" x="340" y="178" text-anchor="middle">in the composer</text>
+  <line x1="340" y1="192" x2="340" y2="222" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-teal" x="160" y="222" width="360" height="56" rx="8"/>
+  <text class="t-title teal-t" x="340" y="246" text-anchor="middle">Set a passphrase + hint</text>
+  <text class="t-sub teal-s" x="340" y="264" text-anchor="middle">message encrypted symmetrically</text>
+  <line x1="340" y1="278" x2="340" y2="308" class="dash-coral" marker-end="url(#ac)"/>
+  <rect class="bx-coral" x="160" y="308" width="360" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="332" text-anchor="middle">Share the password</text>
+  <text class="t-sub coral-s" x="340" y="350" text-anchor="middle">via a separate channel</text>
+  <line x1="340" y1="364" x2="340" y2="394" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-teal" x="160" y="394" width="360" height="56" rx="8"/>
+  <text class="t-title teal-t" x="340" y="418" text-anchor="middle">Send</text>
+  <text class="t-sub teal-s" x="340" y="436" text-anchor="middle">encrypted message or secure link</text>
+</svg>
+<figcaption>Sender — password-based</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="0 0 680 474" role="img" aria-label="Recipient flow for password-based encryption">
+  <rect class="bx-coral" x="160" y="18" width="12" height="12" rx="3"/><text class="leg" x="180" y="28">Out-of-band / setup</text>
+  <rect class="bx-teal" x="320" y="18" width="12" height="12" rx="3"/><text class="leg" x="340" y="28">In webmail / secure page</text>
+  <rect class="bx-coral" x="160" y="50" width="360" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="74" text-anchor="middle">You need only a browser</text>
+  <text class="t-sub coral-s" x="340" y="92" text-anchor="middle">no account or keys</text>
+  <line x1="340" y1="106" x2="340" y2="136" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-teal" x="160" y="136" width="360" height="56" rx="8"/>
+  <text class="t-title teal-t" x="340" y="160" text-anchor="middle">Encrypted message / link arrives</text>
+  <text class="t-sub teal-s" x="340" y="178" text-anchor="middle">from the sender</text>
+  <line x1="340" y1="192" x2="340" y2="222" class="dash-coral" marker-end="url(#ac)"/>
+  <rect class="bx-coral" x="160" y="222" width="360" height="56" rx="8"/>
+  <text class="t-title coral-t" x="340" y="246" text-anchor="middle">Get the password</text>
+  <text class="t-sub coral-s" x="340" y="264" text-anchor="middle">out-of-band, from the sender</text>
+  <line x1="340" y1="278" x2="340" y2="308" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-teal" x="160" y="308" width="360" height="56" rx="8"/>
+  <text class="t-title teal-t" x="340" y="332" text-anchor="middle">Enter the password</text>
+  <text class="t-sub teal-s" x="340" y="350" text-anchor="middle">decrypts the message</text>
+  <line x1="340" y1="364" x2="340" y2="394" class="arrow" marker-end="url(#ag)"/>
+  <rect class="bx-teal" x="160" y="394" width="360" height="56" rx="8"/>
+  <text class="t-title teal-t" x="340" y="418" text-anchor="middle">Read and reply</text>
+  <text class="t-sub teal-s" x="340" y="436" text-anchor="middle">securely, via the same page</text>
+</svg>
+<figcaption>Recipient — password-based (password arrives out-of-band)</figcaption>
+</figure>
+</div>
+
+<h3>Trust model and caveats</h3>
+<ul>
+  <li>Security depends entirely on the password staying secret and travelling out-of-band.</li>
+  <li>The recipient must click an external link or open an encrypted attachment — which can resemble phishing, so a heads-up over the side channel helps.</li>
+</ul>
+
+<h2>How each provider implements the three methods</h2>
+<table>
+  <thead><tr><th>Method</th><th>Proton Mail</th><th>Mailfence</th><th>mailbox.org</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1. Transport (TLS)</strong></td><td>Automatic</td><td>Automatic</td><td>Automatic (with DANE/MTA-STS)</td></tr>
+    <tr><td><strong>2. End-to-end OpenPGP</strong></td><td>Automatic between Proton users (own key server); imported keys / WKD for external</td><td>Explicit OpenPGP via integrated keystore; import, publish, and manage keys</td><td>OpenPGP via "Guard" in-browser; keyservers / WKD; also supports S/MIME</td></tr>
+    <tr><td><strong>3. Password-based</strong></td><td>"Password-protected Emails" (secure link + expiration)</td><td>"Encrypt with a password" (symmetric OpenPGP)</td><td>Password-protected message for keyless recipients</td></tr>
+    <tr><td><em>At-rest extras</em></td><td>Zero-access encryption of stored mail</td><td>Key management and storage in the keystore</td><td>"Encrypted mailbox" — incoming mail re-encrypted to your key</td></tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#5f5e5a;">Feature names and availability change over time; confirm current details in each provider's help center.</p>
+
+<h2>Which method to use</h2>
+<ul>
+  <li><strong>Routine mail, not especially sensitive</strong> → transport encryption is automatic; nothing to do.</li>
+  <li><strong>Sensitive mail to a technical contact you'll write to repeatedly</strong> → OpenPGP; exchange and verify keys once, then it is automatic.</li>
+  <li><strong>Sensitive one-off to someone with no keys</strong> → password-based; agree the password by phone or text first.</li>
+</ul>
+
+<h2>Premises and caveats (summary)</h2>
+<ul>
+  <li>Subject lines and metadata are <strong>not</strong> encrypted in any method — keep them generic.</li>
+  <li>TLS protects mail in transit only; the providers can still read it at rest unless a mailbox-encryption option is used.</li>
+  <li>A password must always travel over a channel <strong>other than</strong> the email.</li>
+  <li>A public key should be <strong>fingerprint-verified</strong> out-of-band; importing a key alone does not prove identity.</li>
+  <li>OpenPGP is interoperable, so a Proton, Mailfence, mailbox.org, or any other PGP user can exchange encrypted mail with one another.</li>
+  <li>Interface labels and feature availability differ per provider and change over time — verify in each one's documentation.</li>
+</ul>
+
+<h2>Help centers</h2>
+<ul>
+  <li>Proton Mail support: <a href="https://proton.me/support">https://proton.me/support</a></li>
+  <li>Mailfence support / knowledge base: <a href="https://mailfence.com">https://mailfence.com</a></li>
+  <li>mailbox.org knowledge base: <a href="https://kb.mailbox.org">https://kb.mailbox.org</a></li>
+</ul>
+
+</body>
+</html>

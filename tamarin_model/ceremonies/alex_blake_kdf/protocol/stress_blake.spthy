@@ -1,0 +1,12 @@
+/*
+  protocol/stress_blake.spthy -- make BLAKE a stress target (Stage B, per-participant targeting).
+  The Blake counterpart of protocol/stress_alex.spthy: produces !StressEnable('Blake') off the
+  persistent !Party('Blake',_). Include it to put Blake under stress; omit it and no stressor can
+  fire for Blake. See stress_alex.spthy for the mechanism.
+*/
+
+rule Enable_Stress_Blake:
+    [ !Party('Blake', id) ] --[ StressOn('Blake') ]-> [ !StressEnable('Blake') ]
+
+restriction OnceStressBlake:
+  "All #i #j. StressOn('Blake')@i & StressOn('Blake')@j ==> #i = #j"

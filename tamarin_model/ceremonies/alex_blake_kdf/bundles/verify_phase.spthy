@@ -1,0 +1,18 @@
+/*
+  bundles/verify_phase.spthy -- the VERIFY_KEY phase repertoire in one include.
+  Producer (the fingerprint UI: genuine + tampered) + the Attentive/Naive answers + the sigma6
+  Abstraction stressor (Attentive->Naive). Naive accepts a tampered fingerprint (the mistake).
+
+  Requires a !Session, so pair with protocol/session.spthy and a CALC producer plus
+  bundles/human_common.spthy. Adding a new VERIFY stressor = one include line here.
+*/
+
+// -- producer --
+#include "../protocol/verify_ui.spthy"
+
+// -- masks (every f_H for VERIFY_KEY) --
+#include "../../../core/masks/attentive_verify.spthy"
+#include "../../../core/masks/naive_verify.spthy"
+
+// -- stressors targeting VERIFY_KEY --
+#include "../../../core/stressors/abstraction.spthy"

@@ -1,0 +1,38 @@
+/*
+  experiments/P3_worstcase.spthy -- Profile P3 · the maximal multi-party worst case (L_P3_*).
+  Consolidates old 04 / 09 / 20: every stressor, mask and phase, now on BOTH participants (Alex via
+  calc_phase, Blake via blake_calc_stressable). The deliberate §6a worst case -- studies that every
+  failure stays reachable and the per-stressor safety properties still compose with two stressable
+  humans. Broad lemmas (mostly reachability + two composed-safety invariants).
+*/
+
+// sanity: a fully-attentive run still reaches authorization.
+lemma P3_happy_path:
+  exists-trace
+  "Ex aid #i. Authorized('Alex', aid)@i"
+
+// every degraded outcome is reachable in the unified multi-party ceremony:
+lemma P3_slip_reachable:
+  exists-trace "Ex p #o. Slip(p)@o"
+
+lemma P3_mistake_reachable:
+  exists-trace "Ex p vid #o #t. Mistake(p,vid)@o & Tampered(vid)@t"
+
+lemma P3_autoapprove_injected_reachable:
+  exists-trace "Ex p pid #o #j. AutoApprove(p,pid)@o & Injected(pid)@j"
+
+lemma P3_abort_reachable:
+  exists-trace "Ex p aid #o. Abort(p,aid)@o"
+
+// MULTI-PARTY: Blake too can be driven to a Busy slip on his CALC_SK.
+lemma P3_blake_slips:
+  exists-trace "Ex k #o. Calc('Blake','Busy')@o & Key('Blake',k)@o & not(Ex a b. k = kdf(a,b))"
+
+// composition preserves per-stressor safety:
+lemma P3_mistake_requires_abstraction:
+  all-traces
+  "All p vid #o. Mistake(p,vid)@o ==> (Ex #s. Abstraction(p)@s & #s < #o)"
+
+lemma P3_attentive_never_accepts_tampered:
+  all-traces
+  "All p vid #i. Verify(p,vid,'Attentive')@i ==> not (Ex #j. Tampered(vid)@j)"

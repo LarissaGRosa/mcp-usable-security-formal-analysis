@@ -1,0 +1,34 @@
+theory ToyCeremony_P1_CalcPressure
+begin
+
+/*
+  PROFILE P1 · CALC_SK under pressure, on BOTH participants.
+  Profile = < C0, {Attentive,Busy,Careless}, {sigma1, sigma3, sigma2} on Alex AND Blake >.
+  Consolidates old 01 / 03 / 08 (the three single-stressor CALC failures) and 18 / 19 (multi-party
+  + the targeting gate). Does NOT use ceremony.base.spthy (which pins Blake to the Attentive
+  default): it assembles the spine + blake_calc_stressable so Blake's CALC is also degradable, and
+  enables BOTH parties. The calc_phase bundle supplies the three CALC stressors and the
+  Attentive/Busy/Careless answers in one include.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P1_calc_pressure.spthy
+*/
+
+// -- spine (NOT ceremony.base: Blake must be degradable) --
+#include "../../core/types.spthy"
+#include "protocol/init.spthy"
+#include "protocol/messages.spthy"
+
+// -- Blake's CALC posed 'Hard' so the shared CALC stressors reach him --
+#include "protocol/blake_calc_stressable.spthy"
+
+// -- the CALC_SK phase repertoire (Alex producer + masks + sigma1/sigma3/sigma2) --
+#include "bundles/calc_phase.spthy"
+
+// -- human-layer plumbing (gates + answer discipline + Alex enable) --
+#include "bundles/human_common.spthy"
+
+// -- enable Blake too (Alex enabled by human_common) --
+#include "protocol/stress_blake.spthy"
+
+#include "experiments/P1_calc_pressure.spthy"
+
+end

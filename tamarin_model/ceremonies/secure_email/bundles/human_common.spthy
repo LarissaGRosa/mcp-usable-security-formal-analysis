@@ -1,0 +1,10 @@
+/*
+  bundles/human_common.spthy -- always-needed human-layer plumbing for secure_email, one include.
+  The persistent current-mask gates (mask_state), the single-answer discipline (answered_once),
+  and the sender stress-enable (stress_alex). Add protocol/stress_blake.spthy to also stress the
+  recipient. Pair with one or both phase bundles (pgp_phase / pw_phase).
+*/
+
+#include "../../../core/transitions/mask_state.spthy"
+#include "../../../core/transitions/answered_once.spthy"
+#include "../protocol/stress_alex.spthy"

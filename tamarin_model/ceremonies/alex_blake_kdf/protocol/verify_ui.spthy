@@ -7,12 +7,14 @@
   Reads the persistent !Session (loop-free). Needs protocol/session.spthy.
 */
 
+// !Step('Alex',_,'compare'): Layer-1 objective step (agnostic interface). A fingerprint check is a
+// 'compare' action the lexicon marks high-Effort -> the migrated sigma6 reads it, not !VerifyReq.
 rule UI_verify_genuine:
     [ !Session('Alex', idA, sk), Fr(~vid) ]
   --[ VerifyPrompt('Alex', ~vid, 'genuine') ]->
-    [ !VerifyReq('Alex', ~vid, 'genuine') ]
+    [ !VerifyReq('Alex', ~vid, 'genuine'), !Step('Alex', ~vid, 'compare') ]
 
 rule UI_verify_tampered:
     [ !Session('Alex', idA, sk), In(vid) ]
   --[ VerifyPrompt('Alex', vid, 'tampered'), Tampered(vid) ]->
-    [ !VerifyReq('Alex', vid, 'tampered') ]
+    [ !VerifyReq('Alex', vid, 'tampered'), !Step('Alex', vid, 'compare') ]

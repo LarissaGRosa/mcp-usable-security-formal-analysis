@@ -8,7 +8,7 @@
 */
 
 rule Detect_AlertVolume:
-    [ !Did(P, r1), !Did(P, r2), !Did(P, r3) ]
+    [ !Did(P, r1), !Did(P, r2), !Did(P, r3), !StressEnable(P) ]
   --[ AlertVolume(P), Neq(r1,r2), Neq(r1,r3), Neq(r2,r3), SetMask(P,'Careless') ]->
     [ ]
 

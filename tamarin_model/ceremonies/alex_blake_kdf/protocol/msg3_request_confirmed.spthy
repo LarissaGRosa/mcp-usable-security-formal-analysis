@@ -14,7 +14,10 @@ rule A_recv_Nb_request:
     [ AlexWait(idA,Na), In(Nb), Fr(~rid) ]
   --[ Request('Alex', ~rid, 'CALC_SK', 'Hard') ]->
     [ AlexAwaitKey(idA, ~rid),
-      !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard') ]
+      !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard'),
+      // Layer-1 objective step (agnostic interface): CALC_SK is a 'compute' action -- the migrated
+      // sigma1 reads this + the lexicon, not the 'Hard' flag.
+      !Step('Alex', ~rid, 'compute') ]
 
 // keys match the expected derivation -> confirmed -> finish.
 rule A_confirm_ok:

@@ -1,0 +1,61 @@
+/*
+  protocol/infer_harness.spthy -- a token-bounded harness for the INFERRED-stressor profile (P4).
+  Merges the old op_tokens (compute), verify_op (verify) and decision_stream (decisions) posers so a
+  single ceremony can host all four inferred stressors. One AlexInit seed deposits a FIXED number of
+  op + decision tokens (bounded -> the trace-counting detectors terminate). Each Pose records the
+  OBJECTIVE operation (!Op tag 'kdf'/'verify') or decision (!Decision); the core detectors infer the
+  stressor from those (MEMORY.md #11/#12 -- key on the tag, never destructure the term).
+*/
+
+rule Seed_infer:
+    [ AlexInit(idA) ]
+  --[ Seeded('Alex') ]->
+    [ OpToken(idA), OpToken(idA),
+      DecToken(idA), DecToken(idA), DecToken(idA), DecToken(idA) ]
+
+// compute operation (sigma1 inferred from 'kdf'; sigma10 from a resulting !Failed)
+rule Pose_kdf:
+    [ OpToken(idA), Fr(~rid), Fr(~Na), In(Nb) ]
+  --[ PoseOp('Alex', 'kdf') ]->
+    [ !Op('Alex', ~rid, 'kdf', kdf(~Na, Nb)), Pending(idA, ~rid),
+      // Layer-1 objective step (agnostic interface): a kdf is a 'compute' action -- the migrated
+      // sigma1 reads this + the lexicon, not the 'kdf' op tag.
+      !Step('Alex', ~rid, 'compute') ]
+
+// verify operation, genuine fingerprint (sigma6 inferred from 'verify')
+rule Pose_verify_genuine:
+    [ OpToken(idA), Fr(~vid), Fr(~fp) ]
+  --[ PoseOp('Alex', 'verify'), GenuineFp('Alex', ~vid) ]->
+    [ !Op('Alex', ~vid, 'verify', ~fp), !Genuine(~vid), Pending(idA, ~vid),
+      // Layer-1 objective step (agnostic interface): a verify is a 'compare' action -- the migrated
+      // sigma6 reads this + the lexicon, not the 'verify' op tag.
+      !Step('Alex', ~vid, 'compare') ]
+
+// verify operation, adversary-supplied (tampered) fingerprint
+rule Pose_verify_tampered:
+    [ OpToken(idA), Fr(~vid), In(fp) ]
+  --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
+    [ !Op('Alex', ~vid, 'verify', fp), Pending(idA, ~vid),
+      !Step('Alex', ~vid, 'compare') ]
+
+// UI decision (sigma9 inferred from decision DENSITY -- >=3 handled !Did)
+rule Pose_decision:
+    [ DecToken(idA), Fr(~did) ]
+  --[ PoseDecision('Alex', ~did) ]->
+    [ !Decision('Alex', ~did), DecPending(idA, ~did) ]
+
+// closers (consume the pending slot once the human's f_H has produced its state fact)
+rule Finish_op:
+    [ Pending(idA, rid), OpResult('Alex', rid, m) ]
+  --[ DoneOp('Alex', rid) ]->
+    [ ]
+
+rule Finish_verify:
+    [ Pending(idA, rid), VerifyDone('Alex', rid) ]
+  --[ DoneVerify('Alex', rid) ]->
+    [ ]
+
+rule Finish_decision:
+    [ DecPending(idA, did), DecisionDone('Alex', did) ]
+  --[ DoneDecision('Alex', did) ]->
+    [ ]

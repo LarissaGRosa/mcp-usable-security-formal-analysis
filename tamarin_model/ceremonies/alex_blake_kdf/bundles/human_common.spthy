@@ -1,0 +1,12 @@
+/*
+  bundles/human_common.spthy -- the always-needed human-layer plumbing, in one include.
+  Every bundle-composed experiment pulls this once: the persistent current-mask gates
+  (mask_state), the single-answer discipline (answered_once), and the Alex stress-enable
+  (Stage B). Pair with one or more phase bundles (calc_phase / approve_phase / verify_phase /
+  authorize_phase) and, for any post-KDF phase, protocol/session.spthy.
+  To stress Blake instead of (or as well as) Alex, add protocol/stress_blake.spthy.
+*/
+
+#include "../../../core/transitions/mask_state.spthy"
+#include "../../../core/transitions/answered_once.spthy"
+#include "../protocol/stress_alex.spthy"

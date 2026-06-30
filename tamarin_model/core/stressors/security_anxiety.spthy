@@ -7,7 +7,7 @@
 */
 
 rule Trigger_SecurityAnxiety:
-    [ !AuthReq(P, aid) ]
+    [ !AuthReq(P, aid), !StressEnable(P) ]
   --[ SecurityAnxiety(P), SetMask(P,'Fearful') ]->
     [ ]
 

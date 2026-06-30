@@ -1,16 +1,27 @@
 /*
-  core/stressors/cognitive_load.spthy -- f_U for sigma1 HighCognitiveLoad.
+  core/stressors/cognitive_load.spthy -- f_U for sigma1 HighCognitiveLoad, CEREMONY-AGNOSTIC.
 
-  A Hard CALC_SK request makes the user Busy: at onset it emits SetMask(P,'Busy') -- the
-  f_M transition Attentive->Busy in the persistent current-mask model (mask_state.spthy),
-  timed to the stressor so the mask cannot be re-asserted later out of order. It READS the
-  persistent !Req (no consume-and-reproduce, so no sources loop). §6.4 narrow interface: the
-  only thing it inspects is 'complexity' = 'Hard'. §6.3: OneStressPerParty caps it to one
-  onset per party (so SetMask(P,'Busy') is emitted once).
+  Migrated to the agnostic interface (AGNOSTIC_STRESSOR_INTERFACE.md). sigma1 used to exist in TWO
+  files keyed on ceremony specifics: this one matched a designer flag !Req(P,_,'CALC_SK',_,'Hard'),
+  and cognitive_load_inferred.spthy (now deleted) matched the objective op !Op(P,_,'kdf',_). Both
+  encoded the SAME judgment -- "this step is mentally hard" -- in the detector. That judgment now
+  lives ONCE in the lexicon, so the two collapse into this single detector, which reads:
+
+    * !Step(P, sid, action)                -- Layer 1: an OBJECTIVE interaction step (no task name)
+    * !Demands(action,'MentalDemand','hi') -- Layer 2: the usability verdict, from core/lexicon_tlx
+
+  A 'compute' step (KDF, passphrase setup) is high mental demand per the lexicon, so this fires for
+  both ceremonies with no 'CALC_SK'/'kdf'/'Hard' token in the rule.
+
+  NASA-TLX Mental Demand (Hart & Staveland 1988) / cognitive load theory (Sweller 1988). At onset it
+  emits SetMask(P,'Busy') -- everything below SetMask is UNCHANGED. !StressEnable(P) gates per party
+  (Stage B); OneStressPerParty bounds the onset to one per party.
 */
 
 rule Trigger_HighCognitiveLoad:
-    [ !Req(P, rid, 'CALC_SK', m, 'Hard') ]
+    [ !Step(P, sid, action),
+      !Demands(action, 'MentalDemand', 'hi'),
+      !StressEnable(P) ]
   --[ Load(P), SetMask(P,'Busy') ]->
     [ ]
 
