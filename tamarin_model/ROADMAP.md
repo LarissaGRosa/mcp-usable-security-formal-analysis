@@ -115,7 +115,15 @@ Levels are binary `'hi'` and expert-asserted. For defensibility: tie levels to *
 TLX or SEQ data**, add **per-population profiles** (novice vs expert; the descoped "Elder" persona),
 and a **sensitivity pass** (does the conclusion survive a one-notch-lower level?).
 
-### 5. Mental-model / belief state  ·  *status: not started (toehold: P5 Pathway B)*
+### 5. Mental-model / belief state  ·  *status: ✅ DONE (worked example)*
+
+> Masks model degraded EXECUTION; this adds a belief-state layer for wrong BELIEFS (phishing/spoofing) --
+> an ATTENTIVE human acting correctly on a false picture, a breach ORTHOGONAL to the mask layer.
+> `ceremonies/phishing/`: `Belief(P,id,ch)`; weak identity interface (belief from displayed claim →
+> spoofable) vs strong (belief requires a verified binding → anti-spoofing). `PhishWeak` proves the
+> Attentive user is phished + attribution to spoofing; `PhishStrong` proves the secret never leaks. The
+> pair = "MUST bind the displayed peer identity to a verified credential." Reuses the #2 interface idea
+> for authentication. Commit 045d2e0.
 
 Masks model degraded *execution*; they do not model **wrong beliefs** (the human thinks they reached
 the bank / that the key is verified). Most real usability-security failures — phishing, spoofed-origin
@@ -190,7 +198,7 @@ Tier 3 to scale and produce the RFC deliverable.
 | 2 | First-class interfaces as demand-transformers | 1 | ✅ done — interface_hardened_verify + P7_interface |
 | 3 | Usability-security property library | 1 | ✅ done — core/usability_properties (2 generic + 4 templates) |
 | 4 | Calibrate the lexicon (empirical levels, populations) | 2 | not started |
-| 5 | Mental-model / belief state | 2 | not started |
+| 5 | Mental-model / belief state | 2 | ✅ done — ceremonies/phishing (PhishWeak/PhishStrong) |
 | 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
 | 7 | Attach-to-real-protocol + termination playbook | 3 | not started |
 | 8 | Static analyzer (propose `!Step` + lexicon) | 3 | not started |
