@@ -17,9 +17,9 @@ rule Seed_infer:
 rule Pose_kdf:
     [ OpToken(idA), Fr(~rid), Fr(~Na), In(Nb) ]
   --[ PoseOp('Alex', 'kdf') ]->
-    [ !Op('Alex', ~rid, 'kdf', kdf(~Na, Nb)), Pending(idA, ~rid),
-      // Layer-1 objective step (agnostic interface): a kdf is a 'compute' action -- the migrated
-      // sigma1 reads this + the lexicon, not the 'kdf' op tag.
+    [ Pending(idA, ~rid),
+      // Layer-1 objective step (agnostic interface): a kdf is a 'compute' action -- sigma1 reads
+      // !Step + the lexicon; the compute masks read !Step + !StepData.
       !Step('Alex', ~rid, 'compute'),
       // !StepData = the correct result, for the agnostic compute masks (Compute_correct yields it,
       // a slip yields a fresh wrong value); the OpResult adapter wraps the resulting Respond.
@@ -27,20 +27,20 @@ rule Pose_kdf:
 
 // verify operation, genuine fingerprint (sigma6 inferred from 'verify')
 rule Pose_verify_genuine:
-    [ OpToken(idA), Fr(~vid), Fr(~fp) ]
+    [ OpToken(idA), Fr(~vid) ]
   --[ PoseOp('Alex', 'verify'), GenuineFp('Alex', ~vid) ]->
-    [ !Op('Alex', ~vid, 'verify', ~fp), !Genuine(~vid), Pending(idA, ~vid),
-      // Layer-1 objective step (agnostic interface): a verify is a 'compare' action -- the migrated
-      // sigma6 reads this + the lexicon, not the 'verify' op tag.
+    [ Pending(idA, ~vid),
+      // Layer-1 objective step (agnostic interface): a verify is a 'compare' action -- sigma6 reads
+      // !Step + the lexicon; the compare masks read !Step + !StepData.
       !Step('Alex', ~vid, 'compare'),
       // !StepData = the ground truth for the compare masks (genuine here; Compare_attentive accepts it).
       !StepData('Alex', ~vid, 'genuine') ]
 
 // verify operation, adversary-supplied (tampered) fingerprint
 rule Pose_verify_tampered:
-    [ OpToken(idA), Fr(~vid), In(fp) ]
+    [ OpToken(idA), Fr(~vid) ]
   --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
-    [ !Op('Alex', ~vid, 'verify', fp), Pending(idA, ~vid),
+    [ Pending(idA, ~vid),
       !Step('Alex', ~vid, 'compare'),
       !StepData('Alex', ~vid, 'tampered') ]
 
@@ -48,9 +48,9 @@ rule Pose_verify_tampered:
 rule Pose_decision:
     [ DecToken(idA), Fr(~did) ]
   --[ PoseDecision('Alex', ~did) ]->
-    [ !Decision('Alex', ~did), DecPending(idA, ~did),
+    [ DecPending(idA, ~did),
       // Layer-1 objective step (agnostic interface): a UI decision is a 'decide' action -- the
-      // migrated sigma9 counts these (>=3 distinct -> Careless), not the handled !Did markers.
+      // migrated sigma9 counts these (>=3 distinct -> Careless); the decide masks read !Step.
       !Step('Alex', ~did, 'decide') ]
 
 // closers (consume the pending slot once the human's f_H has produced its state fact)

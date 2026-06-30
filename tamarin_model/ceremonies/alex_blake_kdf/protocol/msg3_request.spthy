@@ -11,9 +11,8 @@ rule A_recv_Nb_request:
     [ AlexWait(idA,Na), In(Nb), Fr(~rid) ]
   --[ Request('Alex', ~rid, 'CALC_SK', 'Hard') ]->
     [ AlexAwaitKey(idA, ~rid),
-      !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard'),
       // Layer-1 objective step for the agnostic interface: CALC_SK is a 'compute' action.
-      // sigma3 (time_pressure) reads !Step + the lexicon; the compute masks read it too.
+      // sigma1/sigma3 read !Step + the lexicon; the compute masks read !Step + !StepData.
       !Step('Alex', ~rid, 'compute'),
       // !StepData = the correct result this step should yield, for the agnostic compute masks
       // (Compute_correct produces it; a slip produces a fresh wrong value instead).

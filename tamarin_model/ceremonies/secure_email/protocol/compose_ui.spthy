@@ -30,9 +30,8 @@ restriction OnceSeedMenu:
 rule UI_method_option:
     [ MenuTok('Alex'), Fr(~did) ]
   --[ PoseDecision('Alex', ~did) ]->
-    [ !Decision('Alex', ~did),
-      // Layer-1 objective step (agnostic interface): weighing a method is a 'decide' action -- the
-      // migrated sigma9 counts these (>=3 distinct -> Careless), not the handled !Did markers.
+    [ // Layer-1 objective step (agnostic interface): weighing a method is a 'decide' action -- the
+      // migrated sigma9 counts these (>=3 distinct -> Careless); the decide masks read !Step.
       !Step('Alex', ~did, 'decide') ]
 
 // ===== confirm_key : PGP "enable encryption + confirm the recipient's key" (abstract crypto) =====
@@ -40,10 +39,8 @@ rule UI_confirm_key_genuine:
     [ AlexInit(idA), !RecipientKey('Blake', pkB), Fr(~vid) ]
   --[ Branch('Alex','PGP'), UIStep('Alex','confirm_key'), KeyOffered('Alex', ~vid, 'genuine') ]->
     [ AlexVerifying(idA, ~vid, pkB),
-      !VerifyReq('Alex', ~vid, 'genuine'),
-      !Op('Alex', ~vid, 'verify', ~vid),
       // Layer-1 objective step (agnostic interface): confirming the key is a 'compare' action the
-      // lexicon marks high-Effort -> the migrated sigma6 reads it, not the 'verify' op.
+      // lexicon marks high-Effort -> sigma6 reads it; the compare masks read !Step + !StepData.
       !Step('Alex', ~vid, 'compare'),
       !StepData('Alex', ~vid, 'genuine') ]
 
@@ -52,8 +49,6 @@ rule UI_confirm_key_tampered:
   --[ Branch('Alex','PGP'), UIStep('Alex','confirm_key'), KeyOffered('Alex', badkey, 'tampered'),
       Tampered(badkey) ]->
     [ AlexVerifying(idA, badkey, badkey),
-      !VerifyReq('Alex', badkey, 'tampered'),
-      !Op('Alex', badkey, 'verify', badkey),
       !Step('Alex', badkey, 'compare'),
       !StepData('Alex', badkey, 'tampered') ]
 
@@ -63,8 +58,6 @@ rule UI_set_passphrase:
   --[ Branch('Alex','PW'), UIStep('Alex','set_passphrase'), Send('Alex','PW', ~m), Secret(~m),
       Request('Alex', ~rid, 'SHARE_PW') ]->
     [ Out(senc(~m, ~pw)), Posted('Alex','PW', ~m),
-      !Req('Alex', ~rid, 'SHARE_PW', <idB, ~pw>, 'Easy'),
-      !Op('Alex', ~rid, 'kdf', ~rid),
       // Layer-1 objective step (agnostic interface): set_passphrase discloses a passphrase -- a 'share'
       // action. The lexicon marks 'share' Mental+Temporal demanding (sigma1/sigma3 fire); the agnostic
       // share masks respond to it.

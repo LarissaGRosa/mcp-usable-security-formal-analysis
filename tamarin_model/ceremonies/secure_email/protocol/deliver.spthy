@@ -30,8 +30,7 @@ rule B_read_pw:
 rule B_phish_prompt:
     [ BlakeHasSecret(idB, m, pw), In(lure), Fr(~rid2) ]
   --[ Phished('Blake'), UIStep('Blake','phish_confirm'), Request('Blake', ~rid2, 'SHARE_PW') ]->
-    [ !Req('Blake', ~rid2, 'SHARE_PW', <'attacker', pw>, 'Easy'),
-      // Layer-1 objective step (agnostic interface): re-disclosing the password on the phishing page is
+    [ // Layer-1 objective step (agnostic interface): re-disclosing the password on the phishing page is
       // a 'share' action (Blake shares with the attacker). sigma2 (action-generic) reads it -> Blake
       // Careless -> share inband-leak -> recipient-side LeakPw (S0_recipient_leak_reachable).
       !Step('Blake', ~rid2, 'share'),

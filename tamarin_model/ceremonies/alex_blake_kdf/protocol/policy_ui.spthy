@@ -11,13 +11,13 @@
 rule UI_policy_clear:
     [ AlexInit(idA), Fr(~pid) ]
   --[ PolicyPrompt('Alex', ~pid, 'clear') ]->
-    [ !PolicyReq('Alex', ~pid, 'clear'), PolicyPending(idA, ~pid),
+    [ PolicyPending(idA, ~pid),
       !Step('Alex', ~pid, 'set-policy'), !StepData('Alex', ~pid, 'clear') ]
 
 rule UI_policy_misleading:
     [ AlexInit(idA), Fr(~pid) ]
   --[ PolicyPrompt('Alex', ~pid, 'misleading'), MisleadingShown(~pid) ]->
-    [ !PolicyReq('Alex', ~pid, 'misleading'), PolicyPending(idA, ~pid),
+    [ PolicyPending(idA, ~pid),
       !Step('Alex', ~pid, 'set-policy'), !StepData('Alex', ~pid, 'misleading') ]
 
 rule A_finish_policy:

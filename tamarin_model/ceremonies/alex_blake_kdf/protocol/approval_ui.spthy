@@ -16,13 +16,13 @@
 rule UI_issue_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
-    [ !Prompt('Alex', ~pid, 'self'), !Step('Alex', ~pid, 'confirm'),
+    [ !Step('Alex', ~pid, 'confirm'),
       // !StepData = the prompt kind, the ground truth the confirm masks consult (Attentive approves
-      // only a 'self' prompt; see compute/compare/confirm behaviour, AGNOSTIC_MASKS.md).
+      // only a 'self' prompt; see confirm_behavior.spthy).
       !StepData('Alex', ~pid, 'self') ]
 
 rule UI_inject_prompt:
     [ !Session('Alex', idA, sk), In(pid) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid) ]->
-    [ !Prompt('Alex', pid, 'injected'), !Step('Alex', pid, 'confirm'),
+    [ !Step('Alex', pid, 'confirm'),
       !StepData('Alex', pid, 'injected') ]

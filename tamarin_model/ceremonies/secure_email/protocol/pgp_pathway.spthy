@@ -27,13 +27,13 @@
 rule A_fetch_genuine:
     [ AlexInit(idA), !RecipientKey('Blake', pkB), Fr(~vid) ]
   --[ Branch('Alex','PGP'), KeyOffered('Alex', ~vid, 'genuine') ]->
-    [ AlexVerifying(idA, ~vid, pkB), !VerifyReq('Alex', ~vid, 'genuine'), !Step('Alex', ~vid, 'compare'),
+    [ AlexVerifying(idA, ~vid, pkB), !Step('Alex', ~vid, 'compare'),
       !StepData('Alex', ~vid, 'genuine') ]
 
 rule A_fetch_tampered:
     [ AlexInit(idA), !RecipientKey('Blake', pkB), In(badkey) ]
   --[ Branch('Alex','PGP'), KeyOffered('Alex', badkey, 'tampered'), Tampered(badkey) ]->
-    [ AlexVerifying(idA, badkey, badkey), !VerifyReq('Alex', badkey, 'tampered'), !Step('Alex', badkey, 'compare'),
+    [ AlexVerifying(idA, badkey, badkey), !Step('Alex', badkey, 'compare'),
       !StepData('Alex', badkey, 'tampered') ]
 
 // The compose+send and recipient-decrypt OUTCOMES are shared with profile S1 and live in

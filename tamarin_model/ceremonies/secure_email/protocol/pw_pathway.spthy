@@ -28,7 +28,6 @@ rule A_compose_pw:
   --[ Branch('Alex','PW'), Send('Alex','PW', ~m), Secret(~m),
       Request('Alex', ~rid, 'SHARE_PW') ]->
     [ Out(senc(~m, ~pw)), Posted('Alex','PW', ~m),
-      !Req('Alex', ~rid, 'SHARE_PW', <idB, ~pw>, 'Easy'),
       // Layer-1 objective step (agnostic interface): disclosing the passphrase is a 'share' action.
       // The lexicon marks 'share' Mental+Temporal demanding (so sigma1/sigma3 fire); sigma2 is
       // action-generic; the agnostic share masks respond to it.
