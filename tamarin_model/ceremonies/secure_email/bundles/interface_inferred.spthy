@@ -18,9 +18,10 @@
 // outcome_policy comes from the profile entry (S1).
 #include "../../../core/masks/compare_behavior.spthy"
 #include "../../../core/masks/compare_keychecked.spthy"
-#include "../../../core/masks/attentive_share.spthy"
-#include "../../../core/masks/careless_share.spthy"
-#include "../../../core/masks/busy_share.spthy"
+// agnostic share behaviour + the secure_email Out/Oob effect adapters (replaces the 3 *_share masks);
+// outcome_policy comes from the S1 entry.
+#include "../../../core/masks/share_behavior.spthy"
+#include "../protocol/share_effects.spthy"
 // agnostic decide behaviour (replaces attentive_confirm); outcome_policy from the S1 entry.
 #include "../../../core/masks/decide_behavior.spthy"
 

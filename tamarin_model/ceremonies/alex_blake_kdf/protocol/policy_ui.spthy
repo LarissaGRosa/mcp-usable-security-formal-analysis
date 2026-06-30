@@ -6,15 +6,19 @@
   bad-design case for the lemmas.
 */
 
+// !Step('set-policy') + !StepData(terminology): the agnostic interface. The terminology honesty is the
+// TASK's, so policy_behavior reads it (not outcome_policy) -- Pathway B is task-mediated.
 rule UI_policy_clear:
     [ AlexInit(idA), Fr(~pid) ]
   --[ PolicyPrompt('Alex', ~pid, 'clear') ]->
-    [ !PolicyReq('Alex', ~pid, 'clear'), PolicyPending(idA, ~pid) ]
+    [ !PolicyReq('Alex', ~pid, 'clear'), PolicyPending(idA, ~pid),
+      !Step('Alex', ~pid, 'set-policy'), !StepData('Alex', ~pid, 'clear') ]
 
 rule UI_policy_misleading:
     [ AlexInit(idA), Fr(~pid) ]
   --[ PolicyPrompt('Alex', ~pid, 'misleading'), MisleadingShown(~pid) ]->
-    [ !PolicyReq('Alex', ~pid, 'misleading'), PolicyPending(idA, ~pid) ]
+    [ !PolicyReq('Alex', ~pid, 'misleading'), PolicyPending(idA, ~pid),
+      !Step('Alex', ~pid, 'set-policy'), !StepData('Alex', ~pid, 'misleading') ]
 
 rule A_finish_policy:
     [ PolicyPending(idA, pid), PolicyDone('Alex', pid) ]

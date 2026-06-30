@@ -13,9 +13,10 @@
   password handling degradable.
 */
 
-#include "../../../core/masks/attentive_share.spthy"
-#include "../../../core/masks/careless_share.spthy"
-#include "../../../core/masks/busy_share.spthy"
+// agnostic share behaviour + the secure_email Out/Oob effect adapters (replaces the 3 *_share masks);
+// outcome_policy comes from the S0 entry.
+#include "../../../core/masks/share_behavior.spthy"
+#include "../protocol/share_effects.spthy"
 #include "../../../core/stressors/external_distraction.spthy"
 // Agnostic sigma3 (was time_pressure_share): reads the 'compute' !Step posed by A_compose_pw + the
 // lexicon, instead of the 'SHARE_PW' task name. See AGNOSTIC_STRESSOR_INTERFACE.md.

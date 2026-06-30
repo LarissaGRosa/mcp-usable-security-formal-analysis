@@ -31,8 +31,9 @@ rule B_phish_prompt:
     [ BlakeHasSecret(idB, m, pw), In(lure), Fr(~rid2) ]
   --[ Phished('Blake'), UIStep('Blake','phish_confirm'), Request('Blake', ~rid2, 'SHARE_PW') ]->
     [ !Req('Blake', ~rid2, 'SHARE_PW', <'attacker', pw>, 'Easy'),
-      // Layer-1 objective step (agnostic interface): confirming the password on the phishing page is
-      // a 'confirm' action. sigma2 ExternalDistraction (action-generic) reads it -> Blake Careless ->
-      // careless_share -> recipient-side LeakPw (S0_recipient_leak_reachable). No detector keys on
-      // 'confirm' in this ceremony, so only sigma2 (any !Step) fires here.
-      !Step('Blake', ~rid2, 'confirm') ]
+      // Layer-1 objective step (agnostic interface): re-disclosing the password on the phishing page is
+      // a 'share' action (Blake shares with the attacker). sigma2 (action-generic) reads it -> Blake
+      // Careless -> share inband-leak -> recipient-side LeakPw (S0_recipient_leak_reachable).
+      !Step('Blake', ~rid2, 'share'),
+      // !StepData = the share payload <recipient (here the attacker), secret> for the effect adapter.
+      !StepData('Blake', ~rid2, <'attacker', pw>) ]

@@ -23,6 +23,8 @@
     Attentive + decide -> handle    Careless + decide -> fatigue (timeout)
   AUTHORIZE action class = granting a sensitive op (collapses attentive/fearful_authorize). Unconditional.
     Attentive + authorize -> grant (Authorized)    Fearful + authorize -> abort (active refusal)
+  SHARE action class = disclosing a secret over a side channel (collapses attentive/careless/busy_share).
+    Attentive -> oob (pw off the wire)   Careless -> inband-leak (LeakPw)   Busy -> misdeliver (MisdeliveredPw)
 
   Seeded unconditionally so any theory using a behaviour rule stays CLOSED; persistent + read-only ->
   no sources loop (repo MEMORY.md S6.2). OnceOutcomePolicy bounds the seed. As more action classes are
@@ -47,7 +49,12 @@ rule Seed_outcome_policy:
       !OutcomePolicy('Careless',  'decide',  'fatigue'),
       // authorize = granting a sensitive operation; unconditional (no genuineness)
       !OutcomePolicy('Attentive', 'authorize', 'grant'),
-      !OutcomePolicy('Fearful',   'authorize', 'abort') ]
+      !OutcomePolicy('Fearful',   'authorize', 'abort'),
+      // share = disclosing a secret over a side channel; the outcome manifests differently per mask
+      // (a thin per-ceremony effect adapter turns the outcome into the Out/Oob facts)
+      !OutcomePolicy('Attentive', 'share', 'oob'),
+      !OutcomePolicy('Careless',  'share', 'inband-leak'),
+      !OutcomePolicy('Busy',      'share', 'misdeliver') ]
 
 restriction OnceOutcomePolicy:
   "All #i #j. SeedOutcomePolicy()@i & SeedOutcomePolicy()@j ==> #i = #j"

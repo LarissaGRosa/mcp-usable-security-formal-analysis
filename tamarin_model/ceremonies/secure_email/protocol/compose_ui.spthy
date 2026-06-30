@@ -65,9 +65,12 @@ rule UI_set_passphrase:
     [ Out(senc(~m, ~pw)), Posted('Alex','PW', ~m),
       !Req('Alex', ~rid, 'SHARE_PW', <idB, ~pw>, 'Easy'),
       !Op('Alex', ~rid, 'kdf', ~rid),
-      // Layer-1 objective step (agnostic interface): set_passphrase derives a symmetric key under a
-      // deadline -- a 'compute' action that the migrated sigma3 reads via the lexicon (not 'SHARE_PW').
-      !Step('Alex', ~rid, 'compute') ]
+      // Layer-1 objective step (agnostic interface): set_passphrase discloses a passphrase -- a 'share'
+      // action. The lexicon marks 'share' Mental+Temporal demanding (sigma1/sigma3 fire); the agnostic
+      // share masks respond to it.
+      !Step('Alex', ~rid, 'share'),
+      // !StepData = the share payload <intended recipient, secret> the share effect adapter needs.
+      !StepData('Alex', ~rid, <idB, ~pw>) ]
 
 // ===== send : the final click (the SHARE_PW !Req carries the deadline that sigma3 reads) =====
 rule UI_send:

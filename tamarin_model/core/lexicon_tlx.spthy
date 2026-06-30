@@ -47,7 +47,11 @@ rule Seed_lexicon_tlx:
     [ !Demands('compute',   'TemporalDemand', 'hi'),
       !Demands('compute',   'MentalDemand',   'hi'),
       !Demands('compare',   'Effort',         'hi'),
-      !Demands('authorize', 'Arousal',        'hi') ]
+      !Demands('authorize', 'Arousal',        'hi'),
+      // a 'share' step (disclosing a secret over a side channel) is both mentally demanding and under
+      // deadline, so sigma1/sigma3 fire on it -- the secure_email password step is a 'share' action.
+      !Demands('share',     'MentalDemand',   'hi'),
+      !Demands('share',     'TemporalDemand', 'hi') ]
 
 restriction OnceLexicon:
   "All #i #j. SeedLexicon()@i & SeedLexicon()@j ==> #i = #j"

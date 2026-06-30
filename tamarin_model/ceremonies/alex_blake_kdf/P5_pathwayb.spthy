@@ -11,8 +11,8 @@ begin
 
 #include "../../core/types.spthy"
 
-// -- human layer: Attentive SET_POLICY f_H (mistake on misleading terminology) --
-#include "../../core/masks/attentive_policy.spthy"
+// -- human layer: task-mediated SET_POLICY f_H (mistake on misleading terminology, Pathway B) --
+#include "../../core/masks/policy_behavior.spthy"
 #include "../../core/transitions/mask_state.spthy"
 #include "../../core/transitions/answered_once.spthy"
 
