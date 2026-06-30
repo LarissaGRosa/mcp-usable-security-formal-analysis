@@ -1,6 +1,10 @@
 # Agnostic masks (response layer) — design
 
-**Status:** design (2026-06-29). Roadmap item #1. Pilot on the compute cluster next.
+**Status:** ✅ **IMPLEMENTED** (2026-06-30). Roadmap item #1. All seven action classes migrated (compute,
+compare, confirm, decide, authorize, share, set-policy); `core/masks/` went from 22 per-(mask×action) files
+to 10 (one behaviour file per class + `outcome_policy` + 3 compare/share effect adapters). Every mask reads
+the agnostic `!Step` interface; all 56 lemma checks green. §4 below was the pilot plan; it generalised
+cleanly to every class.
 **Companion:** mirrors [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md) on the *other*
 half of the human layer. That doc made the **detectors** (`f_U`) ceremony-agnostic; this one is about the
 **masks** (`f_H`, the human's *response*). Goal (ROADMAP §Tier-1.1): collapse the per-action mask files
