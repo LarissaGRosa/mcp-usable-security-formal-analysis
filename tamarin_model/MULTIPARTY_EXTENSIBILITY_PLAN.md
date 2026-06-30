@@ -1,13 +1,18 @@
 # Iteration plan — multi-participant masks + multi-stressor profiles
 
-> **Note (2026-06-29):** this plan is **complete** (P0–P6 profiles + phase bundles shipped). Since it was
-> written, the stressor trigger interface was migrated to be ceremony-agnostic and two detector files were
-> renamed (`*_inferred` suffix dropped): `repeated_failure_inferred`→`repeated_failure`,
-> `alert_volume_inferred`→`alert_volume`; the detectors now read `!Step` + `core/lexicon_tlx.spthy`. See
-> [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md). The illustrative include blocks below
-> keep their original detector names for historical fidelity.
+> **Status: COMPLETE — kept as design history.** Stages A–E all shipped: every participant is
+> mask-capable, per-party `!StressEnable` targeting, phase `bundles/`, and the consolidated profiles.
+> Two things below are superseded by what was actually built:
+> - **Final profiles ≠ the §4 *proposed* table.** The shipped set is P0–P6 with different names/scopes;
+>   the **as-built** table is in §4 (and the canonical index is [`ceremonies/alex_blake_kdf/README.md`](ceremonies/alex_blake_kdf/README.md)).
+> - **The stressor interface was later made ceremony-agnostic** (a *separate* effort after this plan):
+>   detectors now read a generic `!Step(P,sid,action)` + the `core/lexicon_tlx.spthy` lexicon, not the
+>   `!Req`/`!Op` facts the Stage-A/B snippets below show; `*_inferred` detector files were renamed
+>   (suffix dropped). See [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md) and
+>   [`STRESSORS.md`](STRESSORS.md). The Stage-A/B/C code blocks below are kept as the interface *at the
+>   time of this plan* (the masks still read those `!Req`/`!Prompt` facts today — only the detectors moved).
 
-This plan adds two capabilities to the `alex_blake_kdf` model:
+This plan added two capabilities to the `alex_blake_kdf` model:
 
 1. **Every participant is subject to mask change**, Blake included. A stressor
    targets a named participant.
@@ -118,10 +123,12 @@ rule Enable_Stress:
     [ !Party($P, id) ] --[ StressOn($P) ]-> [ !StressEnable($P) ]
 ```
 
-Each stressor adds `!StressEnable(P)` to its left side:
+Each stressor adds `!StressEnable(P)` to its left side (Stage-B shape; the detector was later made
+agnostic — it now reads `!Step(P,sid,action)` + `!Demands(action,'MentalDemand','hi')` instead of the
+`!Req` flag, see the banner):
 
 ```
-// core/stressors/cognitive_load.spthy  (revised)
+// core/stressors/cognitive_load.spthy  (Stage B; the !StressEnable premise survives the later migration)
 rule Trigger_HighCognitiveLoad:
     [ !Req(P, rid, 'CALC_SK', m, 'Hard'), !StressEnable(P) ]
   --[ Load(P), SetMask(P,'Busy') ]->
@@ -189,16 +196,20 @@ stressed + write lemmas.
 **Goal:** replace the 18 single-stressor entries with a smaller set, each
 exercising ≥3 stressors, plus mitigation toggles.
 
-Proposed entries:
+**As-built profiles (the shipped set — supersedes the proposed table this plan first sketched).**
+7 profiles; each mask-mediated one exercises ≥3 stressors. All read the agnostic `!Step` interface.
 
-| Entry | Bundles | Stressed parties | Stressors (≥3) | Replaces |
+| Profile | Bundles / scope | Stressed parties | Stressors | Lemmas |
 |---|---|---|---|---|
-| `P0_baseline` | calc (inline) | none | — | 00 |
-| `P1_calc_pressure` | calc | Alex + Blake | σ₁ load, σ₃ time-pressure, σ₁₀ repeated-failure | 01, 08, 12 |
-| `P2_ui_fatigue` | approve | Alex | σ₈ habituation, σ₂ distraction, σ₉ alert-volume | 02, 03, 15 |
-| `P3_verify_authorize` | verify + authorize | Alex | σ₆ abstraction, anxiety, + one calc stressor | 06, 07 |
-| `P4_worstcase` | all four | Alex + Blake | all stressors + recovery | 04, 05, 09 |
-| `P5_pathway_b` | policy | Alex | σ₄ misleading-terminology (no mask change) | 13 |
+| `P0_baseline` | calc (inline) | none | — | 2 |
+| `P1_calc_pressure` | calc | Alex + Blake | σ₁ load, σ₃ time-pressure, σ₂ distraction | 7 |
+| `P2_postkdf_recovery` | approve + verify + authorize + recovery | Alex | σ₈ habituation, σ₆ abstraction, SecurityAnxiety | 7 |
+| `P3_worstcase` | all four phases | Alex + Blake | all CALC + post-KDF stressors | 8 |
+| `P4_inferred` | infer_harness (analyzer direction) | Alex | inferred σ₁, σ₆, σ₁₀, σ₉ | 6 |
+| `P5_pathwayb` | policy (task-mediated) | Alex | σ₄ misleading-terminology (no mask change) | 4 |
+| `P6_mitigations` | calc + approve + verify, all three fixes | Alex | σ₁, σ₈, σ₆ + shutdown/shutout/verify-shutout | 6 |
+
+(The second ceremony `secure_email` adds profiles S0/S1, 16 more lemmas — 56 lemma checks in all.)
 
 **Mitigations stay as toggles.** A profile yields its failure variant by default
 and its fix variant by adding one include:
@@ -224,7 +235,7 @@ they now quantify over `p` so they cover both parties.
   narrowing in the entry header, as Exp 04/09 already do.
 - Update `README.md` (experiment index → profile index; "Adding an experiment"
   → "pick bundles + seed stressed parties") and `IMPLEMENTATION.md` (§5 assembly,
-  §7 families).
+  §7 families). ✓ done; both also reflect the later agnostic-interface migration.
 
 ## 6. Order and risk
 

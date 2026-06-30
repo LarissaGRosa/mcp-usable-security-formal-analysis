@@ -3,13 +3,11 @@
 This document describes the Tamarin model in this folder. It draws only on the
 files under `tamarin_model/`.
 
-> **Note (2026-06-29):** the **stressor trigger interface was migrated to be ceremony-agnostic** — every
-> `core/stressors/*` detector now reads a generic `!Step(P,sid,action)` (+ the `core/lexicon_tlx.spthy`
-> lexicon), not a ceremony-specific `!Req`/`!Op`/`!VerifyReq`/`!AuthReq` fact. The declared/inferred tiers
-> were collapsed (three clone files deleted). The **current reference** for the stressor layer is
-> [`STRESSORS.md`](STRESSORS.md) and [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md);
-> where the sections below show a detector reading `!Req(...,'Hard')` or `!Op(...,'kdf',...)`, that is the
-> *pre-migration* shape (the masks still read those facts — only the detectors changed).
+> **Stressor layer is ceremony-agnostic.** Every `core/stressors/*` detector reads a generic
+> `!Step(P,sid,action)` (the ceremony's objective interaction step) plus, for the lookup detectors, a row
+> of the `core/lexicon_tlx.spthy` usability lexicon — never a ceremony-specific task constant. This file
+> describes the model with that interface; [`STRESSORS.md`](STRESSORS.md) is the detailed stressor
+> reference and [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md) the design + rationale.
 
 ## 1. What the model is
 
@@ -111,28 +109,31 @@ Blake no longer computes the key inline. `B_recv_Na_send_Nb` sends `N_B` and lea
 `BlakeWait(idB,<Na,Nb>)`; Blake's CALC_SK is answered by a separate fragment, so Blake
 is subject to the mask machinery as well. The default `protocol/blake_calc.spthy`
 (pulled in by `ceremony.base.spthy`) answers Attentive and posts no `!Req`, so Blake
-stays inert to the stressors and every existing experiment is unchanged.
-`protocol/blake_calc_stressable.spthy` instead posts a `'Hard'` `!Req('Blake',…)` that
-the shared human layer can degrade (Experiment 18).
+stays inert to the stressors and every existing profile is unchanged.
+`protocol/blake_calc_stressable.spthy` instead posts a `'Hard'` `!Req('Blake',…)` for the masks
+**and** a `!Step('Blake',_,'compute')` for the agnostic detectors, so the shared human layer can
+degrade Blake (profiles P1 / P3).
 
-Msg3 — Alex's step — varies per experiment. The variants:
+Msg3 — Alex's step — varies per profile. The variants:
 
 | Variant | File | Shape |
 |---|---|---|
 | inline | `msg3_inline.spthy` | Alex computes `SK` directly |
-| request/ack | `msg3_request.spthy` | Alex issues a `!Req(...,'CALC_SK','Hard')`, a mask answers it, Alex ACKs |
+| request/ack | `msg3_request.spthy` | Alex issues a `!Req(...,'CALC_SK','Hard')` (for the masks) + `!Step(_,_,'compute')` (for the detectors), a mask answers, Alex ACKs |
 | request/confirm | `msg3_request_confirmed.spthy` | as request/ack, plus a key-confirmation that aborts on mismatch (the `shutdown` mitigation) |
 
 In the request/ack variant Alex does not compute the key; he posts a request and
-consumes whatever key results. Which mask answers is decided by the experiment's
-stressor and transition:
+consumes whatever key results. Which mask answers is decided by the profile's
+stressor and transition. The producer emits **two** facts — the `!Req` the masks read for the
+key's *content*, and the agnostic `!Step` the detectors read:
 
 ```
 rule A_recv_Nb_request:
     [ AlexWait(idA,Na), In(Nb), Fr(~rid) ]
   --[ Request('Alex', ~rid, 'CALC_SK', 'Hard') ]->
     [ AlexAwaitKey(idA, ~rid),
-      !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard') ]
+      !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard'),   // masks (f_H) read this
+      !Step('Alex', ~rid, 'compute') ]                  // detectors (f_U) read this
 ```
 
 Additional protocol phases extend the ceremony past key derivation:
@@ -144,12 +145,15 @@ Additional protocol phases extend the ceremony past key derivation:
 
 The human layer has three rule kinds.
 
-**f_U — the stressor (`core/stressors/`).** A stressor reads a protocol fact and
-emits `SetMask(P, <mask>)` at onset. `cognitive_load.spthy`:
+**f_U — the stressor (`core/stressors/`).** A stressor reads the agnostic `!Step` interface and
+emits `SetMask(P, <mask>)` at onset. It names no ceremony task. `cognitive_load.spthy` (σ₁) reads a
+step plus the lexicon's verdict that the step is mentally demanding:
 
 ```
 rule Trigger_HighCognitiveLoad:
-    [ !Req(P, rid, 'CALC_SK', m, 'Hard') ]
+    [ !Step(P, sid, action),
+      !Demands(action, 'MentalDemand', 'hi'),   // from core/lexicon_tlx.spthy
+      !StressEnable(P) ]
   --[ Load(P), SetMask(P,'Busy') ]->
     [ ]
 
@@ -157,9 +161,13 @@ restriction OneStressPerParty:
   "All p #i #j. Load(p)@i & Load(p)@j ==> #i = #j"
 ```
 
-It reads the persistent `!Req` (no consume-and-reproduce, so no sources loop). It
-inspects one field — `'complexity' = 'Hard'`. `OneStressPerParty` caps it to one
-onset per party.
+It reads persistent facts (`!Step`, `!Demands` — no consume-and-reproduce, so no sources loop). The
+lexicon row `!Demands('compute','MentalDemand','hi')` makes it fire on any `compute` step, so the
+HCI judgment "a key derivation is hard" lives once in the lexicon, not in the rule. `OneStressPerParty`
+caps it to one onset per party. The detectors come in four shapes — lookup (`!Step` + a `!Demands`
+row: σ₁/σ₃/σ₆/SecurityAnxiety), density (count `k` distinct `!Step` of one action: σ₈/σ₉),
+action-generic (any `!Step`: σ₂), and chaining (reads the `!Failed` outcome, not a step: σ₁₀). See
+[`STRESSORS.md`](STRESSORS.md) for all of them.
 
 **f_H — the mask (`core/masks/`).** A mask answers an action as one mode. The
 Busy answer to CALC_SK emits a fresh wrong key whose top symbol is not `kdf`:
@@ -273,10 +281,11 @@ Tamarin rejects the theory.
 ### Data-flow for a Busy slip (P1)
 
 ```
-A_recv_Nb_request                  Trigger_HighCognitiveLoad
-   emits !Req(...,'Hard')  ───────▶   reads !Req + !StressEnable, emits SetMask('Alex','Busy')
+A_recv_Nb_request                       Trigger_HighCognitiveLoad
+   emits !Req(...,'Hard') (for masks)    reads !Step + !Demands(_,'MentalDemand','hi')
+       + !Step(...,'compute')  ───────▶    + !StressEnable, emits SetMask('Alex','Busy')
         │                                          │
-        │ !Req persists                            │ Busy now active
+        │ !Req / !Step persist                     │ Busy now active
         ▼                                          ▼
 Calc_Busy_slip   reads !Req, emits RespMask('Alex','Busy') ── checked by
    emits Key('Alex', ~wrong)  (top symbol ≠ kdf)              mask_state.spthy
@@ -287,6 +296,9 @@ A_send_ack   consumes KeyResult, emits Finish('Alex')
         ▼  Blake holds kdf(Na,Nb); Alex holds ~wrong  →  keys disagree, ceremony completes
    UNSAFE-SUCCESS   (and symmetrically when Blake is the stressed party)
 ```
+
+The slip is driven by `!Step` (the agnostic detector), while the mask reads `!Req` for the key
+content — the two-fact split from §3.2.
 
 ## 6. Lemmas
 
@@ -321,8 +333,14 @@ lemma P1_busy_no_correct_key:
 The 21 original single-construct experiments were consolidated into 7 profiles
 (Stage D); each mask-mediated profile exercises ≥3 stressors.
 
-**Declared-stressor profiles (P1, P2, P3).** The stressor reads a flag wired to a
-named request. Outcomes:
+> Before the agnostic migration the profiles split into a *declared* tier (the stressor read a
+> designer flag like `'Hard'`) and an *inferred* tier (a detector read the objective operation). That
+> axis is **gone**: every detector now reads the objective `!Step`, and the "is this step hard?"
+> judgment lives in the lexicon for all of them. What still differs between the profiles is which
+> **producer** emits the steps and which phases/parties are exercised.
+
+**Real-protocol profiles (P1, P2, P3).** The steps are emitted by the real ceremony phases (Msg3
+request, approval/verify/authorize UIs). Outcomes:
 
 | Outcome | Meaning | Example |
 |---|---|---|
@@ -333,28 +351,14 @@ named request. Outcomes:
 runs the post-KDF phases (σ₈/σ₆/anxiety) plus the recovery warning; `P3` is the
 maximal worst case — all phases/masks/stressors on both parties.
 
-**Inferred-stressor profile (P4).** The stressor is not flagged; a `core/`
-detector infers it from the ceremony. Two sub-kinds, merged in one harness:
-
-- *operation-inference* — read the objective operation. `cognitive_load_inferred.spthy`
-  infers `HighCognitiveLoad` from `op='kdf'`:
-
-  ```
-  rule Detect_HighCognitiveLoad:
-      [ !Op(P, rid, 'kdf', m), !StressEnable(P) ]
-    --[ Load(P), SetMask(P,'Busy') ]->
-      [ ]
-  ```
-
-  The detector keys on the operation **tag** (`'kdf'`, a public constant), not by
-  destructuring the result term — matching into `kdf(x,y)` trips Tamarin's
-  message-derivation check.
-
-- *trace-inference* — read prior trace facts: σ₁₀ `RepeatedFailure` from a prior
-  `!Failed` (chained off a σ₁ slip), σ₉ `AlertVolume` from decision density (≥3
-  handled `!Did`). `protocol/infer_harness.spthy` seeds a fixed number of
-  operation + decision tokens so the posers are bounded and the counting
-  detectors terminate.
+**Analyzer-direction profile (P4).** Instead of the real protocol phases, a single token-bounded
+harness (`protocol/infer_harness.spthy`) poses the *objective* steps — `compute`, `compare`,
+`decide` — and the **same agnostic detectors** fire, hosting σ₁/σ₆/σ₁₀/σ₉ in one ceremony. This is
+the "analyzer direction": the ceremony states what the human objectively does, and the detectors read
+it (no designer flag anywhere). The harness emits the protocol facts the masks need (`!Op`, `!Decision`)
+alongside the `!Step` the detectors read, and seeds a fixed number of operation + decision tokens so
+the posers are bounded and the density detectors (σ₉) terminate. σ₁₀ `RepeatedFailure` is the chaining
+edge — it reads the `!Failed` outcome a σ₁ slip leaves (not a step), so a slip can escalate to Careless.
 
 **Pathway B (P5).** A task-mediated mistake with no mask change. An Attentive
 user sets a safe policy under clear terminology, and an unsafe policy under
@@ -434,21 +438,23 @@ under Tamarin 1.12 / Maude 3.5.1, each profile in ≤4 s (slowest: P4 ≈ 3.8 s)
 that answers it, and every stressor that targets it. `bundles/calc_phase.spthy`:
 
 ```
-#include "../protocol/msg3_request.spthy"            // producer: Alex's 'Hard' request
+#include "../protocol/msg3_request.spthy"            // producer: Alex's 'Hard' request + !Step('compute')
 #include "../../../core/masks/attentive_calc.spthy"
 #include "../../../core/masks/busy_calc.spthy"
 #include "../../../core/masks/careless_calc.spthy"
+#include "../../../core/lexicon_tlx.spthy"           // Layer-2 lexicon (the lookup detectors read it)
 #include "../../../core/stressors/cognitive_load.spthy"     // σ1
 #include "../../../core/stressors/time_pressure.spthy"      // σ3
 #include "../../../core/stressors/external_distraction.spthy" // σ2
 ```
 
 `bundles/human_common.spthy` carries the `mask_state` + `answered_once` gates and
-the Alex stress-enable. A bundle-composed experiment is `ceremony.base` +
+the Alex stress-enable. A bundle-composed profile is `ceremony.base` +
 `human_common` + the phase bundles it wants (+ `protocol/session.spthy` for any
-post-KDF phase). Experiment 20 composes all four phase bundles to reproduce the
-Experiment 09 worst-case scope. Adding a stressor to a phase is one include line
-in its bundle; every experiment using that phase inherits it.
+post-KDF phase). `P3` composes all four phase bundles for the worst-case scope.
+Adding a stressor to a phase is one include line in its bundle; every profile
+using that phase inherits it. The lexicon is included once per theory wherever a
+lookup detector is used.
 
 ### Per-participant stress targeting
 
@@ -457,29 +463,32 @@ an enabled party:
 
 ```
 rule Trigger_HighCognitiveLoad:
-    [ !Req(P, rid, 'CALC_SK', m, 'Hard'), !StressEnable(P) ]
+    [ !Step(P, sid, action), !Demands(action, 'MentalDemand', 'hi'), !StressEnable(P) ]
   --[ Load(P), SetMask(P,'Busy') ]->
     [ ]
 ```
 
 `protocol/init.spthy` deposits a persistent `!Party(p,id)`; `protocol/stress_alex.spthy`
 and `protocol/stress_blake.spthy` each read it to seed `!StressEnable` for one party.
-An experiment includes the enable for whoever it stresses. An un-enabled party stays
-Attentive even when its trigger fact is present — Experiment 19 poses an identical
-`'Hard'` request from both parties, enables only Blake, and proves Blake degrades while
-Alex does not (`L19_load_requires_enable`).
+A profile includes the enable for whoever it stresses. An un-enabled party stays
+Attentive even when its step is present — `P1_calc_pressure` enables both parties and
+proves a stressor onset implies a prior enable (`P1_load_requires_enable`).
 
 ## 9. Termination decisions
 
 Several restrictions exist to keep the all-traces search terminating:
 
-- `OneStressPerParty` / `OnceHabituate` / `OneLoadPerParty` — one stressor onset
-  per party. A stressor reads a persistent fact and re-fires without this bound.
+- `OneStressPerParty` / `OnceHabituate` / `OneAlertVolume` / … — one onset per
+  stressor per party. A detector reads a persistent fact and re-fires without this bound.
 - `OneSetMaskPerMask` — one `SetMask` per mask per party, so the interval
   reasoning in `mask_state.spthy` stays finite.
 - `OnceStressAlex` / `OnceStressBlake` — one `StressOn` per party, so the
   persistent `!StressEnable` is seeded a bounded number of times.
-- `op_tokens.spthy` seeds a fixed token count, so the operation poser is bounded.
+- `protocol/infer_harness.spthy` seeds a fixed number of operation + decision tokens
+  (P4), so the step posers are bounded and the density detectors terminate.
+- `Inequality` (the `Neq(x,x) ==> F` distinctness restriction) is shared by the two
+  density detectors σ₈ and σ₉ under one name, so they are never composed in one theory
+  (σ₈ in P2/P6, σ₉ in P4/S1).
 
 These bounds are recorded as semantic no-ops (re-entering a mask you already hold
 changes nothing) or as the documented tractability choice for worst-case
