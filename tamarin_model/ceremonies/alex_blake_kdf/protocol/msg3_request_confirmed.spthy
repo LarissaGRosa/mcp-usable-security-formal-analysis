@@ -17,7 +17,9 @@ rule A_recv_Nb_request:
       !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard'),
       // Layer-1 objective step (agnostic interface): CALC_SK is a 'compute' action -- the migrated
       // sigma1 reads this + the lexicon, not the 'Hard' flag.
-      !Step('Alex', ~rid, 'compute') ]
+      !Step('Alex', ~rid, 'compute'),
+      // !StepData = the correct result, for the agnostic compute masks (see compute_behavior.spthy).
+      !StepData('Alex', ~rid, kdf(Na,Nb)) ]
 
 // keys match the expected derivation -> confirmed -> finish.
 rule A_confirm_ok:

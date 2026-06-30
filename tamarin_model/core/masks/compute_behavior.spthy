@@ -1,0 +1,34 @@
+/*
+  core/masks/compute_behavior.spthy -- f_H for the COMPUTE action class, CEREMONY-AGNOSTIC (AGNOSTIC_MASKS.md).
+  Collapses the old per-fact Calc_* (read !Req CALC_SK, wrote KeyResult) and Op_* (read !Op, wrote OpResult)
+  masks into one behaviour set. The behaviour is identical; only the input/output/correct-value differed,
+  and those are now the ceremony's job (it emits !Step + !StepData, and a thin adapter wraps Respond).
+
+  Each rule reads:
+    * !Step(P, rid, 'compute')          -- Layer 1: the ceremony presents a compute step
+    * !StepData(P, rid, genuine)         -- the correct result the step should yield (ceremony content)
+    * !OutcomePolicy(mask, 'compute', _) -- the human-model verdict (core/masks/outcome_policy.spthy)
+  and emits the response VALUE into a generic Respond(P, rid, value); a per-ceremony adapter turns that
+  into the protocol fact (KeyResult / OpResult). RespMask(P,mask) is gated by mask_state.spthy exactly as
+  before, so only the currently-active mask's rule fires; the action facts (Calc/Slip/Timeout/Key/Mask/
+  Answered/!Failed) are unchanged, so the lemmas are untouched.
+*/
+
+// Attentive: the step is performed correctly -> the genuine value.
+rule Compute_correct:
+    [ !Step(P, rid, 'compute'), !StepData(P, rid, genuine), !OutcomePolicy(mask, 'compute', 'correct') ]
+  --[ Calc(P, mask), RespMask(P, mask), Key(P, genuine), Answered(rid) ]->
+    [ Respond(P, rid, genuine) ]
+
+// Busy: a slip -> a FRESH wrong value (top symbol != kdf, so it can never equal the genuine kdf(_,_)).
+// !Failed marks the objective failure outcome (read by sigma10 RepeatedFailure where present).
+rule Compute_slip:
+    [ !Step(P, rid, 'compute'), Fr(~wrong), !OutcomePolicy(mask, 'compute', 'slip') ]
+  --[ Calc(P, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Slip(P), Key(P, ~wrong), Answered(rid) ]->
+    [ Respond(P, rid, ~wrong), !Failed(P) ]
+
+// Careless: disengagement -> no response (the step stalls; safe-fail). No Respond, so no protocol fact.
+rule Compute_timeout:
+    [ !Step(P, rid, 'compute'), !OutcomePolicy(mask, 'compute', 'timeout') ]
+  --[ Calc(P, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Timeout(P), Answered(rid) ]->
+    [ ]

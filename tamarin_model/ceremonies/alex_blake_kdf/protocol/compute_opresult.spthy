@@ -1,0 +1,10 @@
+/*
+  protocol/compute_opresult.spthy -- thin EFFECT ADAPTER for the agnostic compute behaviour (AGNOSTIC_MASKS.md).
+  The P4 infer_harness manifests a compute response as OpResult (consumed by Finish_op), where the real
+  protocol uses KeyResult. Same generic Respond(P,rid,value) source; different ceremony fact. One line.
+*/
+
+rule Compute_to_OpResult:
+    [ Respond(P, rid, v) ]
+  -->
+    [ OpResult(P, rid, v) ]

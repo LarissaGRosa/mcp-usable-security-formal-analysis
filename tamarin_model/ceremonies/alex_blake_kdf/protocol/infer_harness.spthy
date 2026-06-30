@@ -20,7 +20,10 @@ rule Pose_kdf:
     [ !Op('Alex', ~rid, 'kdf', kdf(~Na, Nb)), Pending(idA, ~rid),
       // Layer-1 objective step (agnostic interface): a kdf is a 'compute' action -- the migrated
       // sigma1 reads this + the lexicon, not the 'kdf' op tag.
-      !Step('Alex', ~rid, 'compute') ]
+      !Step('Alex', ~rid, 'compute'),
+      // !StepData = the correct result, for the agnostic compute masks (Compute_correct yields it,
+      // a slip yields a fresh wrong value); the OpResult adapter wraps the resulting Respond.
+      !StepData('Alex', ~rid, kdf(~Na, Nb)) ]
 
 // verify operation, genuine fingerprint (sigma6 inferred from 'verify')
 rule Pose_verify_genuine:

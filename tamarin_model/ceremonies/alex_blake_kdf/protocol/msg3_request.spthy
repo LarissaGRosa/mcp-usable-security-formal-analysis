@@ -13,8 +13,11 @@ rule A_recv_Nb_request:
     [ AlexAwaitKey(idA, ~rid),
       !Req('Alex', ~rid, 'CALC_SK', <Na,Nb>, 'Hard'),
       // Layer-1 objective step for the agnostic interface: CALC_SK is a 'compute' action.
-      // sigma3 (time_pressure) now reads this + the lexicon, not the 'CALC_SK' task name.
-      !Step('Alex', ~rid, 'compute') ]
+      // sigma3 (time_pressure) reads !Step + the lexicon; the compute masks read it too.
+      !Step('Alex', ~rid, 'compute'),
+      // !StepData = the correct result this step should yield, for the agnostic compute masks
+      // (Compute_correct produces it; a slip produces a fresh wrong value instead).
+      !StepData('Alex', ~rid, kdf(Na,Nb)) ]
 
 rule A_send_ack:
     [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk) ]

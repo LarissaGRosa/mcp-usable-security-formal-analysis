@@ -1,0 +1,11 @@
+/*
+  protocol/compute_keyresult.spthy -- thin EFFECT ADAPTER for the agnostic compute behaviour (AGNOSTIC_MASKS.md).
+  The core behaviour rules (core/masks/compute_behavior.spthy) put the human's compute response into a
+  generic Respond(P,rid,value); this ceremony's CALC_SK step manifests that as KeyResult, which A_send_ack
+  / the key-confirmation (msg3_request*) consume. One line, no mask logic -- that lives in core/.
+*/
+
+rule Compute_to_KeyResult:
+    [ Respond(P, rid, v) ]
+  -->
+    [ KeyResult(P, rid, v) ]

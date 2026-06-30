@@ -17,4 +17,6 @@ rule B_pose_calc_hard:
   --[ Request('Blake', ~rid, 'CALC_SK', 'Hard') ]->
     [ !Req('Blake', ~rid, 'CALC_SK', <Na,Nb>, 'Hard'),
       // Layer-1 objective step for the agnostic interface (sigma3 reads 'compute' + lexicon).
-      !Step('Blake', ~rid, 'compute') ]
+      !Step('Blake', ~rid, 'compute'),
+      // !StepData = the correct result, for the agnostic compute masks (see compute_behavior.spthy).
+      !StepData('Blake', ~rid, kdf(Na,Nb)) ]

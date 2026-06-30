@@ -23,10 +23,11 @@ begin
 #include "../../core/stressors/repeated_failure.spthy"
 #include "../../core/stressors/alert_volume.spthy"
 
-// -- masks: generic op (compute), verify op, and decision (confirm) --
-#include "../../core/masks/attentive_op.spthy"
-#include "../../core/masks/busy_op.spthy"
-#include "../../core/masks/careless_op.spthy"
+// -- masks: agnostic compute behaviour + OpResult adapter (replaces attentive_op/busy_op/careless_op),
+//    plus verify op and decision (confirm) --
+#include "../../core/masks/outcome_policy.spthy"
+#include "../../core/masks/compute_behavior.spthy"
+#include "protocol/compute_opresult.spthy"
 #include "../../core/masks/attentive_verify_op.spthy"
 #include "../../core/masks/naive_verify_op.spthy"
 #include "../../core/masks/attentive_confirm.spthy"
