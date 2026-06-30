@@ -155,7 +155,14 @@ a research contribution is wanted.
 
 ## Tier 3 — scale and the RFC deliverable
 
-### 7. Attach-to-real-protocol + termination playbook  ·  *status: not started*
+### 7. Attach-to-real-protocol + termination playbook  ·  *status: ✅ DONE*
+
+> `ceremonies/fido_auth/`: a signature-based push-MFA (`builtins: signing`) with the human layer attached
+> via `!Step` only. `FidoVuln` proves crypto soundness (auth requires the human's approval) + the MFA-fatigue
+> takeover (habituated → injected login authenticated); `FidoHardened` proves number matching makes it
+> unreachable — REQ-PUSH-MFA-NUMBER-MATCH on a real protocol. `confirm_behavior` gained a `Confirmed` output
+> (output+adapter pattern) so an approval can gate a downstream crypto step. `TERMINATION.md`: the attachment
+> recipe + termination levers + P3-narrowing + honest scaling limits. Commit 2c56573.
 
 Toy ceremonies don't make RFCs; FIDO2 / TLS / OAuth do. `!Step` makes attachment cheap in principle,
 but the §6a state-explosion at real scale needs a documented narrowing strategy (cap enabled stressors
@@ -217,7 +224,7 @@ Tier 3 to scale and produce the RFC deliverable.
 | 4 | Calibrate the lexicon (empirical levels, populations) | 2 | ✅ done — core/population_expert + P9_population + CALIBRATION.md |
 | 5 | Mental-model / belief state | 2 | ✅ done — ceremonies/phishing (PhishWeak/PhishStrong) |
 | 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
-| 7 | Attach-to-real-protocol + termination playbook | 3 | not started |
+| 7 | Attach-to-real-protocol + termination playbook | 3 | ✅ done — ceremonies/fido_auth (signature MFA) + TERMINATION.md |
 | 8 | Static analyzer (propose `!Step` + lexicon) | 3 | not started |
 | 9 | Proof-results → RFC-text generator | 3 | ✅ done — tools/rfc_gen.py + RFC_GUIDANCE.md (7/7 proven) |
 | 10 | Validation against real incidents | 3 | not started |
