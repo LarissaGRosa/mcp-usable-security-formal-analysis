@@ -32,6 +32,9 @@ begin
 #include "bundles/pgp_phase.spthy"
 #include "bundles/pw_phase.spthy"
 
+// -- generic usability-security invariants (ROADMAP #3 library; proven here cross-ceremony) --
+#include "../../core/usability_properties.spthy"
+
 #include "experiments/S0_secure_email.spthy"
 
 end

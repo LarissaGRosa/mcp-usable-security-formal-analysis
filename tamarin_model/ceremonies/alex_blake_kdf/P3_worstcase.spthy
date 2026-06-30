@@ -32,6 +32,9 @@ begin
 // -- enable Blake too --
 #include "protocol/stress_blake.spthy"
 
+// -- generic usability-security invariants (ROADMAP #3 library; proven here in the worst case) --
+#include "../../core/usability_properties.spthy"
+
 #include "experiments/P3_worstcase.spthy"
 
 end
