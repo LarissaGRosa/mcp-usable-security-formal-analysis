@@ -109,7 +109,14 @@ property templates* → a usability-robustness verdict in a day.
 
 ## Tier 2 — makes the results credible enough for an RFC
 
-### 4. Calibrate the lexicon  ·  *status: not started*
+### 4. Calibrate the lexicon  ·  *status: ✅ DONE*
+
+> A population is a demand profile (like an interface, #2, but a property of the user). `core/population_expert.spthy`
+> + `P9_population`: the CALC phase for an expert (low workload demand) proves no slip, vs P1 (novice/baseline)
+> where the slip is reachable — "a ceremony safe for experts may be unsafe for novices; cover the least-skilled
+> population." `CALIBRATION.md`: ordinal level buckets over NASA-TLX 0–100, level provenance, the exact-match
+> `'hi'` threshold as the auditable bucket boundary, population-sensitivity of workload vs environmental stressors,
+> and the sensitivity method (flip a `'hi'` row to `'med'` / vary the population, re-prove). Commit 8ac4b30.
 
 Levels are binary `'hi'` and expert-asserted. For defensibility: tie levels to **published/empirical
 TLX or SEQ data**, add **per-population profiles** (novice vs expert; the descoped "Elder" persona),
@@ -174,8 +181,11 @@ misuse) so the "usability problems arising from the ceremony" are grounded in re
 
 ## Recommended sequence
 
-**Tier 1 is COMPLETE** (✅ #1 agnostic masks, ✅ #2 first-class interfaces, ✅ #3 property library) — plus
-the dead bespoke facts retired. A designer can now apply the framework to a ceremony by emitting `!Step`
+**Tiers 1 and 2 are COMPLETE.** Tier 1: ✅ #1 agnostic masks, ✅ #2 first-class interfaces, ✅ #3 property
+library (+ dead facts retired). Tier 2: ✅ #4 lexicon calibration, ✅ #5 belief state, ✅ #6 adversary-induced
+stressors. A unifying through-line emerged — #2 (interface), #4 (population), #5 (identity interface), #6
+(adversary) are all the SAME lever: a demand/belief profile a good interface lowers, an adversary raises, and
+a population shifts. **Next: Tier 3 (scale + the RFC-text deliverable).** A designer can now apply the framework to a ceremony by emitting `!Step`
 (+ `!StepData`), picking an interface (demand profile), and instantiating the property templates. Next is
 Tier 2 (credibility) — **#6 adversary-induced stressors** is the standout — then Tier 3 (scale + the
 RFC-text deliverable). Original sequencing notes:
@@ -197,7 +207,7 @@ Tier 3 to scale and produce the RFC deliverable.
 | 1 | Agnostic masks (response layer) | 1 | ✅ done — all 7 action classes; core/masks 22→10 files |
 | 2 | First-class interfaces as demand-transformers | 1 | ✅ done — interface_hardened_verify + P7_interface |
 | 3 | Usability-security property library | 1 | ✅ done — core/usability_properties (2 generic + 4 templates) |
-| 4 | Calibrate the lexicon (empirical levels, populations) | 2 | not started |
+| 4 | Calibrate the lexicon (empirical levels, populations) | 2 | ✅ done — core/population_expert + P9_population + CALIBRATION.md |
 | 5 | Mental-model / belief state | 2 | ✅ done — ceremonies/phishing (PhishWeak/PhishStrong) |
 | 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
 | 7 | Attach-to-real-protocol + termination playbook | 3 | not started |
