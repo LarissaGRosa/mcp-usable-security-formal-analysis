@@ -59,7 +59,13 @@ a generic outcome (`busy` on `compute` → slip; on `confirm` → auto-handle; `
 mistake; …). Collapse the per-action mask files into per-mask × per-action-class rules. End state: the
 whole human layer is one include; a new ceremony adds zero `core/` files.
 
-### 2. First-class interfaces as demand-transformers  ·  *status: not started (germ exists in P6 / S1)*
+### 2. First-class interfaces as demand-transformers  ·  *status: ✅ DONE (worked example)*
+
+> An interface = a named demand profile (the `!Demands` rows it induces). A hardened interface lowers a
+> step's demand so the stressor's `'hi'` precondition is never produced → the stressor can't fire (fixes
+> the *cause*, upstream of P6's outcome-blocking mitigations). `core/interface_hardened_verify.spthy` +
+> profile `P7_interface` prove the tampered-key mistake UNREACHABLE under the hardened verify interface,
+> vs `P2_mistake_reachable` under the baseline — the proof pair yields the RFC requirement. Commit 3292b42.
 
 **Gap.** "Interface" is implicit (`approval_ui`, `compose_ui` are just step producers). There is no
 object that represents *what the interface does to the human's workload*.
@@ -77,7 +83,12 @@ number-matching adds an engaged-user value). Then the RFC-shaped lemma is provab
 This generalizes the bespoke P6 mitigations into a principled `interface ⇒ demand-delta ⇒ provable
 consequence` mechanism, and lets designers **compare interface variants** in one theory.
 
-### 3. A usability-security property library (lemma templates)  ·  *status: not started*
+### 3. A usability-security property library (lemma templates)  ·  *status: ✅ DONE*
+
+> `core/usability_properties.spthy`: two ceremony-agnostic includable invariants proven cross-ceremony
+> (P3 + S0) — `UP_degradation_is_attributable`, `UP_degradation_requires_targeting` — plus four
+> parameterized templates (usability-robustness, outcome-requires-stressor, breach attribution, the
+> interface/mitigation lever pair) each with a filled-example pointer. Commit 3aaf299.
 
 **Gap.** Every lemma is hand-written per ceremony. There is no analogue of Tamarin's standard
 `secrecy` / `agreement` goals for the human layer.
@@ -148,6 +159,12 @@ misuse) so the "usability problems arising from the ceremony" are grounded in re
 
 ## Recommended sequence
 
+**Tier 1 is COMPLETE** (✅ #1 agnostic masks, ✅ #2 first-class interfaces, ✅ #3 property library) — plus
+the dead bespoke facts retired. A designer can now apply the framework to a ceremony by emitting `!Step`
+(+ `!StepData`), picking an interface (demand profile), and instantiating the property templates. Next is
+Tier 2 (credibility) — **#6 adversary-induced stressors** is the standout — then Tier 3 (scale + the
+RFC-text deliverable). Original sequencing notes:
+
 Do the **adoption-blocking trio (1 → 2 → 3)** first — they build directly on the trigger seam:
 
 1. **Agnostic masks** (mechanical mirror of the stressor migration; turns the human layer into one
@@ -163,8 +180,8 @@ Tier 3 to scale and produce the RFC deliverable.
 | # | Item | Tier | Status |
 |---|---|---|---|
 | 1 | Agnostic masks (response layer) | 1 | ✅ done — all 7 action classes; core/masks 22→10 files |
-| 2 | First-class interfaces as demand-transformers | 1 | not started |
-| 3 | Usability-security property library | 1 | not started |
+| 2 | First-class interfaces as demand-transformers | 1 | ✅ done — interface_hardened_verify + P7_interface |
+| 3 | Usability-security property library | 1 | ✅ done — core/usability_properties (2 generic + 4 templates) |
 | 4 | Calibrate the lexicon (empirical levels, populations) | 2 | not started |
 | 5 | Mental-model / belief state | 2 | not started |
 | 6 | Adversary-induced stressors | 2 | not started |
