@@ -10,9 +10,9 @@
 // -- producer --
 #include "../protocol/authorize_ui.spthy"
 
-// -- masks (every f_H for AUTHORIZE) --
-#include "../../../core/masks/attentive_authorize.spthy"
-#include "../../../core/masks/fearful_authorize.spthy"
+// -- masks: the agnostic authorize behaviour (Attentive grant / Fearful abort), replacing
+//    attentive_authorize / fearful_authorize. outcome_policy comes from the profile entry. --
+#include "../../../core/masks/authorize_behavior.spthy"
 
 // -- stressors targeting AUTHORIZE --
 #include "../../../core/stressors/security_anxiety.spthy"

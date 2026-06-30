@@ -1,0 +1,19 @@
+/*
+  core/masks/authorize_behavior.spthy -- f_H for the AUTHORIZE action class, AGNOSTIC_MASKS.md.
+  Collapses attentive_authorize / fearful_authorize. Unconditional (no genuineness, so no !StepData):
+  an Attentive user grants a legitimate sensitive request; a Fearful user actively REFUSES (abort),
+  a safe-fail distinct from Careless's passive timeout. The old !AuthDone output was dead (no consumer;
+  lemmas read the Authorized / Abort action facts), so there is no output fact and no adapter.
+
+  RespMask(P,mask) gated by mask_state.spthy as before.
+*/
+
+rule Authorize_grant:
+    [ !Step(P, aid, 'authorize'), !OutcomePolicy(mask, 'authorize', 'grant') ]
+  --[ Authorize(P, aid, mask), RespMask(P, mask), Authorized(P, aid), Answered(aid) ]->
+    [ ]
+
+rule Authorize_abort:
+    [ !Step(P, aid, 'authorize'), !OutcomePolicy(mask, 'authorize', 'abort') ]
+  --[ Authorize(P, aid, mask), RespMask(P, mask), Abort(P, aid), Answered(aid) ]->
+    [ ]

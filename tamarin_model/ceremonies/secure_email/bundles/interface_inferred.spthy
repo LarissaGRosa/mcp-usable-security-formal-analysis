@@ -21,7 +21,8 @@
 #include "../../../core/masks/attentive_share.spthy"
 #include "../../../core/masks/careless_share.spthy"
 #include "../../../core/masks/busy_share.spthy"
-#include "../../../core/masks/attentive_confirm.spthy"
+// agnostic decide behaviour (replaces attentive_confirm); outcome_policy from the S1 entry.
+#include "../../../core/masks/decide_behavior.spthy"
 
 // -- inferred detectors (the f_U that read the objective interface operations) --
 // agnostic sigma6 (was abstraction_inferred): reads the 'compare' !Step + lexicon, not the 'verify' op

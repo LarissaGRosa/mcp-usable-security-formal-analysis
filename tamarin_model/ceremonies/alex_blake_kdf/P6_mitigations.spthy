@@ -32,8 +32,8 @@ begin
 // -- session + shutout-protected APPROVE phase (sigma8) --
 #include "protocol/session.spthy"
 #include "protocol/approval_shutout_ui.spthy"
-#include "../../core/masks/attentive_approve.spthy"
-#include "../../core/masks/habituated_approve.spthy"
+// agnostic confirm behaviour (replaces attentive_approve / habituated_approve); outcome_policy above.
+#include "../../core/masks/confirm_behavior.spthy"
 #include "../../core/stressors/habituation.spthy"
 
 // -- VERIFY phase (sigma6) under verify-shutout --

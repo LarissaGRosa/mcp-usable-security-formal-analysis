@@ -12,9 +12,11 @@
 rule UI_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
-    [ !Prompt('Alex', ~pid, 'self'), !Step('Alex', ~pid, 'confirm') ]
+    [ !Prompt('Alex', ~pid, 'self'), !Step('Alex', ~pid, 'confirm'),
+      !StepData('Alex', ~pid, 'self') ]
 
 rule UI_inject_shutout:
     [ !Session('Alex', idA, sk), In(pid) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid), Shutout(pid) ]->
-    [ !Prompt('Alex', pid, 'injected'), !Step('Alex', pid, 'confirm') ]
+    [ !Prompt('Alex', pid, 'injected'), !Step('Alex', pid, 'confirm'),
+      !StepData('Alex', pid, 'injected') ]

@@ -35,15 +35,18 @@ library, and the RFC deliverable are not.
 
 ## Tier 1 — blocks a designer from using this at all
 
-### 1. Make the response layer (masks) agnostic too  ·  *status: IN PROGRESS — compute cluster done*
+### 1. Make the response layer (masks) agnostic too  ·  *status: IN PROGRESS — compute + compare done*
 
 > Design: [`AGNOSTIC_MASKS.md`](AGNOSTIC_MASKS.md). Finding: masks are **not** a mechanical mirror of the
 > stressor migration — they produce ceremony-specific protocol facts, so the split is behaviour-policy in
 > `core/` (`outcome_policy.spthy` + `<class>_behavior.spthy` → a generic `Respond` event) + thin per-output
 > effect adapters in the ceremony. **Pilot landed (compute):** `Calc_*` + `Op_*` (6 files) collapsed into
 > `core/masks/outcome_policy.spthy` + `core/masks/compute_behavior.spthy` + two 1-line adapters
-> (`compute_keyresult` / `compute_opresult`); all 56 checks green. **Remaining:** roll to compare, confirm/
-> approve, decide, authorize, and the `*_share` outcomes.
+> (`compute_keyresult` / `compute_opresult`); all 56 checks green. **Compare done** (5edc9ae): the 4 verify
+> masks → `compare_behavior` (discerning/credulous) + `compare_keychecked`/`compare_verifydone` adapters;
+> `outcome_policy` is now a once-per-theory entry include (P2/S0/S1) to dodge the P3 double-include.
+> **Remaining:** confirm/approve, decide, authorize, and the `*_share` outcomes (the last has a
+> workload-vs-response tension — its !Step is tagged for the detectors, but its outcome is leak/misdeliver).
 
 **Gap.** We migrated `f_U` (stressors) to read generic `!Step`, but `f_H` (masks) still pattern-match
 task facts: there are three Busy masks (`busy_calc` / `busy_op` / `busy_share`), three Careless, etc.
@@ -160,7 +163,7 @@ Tier 3 to scale and produce the RFC deliverable.
 
 | # | Item | Tier | Status |
 |---|---|---|---|
-| 1 | Agnostic masks (response layer) | 1 | in progress — compute cluster done (compare/confirm/decide/authorize/share left) |
+| 1 | Agnostic masks (response layer) | 1 | in progress — compute + compare done (confirm/decide/authorize/share left) |
 | 2 | First-class interfaces as demand-transformers | 1 | not started |
 | 3 | Usability-security property library | 1 | not started |
 | 4 | Calibrate the lexicon (empirical levels, populations) | 2 | not started |

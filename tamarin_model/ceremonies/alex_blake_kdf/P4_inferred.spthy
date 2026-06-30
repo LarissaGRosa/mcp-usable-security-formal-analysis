@@ -31,8 +31,8 @@ begin
 // agnostic compare behaviour + VerifyDone adapter (replaces attentive_verify_op / naive_verify_op)
 #include "../../core/masks/compare_behavior.spthy"
 #include "../../core/masks/compare_verifydone.spthy"
-#include "../../core/masks/attentive_confirm.spthy"
-#include "../../core/masks/careless_confirm.spthy"
+// agnostic decide behaviour (replaces attentive_confirm / careless_confirm)
+#include "../../core/masks/decide_behavior.spthy"
 
 // -- transitions + Alex stress-enable --
 #include "../../core/transitions/mask_state.spthy"

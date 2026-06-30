@@ -14,6 +14,16 @@
     Attentive + compare -> discerning  (accepts ONLY a genuine artifact; rejects/stalls on tampered)
     Naive    + compare -> credulous   (accepts ANY artifact -> a process Mistake; harmful iff tampered)
 
+  CONFIRM action class = approval prompts (collapses attentive/busy/careless/habituated_approve). Kind
+  in !StepData is 'self' | 'injected'; only Attentive inspects it.
+    Attentive  + confirm -> verify-self  (approves ONLY a self prompt; rejects/stalls on injected)
+    Busy/Habituated + confirm -> autoapprove (reflexively approves ANY prompt -> AutoApprove)
+    Careless   + confirm -> dismiss      (times out; no approval)
+  DECIDE action class = decision-stream items (collapses attentive/careless_confirm). No genuineness.
+    Attentive + decide -> handle    Careless + decide -> fatigue (timeout)
+  AUTHORIZE action class = granting a sensitive op (collapses attentive/fearful_authorize). Unconditional.
+    Attentive + authorize -> grant (Authorized)    Fearful + authorize -> abort (active refusal)
+
   Seeded unconditionally so any theory using a behaviour rule stays CLOSED; persistent + read-only ->
   no sources loop (repo MEMORY.md S6.2). OnceOutcomePolicy bounds the seed. As more action classes are
   migrated (compare/confirm/decide/authorize/share), add their rows here -- one table, reused.
@@ -26,7 +36,18 @@ rule Seed_outcome_policy:
       !OutcomePolicy('Busy',      'compute', 'slip'),
       !OutcomePolicy('Careless',  'compute', 'timeout'),
       !OutcomePolicy('Attentive', 'compare', 'discerning'),
-      !OutcomePolicy('Naive',     'compare', 'credulous') ]
+      !OutcomePolicy('Naive',     'compare', 'credulous'),
+      // confirm = an approval prompt (MFA push); kind in !StepData is 'self' | 'injected'
+      !OutcomePolicy('Attentive', 'confirm', 'verify-self'),
+      !OutcomePolicy('Busy',      'confirm', 'autoapprove'),
+      !OutcomePolicy('Habituated','confirm', 'autoapprove'),
+      !OutcomePolicy('Careless',  'confirm', 'dismiss'),
+      // decide = choosing among options (a decision-stream item); no genuineness, so no !StepData
+      !OutcomePolicy('Attentive', 'decide',  'handle'),
+      !OutcomePolicy('Careless',  'decide',  'fatigue'),
+      // authorize = granting a sensitive operation; unconditional (no genuineness)
+      !OutcomePolicy('Attentive', 'authorize', 'grant'),
+      !OutcomePolicy('Fearful',   'authorize', 'abort') ]
 
 restriction OnceOutcomePolicy:
   "All #i #j. SeedOutcomePolicy()@i & SeedOutcomePolicy()@j ==> #i = #j"

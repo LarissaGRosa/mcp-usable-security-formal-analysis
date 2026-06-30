@@ -13,11 +13,10 @@
 // -- producer --
 #include "../protocol/approval_ui.spthy"
 
-// -- masks (every f_H for APPROVE_REQ) --
-#include "../../../core/masks/attentive_approve.spthy"
-#include "../../../core/masks/busy_approve.spthy"
-#include "../../../core/masks/careless_approve.spthy"
-#include "../../../core/masks/habituated_approve.spthy"
+// -- masks: the agnostic confirm behaviour (Attentive verify-self / Busy+Habituated autoapprove /
+//    Careless dismiss), replacing the four *_approve masks. No output fact (the old !Approved was the
+//    sigma8 trigger, now agnostic). outcome_policy comes from the profile entry. --
+#include "../../../core/masks/confirm_behavior.spthy"
 
 // -- stressors targeting APPROVE_REQ --
 #include "../../../core/stressors/habituation.spthy"

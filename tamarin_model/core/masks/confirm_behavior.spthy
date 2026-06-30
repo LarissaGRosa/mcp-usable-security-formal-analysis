@@ -1,0 +1,32 @@
+/*
+  core/masks/confirm_behavior.spthy -- f_H for the CONFIRM action class (approval prompts), AGNOSTIC_MASKS.md.
+  Collapses attentive_approve / busy_approve / careless_approve / habituated_approve. The prompt KIND
+  ('self' | 'injected') is carried in !StepData; only Attentive inspects it (it verifies and approves only
+  its own prompt). The degraded masks ignore kind. There is no output fact (the old !Approved was read
+  only by the now-agnostic sigma8, so it is dropped); the lemmas read the action facts Approve/AutoApprove.
+
+    Attentive  ('verify-self') : approves ONLY a self prompt -> on injected, NO rule fires (rejects).
+    Busy/Habituated ('autoapprove') : reflexively approve ANY prompt -> AutoApprove (a VerifyShutout/
+      ShutoutBlocksAutoApprove mitigation gates this on a Shutout-protected prompt).
+    Careless ('dismiss') : times out, no approval.
+
+  RespMask(P,mask) gated by mask_state.spthy as before; Approve(P,pid,mask) carries the mask label.
+*/
+
+// Attentive: verifies, approves only a self prompt.
+rule Confirm_attentive_verify:
+    [ !Step(P, pid, 'confirm'), !StepData(P, pid, 'self'), !OutcomePolicy(mask, 'confirm', 'verify-self') ]
+  --[ Approve(P, pid, mask), RespMask(P, mask), Verified(P, pid), Answered(pid) ]->
+    [ ]
+
+// Busy / Habituated: reflexively approve ANY prompt (incl. an injected one -> prompt-bombing).
+rule Confirm_autoapprove:
+    [ !Step(P, pid, 'confirm'), !OutcomePolicy(mask, 'confirm', 'autoapprove') ]
+  --[ Approve(P, pid, mask), RespMask(P, mask), AutoApprove(P, pid), Mask(P,'Attentive',mask), Answered(pid) ]->
+    [ ]
+
+// Careless: dismisses the prompt without acting -> timeout, no approval (safe-fail).
+rule Confirm_dismiss:
+    [ !Step(P, pid, 'confirm'), !OutcomePolicy(mask, 'confirm', 'dismiss') ]
+  --[ Approve(P, pid, mask), RespMask(P, mask), Timeout(P), Answered(pid) ]->
+    [ ]
