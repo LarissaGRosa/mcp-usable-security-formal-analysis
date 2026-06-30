@@ -1,0 +1,30 @@
+theory PhishWeak
+begin
+
+/*
+  PROFILE PhishWeak -- belief-state phishing under a WEAK identity interface (ROADMAP #5, Tier 2).
+  The human forms its peer belief from the displayed claim alone. The adversary spoofs the display, so
+  an ATTENTIVE human (no mask degradation) shares the secret believing it goes to Blake -- and it reaches
+  the adversary. The breach is the belief<->reality gap, not an execution failure.
+  Run: check.py --prove ceremonies/phishing/PhishWeak.spthy
+*/
+
+#include "protocol.spthy"
+#include "identity_weak.spthy"
+
+// the phishing breach is reachable.
+lemma PhishWeak_breach_reachable:
+  exists-trace
+  "Ex m #s #k. Secret(m)@s & K(m)@k"
+
+// the novelty: the human was ATTENTIVE (no degraded mask) and still got phished.
+lemma PhishWeak_attentive_is_phished:
+  exists-trace
+  "Ex m #s #r #k. Secret(m)@s & RespMask('Alex','Attentive')@r & K(m)@k"
+
+// ATTRIBUTION: every breach traces to a spoofed presentation (a false belief), not to the user.
+lemma PhishWeak_breach_requires_spoof:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k ==> (Ex #i. Spoofed()@i)"
+
+end

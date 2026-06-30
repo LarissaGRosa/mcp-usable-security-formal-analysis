@@ -1,0 +1,11 @@
+/*
+  ceremonies/phishing/identity_weak.spthy -- the WEAK identity interface (ROADMAP #5).
+  The human forms its belief from the DISPLAYED claim alone -- no verification. So a spoofed display
+  ('Blake' over the adversary channel) produces a FALSE belief, which the Attentive human then acts on.
+  (Consumes the linear Claimed/Channel, so belief formation is bounded.)
+*/
+
+rule Believe_weak:
+    [ Claimed('Alex', c), Channel('Alex', ch) ]
+  --[ Believes('Alex', c, 'weak') ]->
+    [ Belief('Alex', c, ch) ]
