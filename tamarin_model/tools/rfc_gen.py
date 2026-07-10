@@ -9,7 +9,7 @@ emits the requirement backed by those proofs. A requirement whose proofs do not 
 UNVERIFIED rather than emitted as fact -- the RFC text is only ever as strong as the proofs behind it.
 
 Usage (from the repo root):
-    python3 tamarin_model/tools/rfc_gen.py            # verify proofs, write tamarin_model/RFC_GUIDANCE.md
+    python3 tamarin_model/tools/rfc_gen.py            # verify proofs, write tamarin_model/docs/RFC_GUIDANCE.md
     python3 tamarin_model/tools/rfc_gen.py --no-verify # trust manifest, just render (fast)
 """
 import json, re, subprocess, sys, pathlib
@@ -18,7 +18,7 @@ HERE = pathlib.Path(__file__).resolve()
 REPO = HERE.parents[2]                      # tamarin_model/tools/rfc_gen.py -> repo root
 CHECK = REPO / ".claude/skills/model-tamarin/check.py"
 MANIFEST = HERE.parent / "rfc_requirements.json"
-OUT = REPO / "tamarin_model/RFC_GUIDANCE.md"
+OUT = REPO / "tamarin_model/docs/RFC_GUIDANCE.md"
 
 VERDICT_RE = re.compile(r"^\s*(?:ok|fail)\s+(\S+)\s+(exists-trace|all-traces)\s+(verified|falsified)")
 

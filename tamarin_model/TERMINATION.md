@@ -11,19 +11,20 @@ already used somewhere in this model, so it doubles as a worked reference.
 
 1. On each rule where a human acts, add `!Step(P, sid, action)` with `action` from the fixed taxonomy
    (`compute | compare | confirm | decide | authorize | set-policy`). Add `!StepData(P, sid, …)` only if
-   the response needs ground truth (the correct value for `compute`; `genuine|tampered` for `compare`;
-   `self|injected` for `confirm`).
+   the response needs the step's OBSERVABLES (the correct value for `compute`; `<offered, reference>` for
+   `compare`; `<claimed, own>` for `confirm` — never a pre-computed verdict, repo MEMORY.md lesson 14).
 2. Include the core human layer: `transitions/mask_state` + `transitions/answered_once`, `masks/outcome_policy`
    + the `<class>_behavior` files for the actions you use, the `stressors/*` you want, a stress-enable, and
    `lexicon_tlx` (or a population/interface profile) for the lookup detectors.
 3. If an approval/verification **gates** a downstream protocol step, consume the behavior's output fact
-   (`Respond` / `Checked` / `Confirmed`) in a thin per-ceremony adapter — see `fido_auth` (the device
-   signature is gated on `Confirmed`).
+   (`Respond` / `Checked` / `Confirmed`) in a thin per-ceremony adapter — see `compare_keychecked`
+   (A_send_pgp is gated on `!KeyChecked`).
 4. Instantiate the property templates; run `check.py --prove`; feed the pairs to `tools/rfc_gen.py`.
 
-`fido_auth` is the worked example: a signature protocol (`builtins: signing`) with the human layer attached
-this way, proving a crypto property (auth requires the human's approval) **and** a human-factors property
-(habituation → injected-login takeover), reusing the masks/σ₈/shutout verbatim.
+The retired `fido_auth` ceremony (git 2c56573, removed 2026-07-09) was the worked example: a signature
+protocol (`builtins: signing`) with the human layer attached this way, proving a crypto property (auth
+requires the human's approval) **and** a human-factors property (habituation → injected-login takeover),
+reusing the masks/σ₈/shutout verbatim. The recipe above is what it demonstrated.
 
 ## Termination levers (each used in this model)
 

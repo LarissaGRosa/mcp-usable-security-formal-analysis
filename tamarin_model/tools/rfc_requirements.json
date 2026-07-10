@@ -6,8 +6,17 @@
       "id": "REQ-VERIFY-AFFORDANCE",
       "title": "Low-effort fingerprint comparison",
       "risk_text": "A raw hex key-fingerprint comparison is high-Effort (NASA-TLX), which triggers the Abstraction stressor: the user stops reasoning (Naive) and accepts a tampered key (a Mistake) -> the secret is encrypted to the adversary.",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy", "lemma": "P2_mistake_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P7_interface.spthy", "lemma": "P7_no_mistake", "lever": "presenting the comparison via a low-effort affordance (a side-by-side visual diff), which keeps the user Attentive"},
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy",
+          "lemma": "P2_mistake_reachable"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/alex_blake_kdf/P7_interface.spthy",
+        "lemma": "P7_no_mistake",
+        "lever": "presenting the comparison via a low-effort affordance (a side-by-side visual diff), which keeps the user Attentive"
+      },
       "requirement": "Implementations MUST present key-fingerprint comparison via a low-effort affordance (e.g. a side-by-side visual diff or word-list), not a raw hexadecimal string."
     },
     {
@@ -15,58 +24,88 @@
       "title": "Engaged-user value on approval prompts (number matching)",
       "risk_text": "A habituated user (repeated prompts) OR a user under adversary-induced urgency reflexively auto-approves a prompt of any kind, including an adversary-injected one (MFA prompt-bombing / fatigue).",
       "vulnerable": [
-        {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy", "lemma": "P2_autoapprove_injected_reachable"},
-        {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P8_adversary.spthy", "lemma": "P8_adv_autoapprove_reachable"}
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy",
+          "lemma": "P2_autoapprove_injected_reachable"
+        },
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/P8_adversary.spthy",
+          "lemma": "P8_adv_autoapprove_reachable"
+        }
       ],
-      "removed_by": {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P6_mitigations.spthy", "lemma": "P6_shutout_blocks_injected", "lever": "requiring an engaged-user value (number matching) the reflexive user cannot supply"},
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/alex_blake_kdf/P6_mitigations.spthy",
+        "lemma": "P6_shutout_blocks_injected",
+        "lever": "requiring an engaged-user value (number matching) the reflexive user cannot supply"
+      },
       "requirement": "Implementations MUST require an engaged-user value (e.g. number matching) on security-critical approval prompts, so that a habituated or time-pressured user cannot approve an adversary-injected prompt."
-    },
-    {
-      "id": "REQ-PUSH-MFA-NUMBER-MATCH",
-      "title": "Number matching on push-based MFA (real signature protocol)",
-      "risk_text": "On a signature-based push-MFA (real crypto), a habituated user auto-approves an attacker-triggered ('injected') login; the device signs the attacker's challenge and the attacker authenticates -- an account takeover with NO crypto break.",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/fido_auth/FidoVuln.spthy", "lemma": "Fido_injected_auth_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/fido_auth/FidoHardened.spthy", "lemma": "FidoHardened_no_injected_auth", "lever": "mandatory number matching (an engaged-user value on every prompt) that blocks the reflexive auto-approval"},
-      "requirement": "Push-based MFA implementations MUST require number matching (an engaged-user value) on every approval, so a habituated user cannot approve an attacker-triggered login."
     },
     {
       "id": "REQ-KEY-CONFIRM",
       "title": "Detect-and-halt key confirmation",
       "risk_text": "A user under high cognitive load / time pressure slips and computes a wrong key; without a check, the ceremony completes with the wrong key (unsafe success).",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/alex_blake_kdf/P1_calc_pressure.spthy", "lemma": "P1_slip_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P6_mitigations.spthy", "lemma": "P6_no_slip_completion", "lever": "a key-confirmation step that detects the mismatch and halts"},
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/P1_calc_pressure.spthy",
+          "lemma": "P1_slip_reachable"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/alex_blake_kdf/P6_mitigations.spthy",
+        "lemma": "P6_no_slip_completion",
+        "lever": "a key-confirmation step that detects the mismatch and halts"
+      },
       "requirement": "Implementations MUST verify the derived/agreed key against an expected value and halt on mismatch, so that a slip cannot complete the ceremony with a wrong key."
     },
     {
       "id": "REQ-DEVICE-COMPARE",
       "title": "Automatic (device-side) fingerprint comparison",
       "risk_text": "Leaving the fingerprint comparison to the user's mental model lets a Naive user accept a tampered fingerprint.",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/alex_blake_kdf/P3_worstcase.spthy", "lemma": "P3_mistake_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P6_mitigations.spthy", "lemma": "P6_no_tampered_mistake", "lever": "the device comparing the fingerprints automatically and refusing a tampered one"},
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/P3_worstcase.spthy",
+          "lemma": "P3_mistake_reachable"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/alex_blake_kdf/P6_mitigations.spthy",
+        "lemma": "P6_no_tampered_mistake",
+        "lever": "the device comparing the fingerprints automatically and refusing a tampered one"
+      },
       "requirement": "Implementations SHOULD compare security-critical fingerprints automatically (device-side) rather than relying on the user, so a tampered fingerprint cannot be accepted."
     },
     {
       "id": "REQ-OOB-PASSWORD",
       "title": "Out-of-band secret channel",
       "risk_text": "Sending a sharing password in-band (same channel as the ciphertext) lets the adversary decrypt; a Careless user takes that shortcut and leaks it silently.",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/secure_email/S0_secure_email.spthy", "lemma": "S0_leak_pw_inband_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/secure_email/S0_secure_email.spthy", "lemma": "S0_attentive_keeps_secret", "lever": "sending the password over a channel OTHER than the message (so no degraded-free trace leaks it)"},
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S2_trio_pw.spthy",
+          "lemma": "S2_alertvolume_inband_silent"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/secure_email/S0_baseline.spthy",
+        "lemma": "S0_secrecy_absolute",
+        "lever": "sending the password over a channel OTHER than the message (with no degraded share, secrecy is absolute)"
+      },
       "requirement": "Implementations MUST transmit a sharing password/secret over a channel other than the protected message itself."
-    },
-    {
-      "id": "REQ-VERIFIED-IDENTITY",
-      "title": "Verified peer-identity binding (anti-phishing)",
-      "risk_text": "If the human forms its belief about the peer from a displayed claim alone, the adversary spoofs the display and an Attentive user (no degradation) shares the secret with the adversary -- a belief<->reality gap.",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/phishing/PhishWeak.spthy", "lemma": "PhishWeak_breach_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/phishing/PhishStrong.spthy", "lemma": "PhishStrong_no_phish", "lever": "binding the displayed identity to a verified credential so the false belief cannot form"},
-      "requirement": "Implementations MUST bind the displayed peer identity to a verified credential (not a raw displayed claim), so a spoofed display cannot induce a false belief."
     },
     {
       "id": "REQ-POPULATION",
       "title": "Cover the least-skilled intended population",
       "risk_text": "A step that is low-demand for an expert can be high-demand (overwhelming) for a novice, who then slips. A ceremony proven safe for experts may be unsafe for novices.",
-      "vulnerable": [{"profile": "tamarin_model/ceremonies/alex_blake_kdf/P1_calc_pressure.spthy", "lemma": "P1_slip_reachable"}],
-      "removed_by": {"profile": "tamarin_model/ceremonies/alex_blake_kdf/P9_population.spthy", "lemma": "P9_no_slip", "lever": "the expert population (low demand) -- which a novice does NOT enjoy; so the safety is population-scoped"},
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/P1_calc_pressure.spthy",
+          "lemma": "P1_slip_reachable"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/alex_blake_kdf/P9_population.spthy",
+        "lemma": "P9_no_slip",
+        "lever": "the expert population (low demand) -- which a novice does NOT enjoy; so the safety is population-scoped"
+      },
       "requirement": "The analysis/deployment MUST consider the least-skilled intended user population (the slip is reachable for novices though not experts); equivalently, the interface MUST lower the step's demand for everyone."
     }
   ]
