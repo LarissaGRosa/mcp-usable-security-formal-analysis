@@ -1,0 +1,123 @@
+/*
+  interface/sender.spthy -- INTERFACE LAYER (orange #f2994a), Alex's pane of secure-email-mock.html.
+  One rule per control. The interface PROMPTS the user (!Step + !StepData observables + CONTEXT),
+  the stressor layer reads those prompts, the user's mask answers, and *_go rules turn answers
+  into protocol requests. No rule here touches the wire or the crypto.
+
+  Exposure vs gated (state-space discipline, repo MEMORY.md lesson 15): plain buttons pose
+  EXPOSURE-ONLY prompts (density detectors count POSED prompts); the human-GATED crossings are
+  the three that decide the outcome:
+    compare   (btn_verify_fp)    -> which key the message is encrypted to
+    share     (btn_share_signal) -> which channel the password travels on
+    authorize (btn_send)         -> whether the message leaves at all (Fearful freezes)
+
+  CONTEXT facts (read by the v2 stressor layer): the password pane's controls are presented
+  UNDER A TIMER (the secure link expires; the mock's send-before pressure), so they emit
+  !UnderDeadline(pid) -- sigma3-deadline (time_pressure_deadline.spthy) fires on prompt+deadline,
+  never on a task name.
+
+  Steps, per the mock's STEPS table:
+    PGP : method toggle (3x decide) -> btn_generate_keypair (confirm, exposure)
+          -> btn_fetch_key (confirm, exposure) -> btn_verify_fp (compare, <fetched, OOB fp>)
+          -> btn_send (authorize)
+    PW  : method toggle -> set_passphrase (compute, deadline) -> set_hint (transcribe)
+          -> btn_share_signal (share <recip, correspondent, pw>, deadline) -> btn_send (authorize)
+*/
+
+// ===== method toggle: weighing OpenPGP vs Password (sigma9 density fodder) =====
+
+rule IF_seed_method_menu [color=#f2994a]:
+    [ !Party('Alex', idA) ]
+  --[ UIStep('Alex','method_toggle'), SeedMenu('Alex') ]->
+    [ MenuTok('Alex'), MenuTok('Alex'), MenuTok('Alex') ]
+
+restriction OnceSeedMenu:
+  "All p #i #j. SeedMenu(p)@i & SeedMenu(p)@j ==> #i = #j"
+
+rule IF_weigh_option [color=#f2994a]:
+    [ MenuTok('Alex'), Fr(~did) ]
+  --[ PoseDecision('Alex', ~did) ]->
+    [ !Step('Alex', ~did, 'decide') ]
+
+// branch commit: AlexInit is linear -> one method per trace.
+rule IF_pick_pgp [color=#f2994a]:
+    [ AlexInit(idA) ] --[ Branch('Alex','PGP') ]-> [ AlexPGP(idA) ]
+
+rule IF_pick_pw [color=#f2994a]:
+    [ AlexInit(idA) ] --[ Branch('Alex','PW') ]-> [ AlexPW(idA) ]
+
+// ===== PGP pane =====
+
+// "Generate my keypair" -- exposure confirm (sigma8 density pair, 1 of 2) + direct request.
+rule IF_btn_gen_alex [color=#f2994a]:
+    [ AlexPGP(idA), Fr(~pid) ]
+  --[ UIStep('Alex','btn_generate_keypair') ]->
+    [ !Step('Alex', ~pid, 'confirm'), !StepData('Alex', ~pid, <~pid, ~pid>),
+      PReq_keygen('Alex', idA) ]
+
+// "Fetch from keyserver / WKD" -- exposure confirm (pair 2 of 2) + direct request.
+rule IF_btn_fetch [color=#f2994a]:
+    [ KeyReady('Alex', idA), Fr(~pid) ]
+  --[ UIStep('Alex','btn_fetch_key') ]->
+    [ !Step('Alex', ~pid, 'confirm'), !StepData('Alex', ~pid, <~pid, ~pid>),
+      PReq_fetch(idA) ]
+
+// "Verify fingerprint out-of-band" -- the GATED compare: what the network delivered (FetchedKey,
+// DY-controlled) against the fingerprint from the Signal thread (OobFp). The verdict is derived
+// in compare_behavior; a degraded mask (Naive sigma6 / Habituated click-through / Careless
+// skip-the-check) accepts whatever the DY substituted.
+rule IF_verify_fp [color=#f2994a]:
+    [ FetchedKey(idA, k), OobFp('Blake', 'Alex', ref), Fr(~vid) ]
+  --[ UIStep('Alex','btn_verify_fp') ]->
+    [ !Step('Alex', ~vid, 'compare'), !StepData('Alex', ~vid, <k, ref>),
+      AlexVerifying(idA, ~vid, k) ]
+
+// "Encrypt + sign & send" -- the GATED authorize (releasing the message; Fearful freezes,
+// degraded-but-engaged users still click via outcome_degraded_click).
+rule IF_btn_send_pgp [color=#f2994a]:
+    [ AlexVerifying(idA, vid, kUsed), !KeyChecked('Alex', vid), Fr(~aid) ]
+  --[ UIStep('Alex','btn_send') ]->
+    [ !Step('Alex', ~aid, 'authorize'), SendWaitPGP(idA, kUsed, ~aid) ]
+
+rule IF_btn_send_pgp_go [color=#f2994a]:
+    [ SendWaitPGP(idA, kUsed, aid), Granted('Alex', aid) ]
+  -->
+    [ PReq_send_pgp(idA, kUsed) ]
+
+// ===== password pane (presented under the secure-link timer -> !UnderDeadline context) =====
+
+// "Passphrase for this message" -- the compute prompt.
+rule IF_set_passphrase [color=#f2994a]:
+    [ AlexPW(idA), Fr(~pw), Fr(~cid) ]
+  --[ UIStep('Alex','set_passphrase'), PwCreated(~pw) ]->
+    [ !Step('Alex', ~cid, 'compute'), !UnderDeadline(~cid),
+      PwChosen(idA, ~pw) ]
+
+// the optional hint field (transcribe; the in-band channel the careless leak concretises).
+rule IF_set_hint [color=#f2994a]:
+    [ !Party('Alex', idA), Fr(~tid) ]
+  --[ UIStep('Alex','set_hint'), SetHint('Alex') ]->
+    [ !Step('Alex', ~tid, 'transcribe') ]
+
+restriction OnceSetHint:
+  "All p #i #j. SetHint(p)@i & SetHint(p)@j ==> #i = #j"
+
+// "Share via Signal" -- the GATED share. Observables <recipient, correspondent, payload>:
+// here the entered recipient IS the correspondent ('Blake'); the masks pick the channel.
+rule IF_btn_share_signal [color=#f2994a]:
+    [ PwChosen(idA, pw), Fr(~rid) ]
+  --[ UIStep('Alex','btn_share_signal') ]->
+    [ !Step('Alex', ~rid, 'share'), !StepData('Alex', ~rid, <'Blake', 'Blake', pw>),
+      !UnderDeadline(~rid),
+      PwStaged(idA, pw) ]
+
+// "Encrypt with password & send" -- the GATED authorize, as on the PGP pane.
+rule IF_btn_send_pw [color=#f2994a]:
+    [ PwStaged(idA, pw), Fr(~aid) ]
+  --[ UIStep('Alex','btn_send') ]->
+    [ !Step('Alex', ~aid, 'authorize'), SendWaitPW(idA, pw, ~aid) ]
+
+rule IF_btn_send_pw_go [color=#f2994a]:
+    [ SendWaitPW(idA, pw, aid), Granted('Alex', aid) ]
+  -->
+    [ PReq_send_pw(idA, pw) ]

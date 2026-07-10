@@ -1,0 +1,29 @@
+/*
+  interface/effects.spthy -- the SHARE effect adapters (orange #f2994a): the one sanctioned
+  interface->channel boundary. The generic share behaviour decided the outcome
+  (ShareOutcome(P,rid,kind)); here each outcome manifests on the channels using the step's
+  observables <recipient, correspondent, payload>. Oob is addressed by PARTY NAME; delivery to a
+  corrupt name reaches the adversary (protocol/mail.spthy P_oob_corrupt).
+
+    oob          -> Oob(P, recipient, pw)          (off the wire; Attentive guaranteed
+                                                    recipient = correspondent)
+    inband-leak  -> Out(pw) + Oob(P, recipient, pw) (recipient still gets it; silent compromise)
+    misdeliver   -> Out(pw)                         (wrong place; intended recipient locked out)
+
+  (The compare adapter is core/masks/compare_keychecked.spthy, included by the profiles.)
+*/
+
+rule Share_oob_effect [color=#f2994a]:
+    [ ShareOutcome(P, rid, 'oob'), !StepData(P, rid, <r, c, pw>) ]
+  -->
+    [ Oob(P, r, pw) ]
+
+rule Share_inband_leak_effect [color=#f2994a]:
+    [ ShareOutcome(P, rid, 'inband-leak'), !StepData(P, rid, <r, c, pw>) ]
+  -->
+    [ Out(pw), Oob(P, r, pw) ]
+
+rule Share_misdeliver_effect [color=#f2994a]:
+    [ ShareOutcome(P, rid, 'misdeliver'), !StepData(P, rid, <r, c, pw>) ]
+  -->
+    [ Out(pw) ]

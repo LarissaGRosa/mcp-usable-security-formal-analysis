@@ -1,10 +1,15 @@
 /*
-  bundles/human_common.spthy -- always-needed human-layer plumbing for secure_email, one include.
+  bundles/human_common.spthy -- the always-needed human-layer plumbing, one include (v2).
   The persistent current-mask gates (mask_state), the single-answer discipline (answered_once),
-  and the sender stress-enable (stress_alex). Add protocol/stress_blake.spthy to also stress the
-  recipient. Pair with one or both phase bundles (pgp_phase / pw_phase).
+  the outcome matrix, the demand lexicon (read by the lookup detectors; dangles harmlessly in the
+  baseline), and stress targeting for BOTH parties. A profile adds on top: its 3 stressor
+  detectors (one include line each, visible in the profile) + any opt-in outcome rows its story
+  needs (clickthrough / skipcheck / degraded_click).
 */
 
 #include "../../../core/transitions/mask_state.spthy"
 #include "../../../core/transitions/answered_once.spthy"
+#include "../../../core/masks/outcome_policy.spthy"
+#include "../../../core/lexicon_tlx.spthy"
 #include "../protocol/stress_alex.spthy"
+#include "../protocol/stress_blake.spthy"

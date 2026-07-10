@@ -1,0 +1,49 @@
+/*
+  interface/recipient.spthy -- INTERFACE LAYER (orange #f2994a), Blake's pane.
+  Plain clicks are UIStep-only (state-space discipline); Blake's maskable prompts are the
+  password entry (transcribe exposure) and -- crucially -- the REPLY prompt his mail client
+  renders when a password request arrives (IF_reply_pwreq): the phishing surface that EMERGES
+  from the open mail channel. Its share observables are <replyTo, correspondent, pw>: an
+  Attentive Blake shares only back to the person the ceremony was actually with ('Alex'), no
+  matter what the mail claims; a degraded Blake does not look.
+*/
+
+// Blake's pane matches the method (BlakeInit linear -> one flavour per trace).
+rule IF_blake_pgp_setup [color=#f2994a]:
+    [ BlakeInit(idB) ] --[ BranchB('Blake','PGP') ]-> [ BlakeSetup(idB) ]
+
+rule IF_blake_pw_inbox [color=#f2994a]:
+    [ BlakeInit(idB) ] --[ BranchB('Blake','PW') ]-> [ BlakeInboxPW(idB) ]
+
+// "Generate my keypair" / "Publish to keyserver" / "Decrypt with my private key" -- plain clicks.
+rule IF_btn_gen_blake [color=#f2994a]:
+    [ BlakeSetup(idB) ]
+  --[ UIStep('Blake','btn_generate_keypair') ]->
+    [ PReq_keygen('Blake', idB) ]
+
+rule IF_btn_publish [color=#f2994a]:
+    [ KeyReady('Blake', idB) ]
+  --[ UIStep('Blake','btn_publish_key') ]->
+    [ PReq_publish(idB) ]
+
+rule IF_btn_decrypt [color=#f2994a]:
+    [ BlakeReadyPGP(idB) ]
+  --[ UIStep('Blake','btn_decrypt') ]->
+    [ PReq_decrypt(idB) ]
+
+// "Enter the password (received out-of-band)" -- transcribe exposure; the unlock itself
+// proceeds at the protocol (link + Oob password).
+rule IF_pw_entry [color=#f2994a]:
+    [ BlakeInboxPW(idB), Fr(~tid) ]
+  --[ UIStep('Blake','pw_entry') ]->
+    [ !Step('Blake', ~tid, 'transcribe'), PReq_unlock(idB) ]
+
+// an incoming password request (anyone can send one -- the DY, hence Eve) renders as an
+// ordinary reply prompt: the GATED share for Blake. Bounded once per trace.
+rule IF_reply_pwreq [color=#f2994a]:
+    [ BlakeHasPw(idB, pw), MailPwReq(idB, replyTo), Fr(~rid) ]
+  --[ UIStep('Blake','reply_pw_request'), PwReqShown('Blake') ]->
+    [ !Step('Blake', ~rid, 'share'), !StepData('Blake', ~rid, <replyTo, 'Alex', pw>) ]
+
+restriction OncePwReqShown:
+  "All p #i #j. PwReqShown(p)@i & PwReqShown(p)@j ==> #i = #j"

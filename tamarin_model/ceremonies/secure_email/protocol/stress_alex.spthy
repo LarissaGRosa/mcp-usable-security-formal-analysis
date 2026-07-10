@@ -5,7 +5,7 @@
   OnceStressAlex bounds the onset (StressEnable is persistent; the bound keeps StressOn finite).
 */
 
-rule Enable_Stress_Alex:
+rule Enable_Stress_Alex [color=#9b51e0]:
     [ !Party('Alex', id) ] --[ StressOn('Alex') ]-> [ !StressEnable('Alex') ]
 
 restriction OnceStressAlex:

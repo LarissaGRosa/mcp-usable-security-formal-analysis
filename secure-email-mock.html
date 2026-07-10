@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure email — interactive mock</title>
+<style>
+  :root{
+    --ink:#2c2c2a; --sub:#5f5e5a; --line:#e5e3da; --paper:#fff;
+    --coral:#993c1d; --coral-bg:#faece7;
+    --blue:#185fa5;  --blue-bg:#e6f1fb;
+    --teal:#0f6e56;  --teal-bg:#e1f5ee;
+    --purple:#534ab7;--purple-bg:#eeedfe;
+    --warn:#ba7517;  --warn-bg:#faeeda;
+    --ok:#0f6e56;    --bad:#b23b2e;
+  }
+  *{box-sizing:border-box}
+  body{max-width:1100px;margin:0 auto;padding:36px 20px 90px;background:#faf9f5;
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);line-height:1.5;}
+  h1{font-size:25px;font-weight:600;margin:0 0 4px}
+  .lede{color:var(--sub);font-size:15px;margin:0 0 22px;max-width:760px}
+  .lede a{color:var(--blue)}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f1efe8;
+    padding:1px 5px;border-radius:4px;font-size:12.5px}
+
+  /* method toggle */
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 20px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;font:600 14px inherit;color:var(--sub);
+    padding:9px 16px;cursor:pointer;display:flex;gap:8px;align-items:center}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button[data-on="pgp"].active{background:var(--purple-bg);color:var(--purple)}
+  .seg button[data-on="pw"].active{background:var(--teal-bg);color:var(--teal)}
+  .seg .dot{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.55}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:9px;
+    font:600 13.5px inherit;color:var(--ink);padding:8px 14px;cursor:pointer}
+  .btn:hover{background:#f4f2ec}
+  .btn.ghost{color:var(--sub)}
+  .method-note{font-size:13px;color:var(--sub);margin:0 0 18px;padding:9px 13px;
+    border-left:4px solid var(--purple);background:var(--purple-bg);border-radius:0 6px 6px 0}
+  body[data-method="pw"] .method-note{border-color:var(--teal);background:var(--teal-bg)}
+
+  /* stage grid */
+  .stage{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.stage{grid-template-columns:1fr}}
+  .pane{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    display:flex;flex-direction:column;min-height:420px}
+  .pane header{display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid var(--line)}
+  .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+    font-weight:700;color:#fff;font-size:13px}
+  .a-alex{background:#185fa5}.a-blake{background:#993c1d}
+  .pane header .who{font-weight:600;font-size:15px;line-height:1.15}
+  .pane header .role{font-size:12px;color:var(--sub)}
+  .pane .body{padding:14px 15px;flex:1;display:flex;flex-direction:column;gap:12px}
+
+  /* step list */
+  .steps{list-style:none;margin:0;padding:0;font-size:13px}
+  .steps li{display:flex;gap:9px;padding:5px 0;color:var(--sub);align-items:flex-start}
+  .steps li .mk{flex:0 0 18px;height:18px;border-radius:50%;border:1.5px solid #cfcdc4;
+    display:grid;place-items:center;font-size:11px;margin-top:1px}
+  .steps li.done{color:var(--ink)}
+  .steps li.done .mk{background:var(--ok);border-color:var(--ok);color:#fff}
+  .steps li.active{color:var(--ink);font-weight:600}
+  .steps li.active .mk{border-color:var(--ink)}
+
+  label.fld{display:block;font-size:12px;font-weight:600;color:var(--sub);margin:0 0 4px}
+  input[type=text],input[type=password],textarea{width:100%;border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font:14px inherit;color:var(--ink);background:#fff}
+  textarea{resize:vertical;min-height:74px;line-height:1.45}
+  input:focus,textarea:focus{outline:2px solid #bcd3ee;border-color:#9dbfe0}
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .grow{flex:1;min-width:120px}
+
+  .chip{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600;
+    padding:3px 9px;border-radius:20px;background:#f1efe8;color:var(--sub)}
+  .chip.on{background:var(--teal-bg);color:var(--teal)}
+  .chip.warnc{background:var(--warn-bg);color:var(--warn)}
+
+  .cipher{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;
+    background:#1f1e1c;color:#a9d5c4;border-radius:8px;padding:10px 12px;
+    word-break:break-all;line-height:1.4;max-height:150px;overflow:auto}
+  .plain{background:#fbfaf6;border:1px dashed #d7d5cb;border-radius:8px;padding:10px 12px;font-size:14px}
+  .plain .subj{font-weight:600;margin-bottom:4px}
+  .locked{display:grid;place-items:center;gap:8px;text-align:center;color:var(--sub);
+    background:#fbfaf6;border:1px dashed #d7d5cb;border-radius:8px;padding:22px 12px;font-size:13px}
+  .locked .big{font-size:26px}
+
+  .primary{border:0;border-radius:9px;font:600 14px inherit;color:#fff;padding:9px 16px;cursor:pointer}
+  .primary.pgp{background:var(--purple)} .primary.pw{background:var(--teal)}
+  .primary:disabled{opacity:.4;cursor:not-allowed}
+
+  /* out-of-band channel */
+  .oob{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .oob h3{margin:0 0 3px;font-size:14px;display:flex;gap:8px;align-items:center}
+  .oob p{margin:0 0 10px;font-size:12.5px;color:var(--sub)}
+  .oob .warnc{margin-left:auto}
+  .sig{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .sig .bubble{background:#e7f7ea;border:1px solid #bfe6c6;border-radius:12px 12px 12px 3px;
+    padding:8px 12px;font-size:13px;max-width:100%;color:#134d22}
+  .sig .bubble .lbl{font-size:11px;color:#3f7a4c;font-weight:600;margin-bottom:2px}
+  .sig .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);
+    background:#1f1e1c;color:#fff;padding:10px 18px;border-radius:10px;font-size:13.5px;
+    opacity:0;pointer-events:none;transition:.25s;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .hide{display:none!important}
+  .muted{color:var(--sub);font-size:12.5px}
+  .flag{font-size:12px;padding:3px 9px;border-radius:6px;font-weight:600}
+  .flag.ok{background:var(--teal-bg);color:var(--ok)} .flag.bad{background:#fbe7e4;color:var(--bad)}
+  .fp{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;letter-spacing:.5px}
+</style>
+</head>
+<body data-method="pgp">
+
+<h1>Secure email — interactive mock</h1>
+<p class="lede">A working simulation of the two secure-send methods from the
+  <a href="secure-email-generic-guide.html">generic guide</a>: <strong>OpenPGP end-to-end</strong> and
+  <strong>password-based</strong>. Alex sends, Blake receives. The crypto is mocked (no real keys leave the page)
+  so you can watch <em>where</em> each secret has to travel — including the out-of-band channel that both methods depend on.</p>
+
+<div class="toolbar">
+  <div class="seg" role="tablist">
+    <button data-on="pgp" class="active" onclick="setMethod('pgp')"><span class="dot"></span>Method 2 — OpenPGP</button>
+    <button data-on="pw" onclick="setMethod('pw')"><span class="dot"></span>Method 3 — Password</button>
+  </div>
+  <button class="btn ghost" onclick="resetAll()">↺ Reset</button>
+</div>
+
+<div class="method-note" id="methodNote"></div>
+
+<div class="stage">
+  <!-- ================= SENDER ================= -->
+  <section class="pane">
+    <header>
+      <div class="avatar a-alex">A</div>
+      <div><div class="who">Alex</div><div class="role">Sender · composes the message</div></div>
+    </header>
+    <div class="body">
+      <ul class="steps" id="senderSteps"></ul>
+
+      <div id="senderControls">
+        <label class="fld">Subject <span class="muted">(never encrypted — keep it generic)</span></label>
+        <input type="text" id="subject" value="Lunch plans" />
+
+        <div style="height:10px"></div>
+        <label class="fld">Message body</label>
+        <textarea id="bodyText">The wire transfer code is 4417-9920. Don't share it.</textarea>
+
+        <!-- PGP setup -->
+        <div id="pgpSetup" style="margin-top:12px">
+          <div class="row">
+            <span class="chip" id="chipHaveKey">⚿ Alex keypair: <span id="alexKeyState">generate</span></span>
+            <button class="btn" id="btnAlexKey" onclick="genAlexKey()">Generate my keypair</button>
+          </div>
+          <div style="height:8px"></div>
+          <div class="row">
+            <span class="chip" id="chipBlakeKey">⇩ Blake's public key: <span id="blakeKeyState">not fetched</span></span>
+            <button class="btn" id="btnFetchKey" onclick="fetchBlakeKey()">Fetch from keyserver / WKD</button>
+          </div>
+          <div id="verifyBlock" class="hide" style="margin-top:10px">
+            <label class="fld">Verify fingerprint out-of-band</label>
+            <div class="row">
+              <span class="fp" id="blakeFp"></span>
+              <button class="btn" id="btnVerify" onclick="verifyFp()">Confirm it matches Blake's</button>
+            </div>
+            <div class="muted" style="margin-top:4px">Compare against the fingerprint Blake reads out on the channel below.</div>
+          </div>
+        </div>
+
+        <!-- PW setup -->
+        <div id="pwSetup" class="hide" style="margin-top:12px">
+          <label class="fld">Passphrase for this message</label>
+          <div class="row">
+            <input type="text" id="passphrase" class="grow" placeholder="e.g. purple-otter-73" value="purple-otter-73"/>
+            <button class="btn" onclick="sharePassword()" id="btnSharePw">Share via Signal ↗</button>
+          </div>
+          <label class="fld" style="margin-top:10px">Password hint (travels in the email — keep it useless to outsiders)</label>
+          <input type="text" id="hint" value="the animal from Saturday" />
+        </div>
+
+        <div style="height:14px"></div>
+        <button class="primary pgp" id="sendBtn" onclick="sendMail()">Encrypt &amp; send</button>
+        <div class="muted hide" id="sendHint" style="margin-top:8px"></div>
+      </div>
+
+      <!-- sent view -->
+      <div id="sentView" class="hide">
+        <div class="row" style="margin-bottom:8px">
+          <span class="flag ok">✓ Sent</span>
+          <span class="muted" id="sentMode"></span>
+        </div>
+        <div class="muted" style="margin-bottom:4px">This is exactly what leaves Alex's outbox:</div>
+        <div class="plain" style="margin-bottom:8px">
+          <div class="subj">Subject: <span id="wireSubj"></span></div>
+          <div class="muted">To: blake@example.org — <em>metadata &amp; subject are not encrypted</em></div>
+        </div>
+        <div class="cipher" id="wireCipher"></div>
+        <div class="muted hide" id="pubAttached" style="margin-top:8px">⇧ Alex's public key is attached, so Blake can verify the signature and reply encrypted.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RECIPIENT ================= -->
+  <section class="pane">
+    <header>
+      <div class="avatar a-blake">B</div>
+      <div><div class="who">Blake</div><div class="role">Recipient · reads the message</div></div>
+    </header>
+    <div class="body">
+      <ul class="steps" id="recvSteps"></ul>
+
+      <!-- Blake's PGP setup (before any message) -->
+      <div id="recvSetup" class="hide">
+        <div class="row">
+          <span class="chip" id="chipBlakeGen">⚿ Blake keypair: <span id="blakeGenState">generate</span></span>
+          <button class="btn" id="btnBlakeGen" onclick="genBlakeKey()">Generate my keypair</button>
+        </div>
+        <div style="height:8px"></div>
+        <div class="row">
+          <span class="chip" id="chipBlakePub">⇧ Your public key: <span id="blakePubState">not published</span></span>
+          <button class="btn" id="btnBlakePub" onclick="publishBlakeKey()">Publish to keyserver / send</button>
+        </div>
+        <div class="muted" style="margin-top:10px" id="recvWaiting">
+          Generate a keypair, then publish the <em>public</em> half so Alex can fetch it. Your private key never leaves here.
+        </div>
+      </div>
+
+      <div id="recvEmpty" class="locked hide" style="flex:1">
+        <div class="big">📭</div>
+        <div>No message yet. Have Alex encrypt &amp; send.</div>
+      </div>
+
+      <div id="recvArrived" class="hide">
+        <div class="row" style="margin-bottom:8px">
+          <span class="flag ok" id="recvFlag">✉ New message</span>
+          <span class="muted" id="recvFrom">from Alex</span>
+        </div>
+        <div class="plain" style="margin-bottom:10px">
+          <div class="subj">Subject: <span id="recvSubj"></span></div>
+        </div>
+
+        <!-- PGP decrypt -->
+        <div id="recvPgp" class="hide">
+          <div class="cipher" id="recvCipher" style="margin-bottom:10px"></div>
+          <button class="primary pgp" id="btnDecryptPgp" onclick="decryptPgp()">Decrypt with my private key</button>
+        </div>
+
+        <!-- PW decrypt -->
+        <div id="recvPw" class="hide">
+          <div class="locked" style="margin-bottom:10px">
+            <div class="big">🔗</div>
+            <div>Secure link — content is encrypted until you enter the password.</div>
+          </div>
+          <label class="fld">Enter the password (received out-of-band)</label>
+          <div class="row">
+            <input type="password" id="pwEntry" class="grow" placeholder="type the passphrase"/>
+            <button class="primary pw" onclick="decryptPw()">Unlock</button>
+          </div>
+          <div class="muted" id="pwHintShown" style="margin-top:6px"></div>
+          <div class="flag bad hide" id="pwErr" style="margin-top:8px">✗ Wrong password — cannot decrypt.</div>
+        </div>
+
+        <!-- revealed -->
+        <div id="recvPlain" class="hide">
+          <div class="plain">
+            <div class="subj" id="plainSubjLine"></div>
+            <div id="plainBody"></div>
+          </div>
+          <div class="row" id="verifyLine" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= OUT OF BAND ================= -->
+<div class="oob">
+  <h3>📱 Out-of-band channel <span class="muted" style="font-weight:400">(Signal / phone — separate from email)</span>
+    <span class="chip warnc" id="oobLabel">the secret must travel here, not in the email</span></h3>
+  <p id="oobDesc"></p>
+  <div class="sig" id="sigThread"><span class="muted">Nothing sent on the side channel yet.</span></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- mocked crypto (visual only) ---------- */
+function b64ish(seed, n){
+  const cs="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let s="", x=0; for(let i=0;i<seed.length;i++) x=(x*31+seed.charCodeAt(i))>>>0;
+  for(let i=0;i<n;i++){ x=(x*1103515245+12345)>>>0; s+=cs[(x>>>8)%64]; if((i+1)%64===0)s+="\n"; }
+  return s;
+}
+function pgpBlock(payload){
+  return "-----BEGIN PGP MESSAGE-----\nVersion: Mock 1.0\n\n"+b64ish(payload,320)+"\n=Ab3d\n-----END PGP MESSAGE-----";
+}
+function pwBlob(payload,pass){
+  return "https://secure.mail/msg/"+b64ish(payload+pass,14).replace(/[^A-Za-z0-9]/g,"").slice(0,14)+
+    "\n\n[encrypted payload]\n"+b64ish(payload+pass,192);
+}
+const BLAKE_FP = "9F2C  4A11  7E08  BB63  D5A9";
+
+/* ---------- state ---------- */
+let method="pgp";
+let st={};
+function freshState(){ return {
+  alexKey:false, blakeKeyGen:false, blakePublished:false, blakeKey:false,
+  verified:false, pwShared:false,
+  sent:false, mode:null, wire:"", plainBody:"", plainSubj:"", usedPass:"", decrypted:false
+};}
+
+/* ---------- step definitions ---------- */
+const STEPS={
+  pgp:{
+    sender:[["key","Generate your keypair"],["fetch","Fetch Blake's public key"],
+      ["verify","Verify fingerprint out-of-band"],["send","Encrypt + sign, send"]],
+    recv:[["genkey","Generate your keypair"],["publish","Publish / send your public key"],
+      ["arrive","Encrypted email arrives"],["decrypt","Decrypt with private key"],["read","Read &amp; verify signature"]]
+  },
+  pw:{
+    sender:[["pass","Set a passphrase"],["share","Share password out-of-band"],["send","Encrypt with password, send"]],
+    recv:[["arrive","Secure link arrives"],["getpw","Get password out-of-band"],["unlock","Enter password, read"]]
+  }
+};
+
+/* ---------- rendering ---------- */
+function el(id){return document.getElementById(id);}
+function toast(m){const t=el('toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2100);}
+
+function senderStepState(){
+  if(method==='pgp'){
+    return {key:st.alexKey, fetch:st.blakeKey, verify:st.verified, send:st.sent};
+  }
+  return {pass:true, share:st.pwShared, send:st.sent};
+}
+function recvStepState(){
+  if(method==='pgp'){
+    return {genkey:st.blakeKeyGen, publish:st.blakePublished, arrive:st.sent, decrypt:st.decrypted, read:st.decrypted};
+  }
+  return {arrive:st.sent, getpw:st.pwShared, unlock:st.decrypted};
+}
+function renderSteps(){
+  const draw=(ulId,defs,states)=>{
+    const ul=el(ulId); ul.innerHTML="";
+    let activeSet=false;
+    defs.forEach(([k,label])=>{
+      const done=!!states[k];
+      const li=document.createElement('li');
+      li.className=done?'done':((!activeSet)?'active':'');
+      if(!done&&!activeSet)activeSet=true;
+      li.innerHTML=`<span class="mk">${done?'✓':''}</span><span>${label}</span>`;
+      ul.appendChild(li);
+    });
+  };
+  draw('senderSteps',STEPS[method].sender,senderStepState());
+  draw('recvSteps',STEPS[method].recv,recvStepState());
+}
+
+function render(){
+  document.body.dataset.method=method;
+  // toggle buttons
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('active',b.dataset.on===method));
+
+  // note + oob copy
+  if(method==='pgp'){
+    el('methodNote').innerHTML="<strong>OpenPGP end-to-end.</strong> The out-of-band channel carries the <em>public-key fingerprint</em> for verification. The provider never sees plaintext — but a key you never verified could belong to an impostor.";
+    el('oobDesc').innerHTML="For PGP, Blake reads out the <strong>fingerprint</strong> of their public key so Alex can confirm the fetched key is genuine (not a man-in-the-middle's).";
+    el('oobLabel').textContent="fingerprint verification happens here";
+  }else{
+    el('methodNote').innerHTML="<strong>Password-based.</strong> The out-of-band channel carries the <em>passphrase itself</em>. Whoever has the password can read the message — so it must never travel in the email.";
+    el('oobDesc').innerHTML="For the password method, Alex sends Blake the <strong>passphrase</strong> here — over Signal, never by email.";
+    el('oobLabel').textContent="the password travels here";
+  }
+
+  // sender setup panels
+  el('pgpSetup').classList.toggle('hide',method!=='pgp');
+  el('pwSetup').classList.toggle('hide',method!=='pw');
+  el('sendBtn').className="primary "+method;
+  el('sendBtn').textContent = method==='pgp' ? "Encrypt + sign & send" : "Encrypt with password & send";
+
+  // pgp chip states
+  el('alexKeyState').textContent=st.alexKey?'ready':'generate';
+  el('chipHaveKey').classList.toggle('on',st.alexKey);
+  el('btnAlexKey').disabled=st.alexKey;
+  el('blakeKeyState').textContent=st.blakeKey?'fetched':(st.blakePublished?'available':'waiting on Blake');
+  el('chipBlakeKey').classList.toggle('on',st.blakeKey);
+  el('chipBlakeKey').classList.toggle('warnc',!st.blakeKey&&st.alexKey&&!st.blakePublished);
+  el('btnFetchKey').disabled=st.blakeKey||!st.alexKey||!st.blakePublished;
+  el('btnFetchKey').title=!st.blakePublished?"Blake must publish their public key first":"";
+  el('verifyBlock').classList.toggle('hide',!st.blakeKey);
+  el('blakeFp').textContent=BLAKE_FP;
+  el('btnVerify').disabled=st.verified;
+  el('btnVerify').textContent=st.verified?'✓ Verified':'Confirm it matches Blake\'s';
+
+  // send enable rules
+  let canSend;
+  if(method==='pgp') canSend = st.alexKey && st.blakeKey && !st.sent;
+  else canSend = !st.sent;
+  el('sendBtn').disabled=!canSend;
+  el('sendHint').classList.toggle('hide', method!=='pgp' || st.sent || (st.alexKey&&st.blakeKey));
+  if(method==='pgp') el('sendHint').textContent="Need your keypair and Blake's public key first.";
+
+  // sent / not
+  el('senderControls').classList.toggle('hide',st.sent);
+  el('sentView').classList.toggle('hide',!st.sent);
+  if(st.sent){
+    el('sentMode').textContent = method==='pgp' ? "end-to-end encrypted (OpenPGP)" : "encrypted secure link (password)";
+    el('wireSubj').textContent=st.plainSubj;
+    el('wireCipher').textContent=st.wire;
+    el('pubAttached').classList.toggle('hide',method!=='pgp');
+  }
+
+  // recipient
+  const inSetup = !st.sent;
+  el('recvSetup').classList.toggle('hide', !(method==='pgp' && inSetup));
+  el('recvEmpty').classList.toggle('hide', !(method==='pw' && inSetup));
+  el('recvArrived').classList.toggle('hide', !st.sent);
+  el('blakeGenState').textContent=st.blakeKeyGen?'ready':'generate';
+  el('chipBlakeGen').classList.toggle('on',st.blakeKeyGen);
+  el('btnBlakeGen').disabled=st.blakeKeyGen;
+  el('blakePubState').textContent=st.blakePublished?'published':'not published';
+  el('chipBlakePub').classList.toggle('on',st.blakePublished);
+  el('btnBlakePub').disabled=st.blakePublished||!st.blakeKeyGen;
+  if(st.sent){
+    el('recvSubj').textContent=st.plainSubj;
+    el('recvPgp').classList.toggle('hide',method!=='pgp'||st.decrypted);
+    el('recvPw').classList.toggle('hide',method!=='pw'||st.decrypted);
+    el('recvPlain').classList.toggle('hide',!st.decrypted);
+    if(method==='pgp') el('recvCipher').textContent=st.wire;
+    if(method==='pw') el('pwHintShown').innerHTML="Hint in the email: <em>"+escapeHtml(el('hint').value)+"</em>";
+    if(st.decrypted){
+      el('plainSubjLine').textContent="Subject: "+st.plainSubj;
+      el('plainBody').textContent=st.plainBody;
+      el('verifyLine').innerHTML = method==='pgp'
+        ? (st.verified?'<span class="flag ok">✓ Signature valid — from verified key</span>'
+                      :'<span class="flag bad">⚠ Signature from an unverified key</span>')
+        : '<span class="flag ok">✓ Decrypted with the shared password</span>';
+    }
+  }
+  renderSteps();
+}
+
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---------- sender actions ---------- */
+function genAlexKey(){ st.alexKey=true; toast("Keypair generated for Alex"); render(); }
+function genBlakeKey(){ st.blakeKeyGen=true; toast("Keypair generated for Blake"); render(); }
+function publishBlakeKey(){ st.blakePublished=true;
+  pushSig("Blake","My PGP fingerprint is:",BLAKE_FP,true);
+  toast("Blake's public key published — Alex can fetch it now"); render(); }
+function fetchBlakeKey(){ st.blakeKey=true; st.verified=false;
+  toast("Fetched Blake's public key — now verify the fingerprint"); render(); }
+function verifyFp(){ st.verified=true; toast("Fingerprint matches — key is trusted"); render(); }
+function sharePassword(){ st.pwShared=true; st.usedPass=el('passphrase').value.trim();
+  pushSig("Alex","Password for the email I just sent:",st.usedPass||"(empty)",false);
+  toast("Password shared over Signal"); render(); }
+
+function sendMail(){
+  st.plainSubj=el('subject').value||"(no subject)";
+  st.plainBody=el('bodyText').value;
+  if(method==='pgp'){
+    st.wire=pgpBlock(st.plainBody+st.plainSubj);
+    st.mode='pgp';
+  }else{
+    if(!st.pwShared) st.usedPass=el('passphrase').value.trim(); // may send before sharing
+    st.wire=pwBlob(st.plainBody, el('passphrase').value.trim());
+    st.mode='pw';
+    st.usedPass=el('passphrase').value.trim();
+  }
+  st.sent=true; st.decrypted=false;
+  toast(method==='pgp'?"Sent — end-to-end encrypted":"Sent — encrypted secure link");
+  render();
+}
+
+/* ---------- recipient actions ---------- */
+function decryptPgp(){ st.decrypted=true;
+  toast(st.verified?"Decrypted — signature verified":"Decrypted — but key was never verified");
+  render(); }
+function decryptPw(){
+  const entered=el('pwEntry').value.trim();
+  if(entered && entered===st.usedPass){
+    st.decrypted=true; el('pwErr').classList.add('hide'); toast("Unlocked");
+  }else{
+    el('pwErr').classList.remove('hide'); toast("Wrong password");
+  }
+  render();
+}
+
+/* ---------- out-of-band thread ---------- */
+function pushSig(who,label,value,mono){
+  const t=el('sigThread');
+  if(t.querySelector('.muted')) t.innerHTML="";
+  const b=document.createElement('div');
+  b.className="bubble";
+  b.innerHTML=`<div class="lbl">${who} · Signal</div>${escapeHtml(label)} <span class="${mono?'mono':''}"><strong>${escapeHtml(value)}</strong></span>`;
+  t.appendChild(b);
+}
+
+/* ---------- top-level ---------- */
+function setMethod(m){ if(m===method)return; method=m; st=freshState();
+  el('pwEntry')&&(el('pwEntry').value=""); el('sigThread').innerHTML='<span class="muted">Nothing sent on the side channel yet.</span>';
+  render(); }
+function resetAll(){ st=freshState(); el('pwEntry')&&(el('pwEntry').value="");
+  el('pwErr').classList.add('hide');
+  el('sigThread').innerHTML='<span class="muted">Nothing sent on the side channel yet.</span>';
+  toast("Reset"); render(); }
+
+st=freshState();
+render();
+</script>
+</body>
+</html>

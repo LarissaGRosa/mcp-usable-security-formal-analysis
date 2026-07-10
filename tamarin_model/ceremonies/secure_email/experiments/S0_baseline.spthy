@@ -1,0 +1,21 @@
+/*
+  experiments/S0_baseline.spthy -- baseline lemmas: the five-layer pipeline works, and with no
+  stressor armed secrecy is ABSOLUTE.
+*/
+
+#include "helpers.spthy"
+
+lemma S0_happy_pgp:
+  exists-trace
+  "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+
+lemma S0_happy_pw:
+  exists-trace
+  "Ex m link #s #u #r.
+     Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
+
+// no stressor -> no SetMask -> no degraded row can fire -> the secret NEVER leaks,
+// even with Eve's password-request mail and the DY-controlled keyserver in play.
+lemma S0_secrecy_absolute:
+  all-traces
+  "All m #s. Secret(m)@s ==> not (Ex #k. K(m)@k)"

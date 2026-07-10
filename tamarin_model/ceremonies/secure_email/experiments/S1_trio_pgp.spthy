@@ -1,0 +1,53 @@
+/*
+  experiments/S1_trio_pgp.spthy -- the PGP trio {sigma6, sigma8, sigma2-concurrency}: three
+  degraded routes to the same weak point (accepting the DY-substituted keyserver answer). PGP
+  chains are stated K-FREE (Mistake + Send) -- the K(m) consequence is carried by the secrecy
+  pair via the helpers (lesson 15).
+*/
+
+#include "helpers.spthy"
+
+// ---- security properties under this trio ----
+
+// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
+// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
+lemma S1_message_secrecy_attribution:
+  all-traces
+  "All m #s #k.
+     Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)"
+
+lemma S1_degrade_from_interface_step:
+  all-traces
+  "All p m #s.
+     SetMask(p, m)@s & not(m = 'Attentive')
+   ==> (Ex step #u. UIStep(p, step)@u & #u < #s)"
+
+// ---- one chain per stressor: control -> onset -> mask -> mistake -> send ----
+
+// sigma6: the fingerprint compare overwhelms -> Naive accepts whatever the network delivered.
+lemma S1_abstraction_naive_substitution:
+  exists-trace
+  "Ex m vid #u #o #v #d #s.
+     UIStep('Alex','btn_verify_fp')@u & Abstraction('Alex')@o
+   & Verify('Alex', vid, 'Naive')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"
+
+// sigma8: the two button confirms habituate -> click-through on the key check.
+lemma S1_habituation_clickthrough:
+  exists-trace
+  "Ex m vid #u1 #u2 #h #v #d #s.
+     UIStep('Alex','btn_generate_keypair')@u1 & UIStep('Alex','btn_fetch_key')@u2
+   & Habituate('Alex')@h
+   & Verify('Alex', vid, 'Habituated')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"
+
+// sigma2 v2: two prompts pending (competing demand) -> Careless SKIPS the check.
+lemma S1_distraction_skipcheck:
+  exists-trace
+  "Ex m vid #o #v #d #s.
+     Distract('Alex')@o
+   & Verify('Alex', vid, 'Careless')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"

@@ -1,0 +1,29 @@
+/*
+  experiments/helpers.spthy -- the shared [reuse] lemma trio (repo MEMORY.md lesson 15): the key
+  derivation facts proven once so every profile's secrecy pair terminates over the layered state
+  space. Include BEFORE the profile's own lemmas.
+*/
+
+// the passphrase reaches the adversary only through a degraded share outcome.
+lemma H_pw_stays_oob [reuse]:
+  all-traces
+  "All pw #c #k.
+     PwCreated(pw)@c & K(pw)@k
+   ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)"
+
+// a generated private key never reaches the adversary (it never leaves !OwnSk).
+// [heuristic=C]: the default smart ranking wanders through the mask-gate interleavings when the
+// trio's extra credulous compare rows are present; the conservative ranking closes it in seconds.
+lemma H_sk_secret [reuse, heuristic=C]:
+  all-traces
+  "All p sk #g #k. OwnSkGen(p, sk)@g & K(sk)@k ==> F"
+
+// STRUCTURAL (no adversary reasoning): the key a message is encrypted to is either a key this
+// ceremony generated (the DY forwarded it faithfully and the ATTENTIVE comparison against the
+// OOB fingerprint passed) or the comparison was answered credulously (a Mistake).
+lemma H_encto_shape [reuse]:
+  all-traces
+  "All m keyUsed #e.
+     EncTo(m, keyUsed)@e
+   ==> (Ex p sk #g. OwnSkGen(p, sk)@g & keyUsed = pk(sk))
+     | (Ex p vid #d. Mistake(p, vid)@d)"

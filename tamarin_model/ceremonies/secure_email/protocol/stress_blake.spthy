@@ -5,7 +5,7 @@
   omit it and no stressor can fire for Blake.
 */
 
-rule Enable_Stress_Blake:
+rule Enable_Stress_Blake [color=#9b51e0]:
     [ !Party('Blake', id) ] --[ StressOn('Blake') ]-> [ !StressEnable('Blake') ]
 
 restriction OnceStressBlake:
