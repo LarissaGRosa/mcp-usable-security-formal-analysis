@@ -1,19 +1,8 @@
 /*
-  bundles/human_common.spthy -- the always-needed human-layer plumbing, one include (V3 layered
-  template; mirrors secure_email/bundles/human_common.spthy). The persistent current-mask gates
-  (mask_state), the single-answer discipline (answered_once), the outcome matrix, the demand lexicon
-  (read by the lookup detectors; dangles harmlessly in the baseline), and stress targeting for ALEX.
-  A profile adds on top: its stressor detectors (one include line each) + the action-class behaviours
-  it uses + any opt-in outcome rows its story needs.
-
-  ALEX is enabled by default (every profile stresses at least the sender); a profile that ALSO
-  stresses Blake adds protocol/stress_blake.spthy (the multi-party cases P1 / P3). A profile that
-  SWAPS the demand profile (interface_* / population_*) composes the pieces manually WITHOUT this
-  bundle (it would double-seed the lexicon): see P7 / P9.
+  bundles/human_common.spthy -- the standard human layer: human_manual (mask gates + one-answer +
+  outcome matrix + Alex enable) + the baseline lexicon_tlx demand profile. The lookup detectors read
+  the lexicon; it dangles harmlessly where none is armed. Add protocol/stress_blake.spthy to also
+  stress Blake (P1 / P3).
 */
-
-#include "../../../core/transitions/mask_state.spthy"
-#include "../../../core/transitions/answered_once.spthy"
-#include "../../../core/masks/outcome_policy.spthy"
+#include "human_manual.spthy"
 #include "../../../core/lexicon_tlx.spthy"
-#include "../protocol/stress_alex.spthy"

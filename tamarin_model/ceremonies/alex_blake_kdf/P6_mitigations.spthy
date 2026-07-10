@@ -2,44 +2,22 @@ theory ToyCeremony_P6_Mitigations
 begin
 
 /*
-  PROFILE P6 · three Poka-Yoke mitigations in one ceremony.
-  Profile = < C0(confirmed) + APPROVE(shutout) + VERIFY, {Attentive,Busy,Habituated,Naive},
-              {sigma1, sigma8, sigma6} + mitigations >.
-  Consolidates old 14 / 16 / 17. The stressors still degrade the user; the mitigations neutralize
-  each consequence. Uses the key-confirmation Msg3 (shutdown), the shutout-protected approval UI,
-  and core/mitigations.spthy (which also blocks tampered acceptance in VERIFY).
-  Run: check.py --prove ceremonies/alex_blake_kdf/P6_mitigations.spthy
+  P6 -- three Poka-Yoke mitigations in one ceremony. The stressors still degrade the user, but each
+  fix neutralizes the consequence: shutdown (key-confirmation finish) catches the sigma1 slip;
+  shutout (number-matching MFA) blocks the sigma8 auto-approve; verify-shutout blocks the sigma6
+  tampered acceptance. Run: check.py --prove ceremonies/alex_blake_kdf/P6_mitigations.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire) + the SHUTDOWN finish (key-confirmation) --
-#include "protocol/kdf.spthy"
-#include "protocol/finish_confirmed.spthy"
-
-// -- f2994a ORANGE: interface layer (Alex's compute prompt) + compute adapter --
-#include "interface/sender.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- human plumbing (Alex) + the mitigation restrictions (shutout + verify-shutout) --
+#include "spine.spthy"                        // crypto + KDF wire + Alex compute pipeline
+#include "protocol/finish_confirmed.spthy"    // SHUTDOWN: key-confirmation finish
 #include "bundles/human_common.spthy"
-#include "../../core/mitigations.spthy"
+#include "../../core/mitigations.spthy"       // shutout + verify-shutout restrictions
 
-// -- 27ae60 GREEN: compute behaviour; eb5757 RED: sigma1 drives the slip (caught by the shutdown) --
-#include "../../core/masks/compute_behavior.spthy"
-#include "../../core/stressors/cognitive_load.spthy"
-
-// == shutout-protected APPROVE phase (sigma8, blocked by ShutoutBlocksAutoApprove) ==
-#include "protocol/approval_shutout_ui.spthy"
-#include "../../core/masks/confirm_behavior.spthy"
-#include "../../core/stressors/habituation.spthy"
-
-// == VERIFY phase (sigma6) under verify-shutout ==
-#include "protocol/verify_ui.spthy"
-#include "../../core/masks/compare_behavior.spthy"
-#include "../../core/masks/compare_keychecked.spthy"
-#include "../../core/stressors/abstraction.spthy"
+#include "../../core/stressors/cognitive_load.spthy"   // sigma1 -> slip (caught by shutdown)
+#include "phases/approve_shutout.spthy"
+#include "../../core/stressors/habituation.spthy"      // sigma8 -> auto-approve (blocked by shutout)
+#include "phases/verify.spthy"
+#include "../../core/stressors/abstraction.spthy"      // sigma6 -> mistake (blocked by verify-shutout)
 
 #include "experiments/P6_mitigations.spthy"
 

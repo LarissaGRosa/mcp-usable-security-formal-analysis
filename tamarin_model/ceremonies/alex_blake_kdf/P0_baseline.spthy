@@ -2,32 +2,15 @@ theory ToyCeremony_P0_Baseline
 begin
 
 /*
-  PROFILE P0 -- BASELINE: the layered pipeline with NO stressor armed (V3 template).
-  Protocol <-> interface <-> (stressor layer: empty) <-> user: both parties are prompted to derive
-  SK = kdf(N_A,N_B), both answer Attentively (compute_behavior), the ceremony finishes and the two
-  keys agree. The unperturbed run the failure profiles perturb.
-  Run: check.py --prove ceremonies/alex_blake_kdf/P0_baseline.spthy
+  P0 -- BASELINE: the layered pipeline, no stressor. Both parties derive SK = kdf(N_A,N_B)
+  Attentively; the ceremony finishes and the keys agree. Run:
+  check.py --prove ceremonies/alex_blake_kdf/P0_baseline.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
-#include "protocol/finish.spthy"
-
-// -- f2994a ORANGE: interface layer (the compute prompts) + the compute effect adapter --
-#include "interface/sender.spthy"
-#include "interface/recipient.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, targeting (both parties) --
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
+#include "protocol/finish.spthy"          // plain finish + session
+#include "interface/recipient.spthy"      // Blake computes too (P0_agreement checks both keys)
 #include "bundles/human_common.spthy"
-
-// -- 27ae60 GREEN: the compute behaviour that drives the outcome (Attentive -> correct) --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- eb5757 RED: no stressors in the baseline --
 
 #include "experiments/P0_baseline.spthy"
 

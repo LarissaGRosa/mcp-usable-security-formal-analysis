@@ -1,13 +1,5 @@
 /*
-  core/masks/decide_behavior.spthy -- f_H for the DECIDE action class (decision-stream items), AGNOSTIC_MASKS.md.
-  Collapses attentive_confirm / careless_confirm. A decision has no genuineness, so no !StepData is read.
-  Produces DecisionDone(P,did) (consumed by the P4 infer_harness's Finish_decision; dangles elsewhere);
-  the old !Did was read only by the now-agnostic sigma9, so it is dropped.
-
-    Attentive ('handle')  : handles the decision properly.
-    Careless ('fatigue') : times out (decision fatigue) but the slot is still spent.
-
-  RespMask(P,mask) gated by mask_state.spthy as before.
+  f_H for DECIDE (decision-stream items). Attentive handle; Careless fatigue (timeout). No genuineness.
 */
 
 rule Decide_handle [color=#27ae60]:

@@ -2,57 +2,32 @@ theory ToyCeremony_P3_WorstCase
 begin
 
 /*
-  PROFILE P3 · the maximal worst case, on BOTH participants (§6a).
-  Profile = < C0 + all post-KDF phases, all masks, all CALC + post-KDF stressors, on Alex AND Blake >.
-  Consolidates old 04 / 09 / 20. Does NOT use ceremony.base.spthy: it assembles the spine +
-  blake_calc_stressable so Blake's CALC is degradable, then the four phase bundles. The deliberate
-  state-space worst case -- if this stops terminating, that is the §6a blow-up; narrow the enabled
-  set (drop a bundle or stress one party).
+  P3 -- the maximal worst case (§6a): the CALC trio + all post-KDF phases + all their stressors, on
+  BOTH parties. Every failure mode stays reachable and the per-stressor safety properties still
+  compose. If this stops terminating, narrow the enabled set.
   Run: check.py --prove ceremonies/alex_blake_kdf/P3_worstcase.spthy
 */
 
-// -- spine (NOT ceremony.base: Blake must be degradable) --
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
 #include "protocol/finish.spthy"
-
-// -- f2994a ORANGE: interface layer (compute prompts + nonce-ack exposure, both parties) + adapter --
-#include "interface/sender.spthy"
-#include "interface/recipient.spthy"
-#include "interface/nonce_ack.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, Alex targeting --
+#include "interface/recipient.spthy"      // Blake computes (P3_blake_slips)
+#include "interface/nonce_ack.spthy"      // second prompt -> sigma2
 #include "bundles/human_common.spthy"
-#include "protocol/stress_blake.spthy"          // multi-party worst case: enable Blake too
+#include "protocol/stress_blake.spthy"    // multi-party
 
-// -- 27ae60 GREEN: compute behaviour (Attentive/Busy/Careless) --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- eb5757 RED: the CALC trio (v2 detectors), both parties --
+// -- CALC trio --
 #include "../../core/stressors/cognitive_load.spthy"           // sigma1
 #include "../../core/stressors/time_pressure_deadline.spthy"   // sigma3
 #include "../../core/stressors/distraction_concurrent.spthy"   // sigma2
-
-// == post-KDF phases (interface prompts read !Session; behaviours + their stressors) ==
-#include "protocol/approval_ui.spthy"
-#include "../../core/masks/confirm_behavior.spthy"
+// -- post-KDF phases + their stressors --
+#include "phases/approve.spthy"
 #include "../../core/stressors/habituation.spthy"              // sigma8
-
-#include "protocol/verify_ui.spthy"
-#include "../../core/masks/compare_behavior.spthy"
-#include "../../core/masks/compare_keychecked.spthy"
+#include "phases/verify.spthy"
 #include "../../core/stressors/abstraction.spthy"              // sigma6
-
-#include "protocol/authorize_ui.spthy"
-#include "../../core/masks/authorize_behavior.spthy"
+#include "phases/authorize.spthy"
 #include "../../core/stressors/security_anxiety.spthy"         // Anxiety
 
-// -- generic usability-security invariants (ROADMAP #3 library; proven here in the worst case) --
-#include "../../core/usability_properties.spthy"
+#include "../../core/usability_properties.spthy"               // generic invariants (proven here)
 
 #include "experiments/P3_worstcase.spthy"
 

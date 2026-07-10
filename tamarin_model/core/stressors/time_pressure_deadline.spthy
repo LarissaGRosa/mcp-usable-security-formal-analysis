@@ -1,24 +1,6 @@
 /*
-  core/stressors/time_pressure_deadline.spthy -- f_U for sigma3 TimePressure, v2
-  (DEADLINE-CONTEXT-triggered), CEREMONY-AGNOSTIC.
-
-  The v1 detector (time_pressure.spthy, kept for alex_blake_kdf) reads the lexicon's
-  TemporalDemand row -- time pressure as a property of the ACTION CLASS. This v2 detector is
-  closer to the literature: time pressure is SITUATIONAL, a constraint the environment/interface
-  imposes on a step, not something intrinsic to computing or sharing (Maule & Svenson 1993,
-  time-pressure research; NASA-TLX Temporal Demand is likewise rated per situation, Hart &
-  Staveland 1988). So the trigger reads:
-
-    * !Step(P, pid, action)   -- Layer 1: the interface's prompt
-    * !UnderDeadline(pid)     -- Layer-1 CONTEXT: the interface presented THIS control under a
-                                 timer (an expiring secure link, a send-before deadline). Emitted
-                                 by the interface alongside the prompt -- the stressor layer still
-                                 reads only the interface, never the protocol.
-
-  No lexicon row and no task name: which controls are time-boxed is an interface design fact,
-  exactly like a !Demands row is an interface's demand profile. At onset it emits SetMask(P,'Busy')
-  -- everything below SetMask is UNCHANGED. !StressEnable(P) gates per party; OneTimePressure
-  bounds the onset (same name as v1's restriction -- the two sigma3 files are never co-included).
+  sigma3 TimePressure (situational) -- fires on a prompt the interface presents !UnderDeadline
+  -> Busy. Reads interface CONTEXT, not a task or a demand level. Maule & Svenson 1993; TLX Temporal.
 */
 
 rule Trigger_TimePressureDeadline [color=#eb5757]:

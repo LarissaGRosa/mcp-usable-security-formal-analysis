@@ -1,20 +1,5 @@
 /*
-  core/masks/outcome_degraded_click.spthy -- OPT-IN outcome rows: a DEGRADED user still fires the
-  primary-goal click (an extension of the outcome matrix, like outcome_habituated_clickthrough).
-
-  The default matrix gives 'authorize' only Attentive->grant and Fearful->abort: under any other
-  active degrade the step stalls. That is the right default for a SECURITY authorization (P3's
-  authorize phase). But the final "send" button of a composer is the PRIMARY-GOAL action, not a
-  security check: degraded-but-engaged users still complete the task they came to do -- attentional
-  degradation hits the CHECKS along the way, not the goal click (Reason's GEMS: slips and lapses
-  strike the checking/monitoring steps; the intention to send survives). Only Fearful (frozen past
-  the Yerkes-Dodson peak) refuses, and Attentive grants as before.
-
-    Busy / Habituated / Naive / Careless + authorize -> grant
-
-  Opt-in, NOT global, so profiles whose 'authorize' models a security gate keep the stall default.
-  Include alongside outcome_policy (S3 does). Persistent + read-only, seeded unconditionally ->
-  closed theory, no sources loop; OnceDegradedClick bounds the seed.
+  Opt-in outcome row: a degraded-but-engaged mask still clicks the final authorize (only Fearful refuses).
 */
 
 rule Seed_degraded_click [color=#9b51e0]:

@@ -1,24 +1,7 @@
 /*
-  core/stressors/additive_load.spthy -- f_U for ADDITIVE cognitive load (V3 §2c), CEREMONY-AGNOSTIC.
-
-  Cognitive Load Theory (Sweller 1988) is ADDITIVE: total load = intrinsic + extraneous + germane.
-  A single step may sit BELOW the overload threshold, yet two moderate demands PRESENTED TOGETHER
-  sum past it. The lookup detectors (sigma1/sigma3/sigma6) fire only on a step the lexicon rates at
-  the 'hi' threshold (via !AtLeast, V3 §2a); this detector captures the case they miss -- TWO
-  distinct steps each rated 'med' (individually sub-threshold), whose loads add to an overload.
-
-  It reads only Layer-1 prompts + the Layer-2 demand levels, like every other detector:
-    * two distinct !Step(P, _, _) for the SAME party
-    * each with SOME demand dimension rated 'med' (the sub-threshold band: 'lo' < 'med' < 'hi')
-  and, like the density detectors (sigma8/sigma9/sigma2-concurrent), it counts POSED prompts (no
-  arithmetic -- Tamarin has no native sum over public constants; "two 'med' contributions present"
-  IS the additive model). At onset it emits SetMask(P,'Busy') -- the same overload mask sigma1 would
-  set from a single 'hi' step. !StressEnable(P) gates per party; InequalityAdditive is this file's
-  private distinctness restriction; OnceAdditiveLoad bounds the onset per party.
-
-  Contrast a profile can prove: with two 'med' steps and NO 'hi' step, sigma1 (HighCognitiveLoad)
-  never onsets (nothing crosses 'hi' alone) yet AdditiveLoad DOES -- the moderate loads the
-  single-step detector is blind to, summed.
+  Additive cognitive load (Sweller 1988: load is additive) -- fires when TWO distinct 'med' steps
+  co-occur for one party (each individually sub-threshold for sigma1) -> Busy. Density-style, no
+  arithmetic. Contrast: with two 'med' and no 'hi' step, sigma1 never fires but this does.
 */
 
 rule Trigger_AdditiveLoad [color=#eb5757]:

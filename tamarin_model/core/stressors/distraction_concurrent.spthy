@@ -1,19 +1,6 @@
 /*
-  core/stressors/distraction_concurrent.spthy -- f_U for sigma2 ExternalDistraction, v2
-  (CONCURRENCY-triggered), CEREMONY-AGNOSTIC.
-
-  The v1 detector (external_distraction.spthy, kept for alex_blake_kdf) fires on ANY single
-  pending step -- distraction as a free-floating environmental event. This v2 detector is closer
-  to the construct it cites: Wickens' Multiple Resource Theory (2008) locates the degradation in
-  COMPETING demands -- performance drops when a second task contends for the same resources. So
-  the trigger is a DENSITY of two: the party has TWO distinct prompts presented (k=2, any action
-  classes -- competition is cross-task by nature). It reads only the interface's Layer-1 prompts;
-  no lexicon row (competition is action-independent).
-
-  Counted at PRESENT time like sigma8/sigma9 (the prompts are on screen together). At onset it
-  emits SetMask(P,'Careless') -- everything below SetMask is UNCHANGED. !StressEnable(P) gates per
-  party; OneDistractPerParty bounds the onset; InequalityConcurrency is this file's private
-  distinctness restriction (never co-include with a file defining the same name).
+  sigma2 ExternalDistraction (competing demand) -- fires on TWO distinct prompts pending for one
+  party (k=2, any actions) -> Careless. Wickens' Multiple Resource Theory 2008.
 */
 
 rule Trigger_DistractionConcurrent [color=#eb5757]:

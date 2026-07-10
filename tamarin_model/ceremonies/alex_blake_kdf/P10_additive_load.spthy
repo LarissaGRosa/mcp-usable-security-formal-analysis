@@ -2,49 +2,26 @@ theory ToyCeremony_P10_AdditiveLoad
 begin
 
 /*
-  PROFILE P10 -- ADDITIVE cognitive load (V3 §2c; Sweller 1988, load is additive).
-  The compute (calc_sk) and the nonce-acknowledgement (confirm) are each rated MODERATE demand
-  ('med') -- individually BELOW the 'hi' overload threshold, so sigma1 HighCognitiveLoad (which fires
-  only at 'hi', via the !AtLeast band) never onsets. But the two moderate loads PRESENTED TOGETHER
-  sum past the threshold: core/stressors/additive_load.spthy fires -> Busy -> the compute slips.
-  The contrast (P10_no_solo_load vs P10_additive_busy) is the point: the single-step detector is
-  blind to moderate loads that the additive detector catches when they co-occur.
+  P10 -- ADDITIVE cognitive load (Sweller). The compute and the nonce-ack are each MODERATE demand
+  ('med'), individually below sigma1's 'hi' threshold -- so sigma1 never fires -- yet the two
+  moderate loads presented together SUM past it: additive_load fires -> Busy -> the compute slips.
+  The contrast (P10_no_solo_load vs P10_additive_busy) is the point.
   Run: check.py --prove ceremonies/alex_blake_kdf/P10_additive_load.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
 #include "protocol/finish.spthy"
+#include "interface/nonce_ack.spthy"      // the SECOND moderate step
+#include "bundles/human_manual.spthy"     // manual layer -- the moderate seed below is the demand profile
 
-// -- f2994a ORANGE: interface layer (compute prompt + nonce-ack, the two moderate loads) + adapter --
-#include "interface/sender.spthy"
-#include "interface/nonce_ack.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- MODERATE demand profile (profile-local, NOT lexicon_tlx which rates compute 'hi'): both the
-//    compute and the confirm are 'med' -- sub-threshold for sigma1, the two summing for additive. --
+// moderate demand seed (profile-local): compute + confirm are 'med', each sub-threshold for sigma1
 rule Seed_moderate_demand [color=#9b51e0]:
     [ ] --[ SeedModerate() ]->
-    [ !Demands('compute', 'MentalDemand', 'med'),
-      !Demands('confirm', 'MentalDemand', 'med') ]
-restriction OnceModerate:
-  "All #i #j. SeedModerate()@i & SeedModerate()@j ==> #i = #j"
+    [ !Demands('compute', 'MentalDemand', 'med'), !Demands('confirm', 'MentalDemand', 'med') ]
+restriction OnceModerate: "All #i #j. SeedModerate()@i & SeedModerate()@j ==> #i = #j"
 
-// -- human plumbing, MANUAL (no lexicon_tlx: the moderate seed above is the demand profile) --
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
-#include "../../core/masks/outcome_policy.spthy"
-#include "protocol/stress_alex.spthy"
-
-// -- 27ae60 GREEN: compute behaviour (Busy -> slip) --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- eb5757 RED: sigma1 (never fires -- nothing is 'hi') vs the ADDITIVE detector (two 'med' sum) --
-#include "../../core/stressors/cognitive_load.spthy"
-#include "../../core/stressors/additive_load.spthy"
+#include "../../core/stressors/cognitive_load.spthy"   // sigma1 -- never fires (nothing is 'hi')
+#include "../../core/stressors/additive_load.spthy"    // two 'med' -> Busy
 
 #include "experiments/P10_additive_load.spthy"
 

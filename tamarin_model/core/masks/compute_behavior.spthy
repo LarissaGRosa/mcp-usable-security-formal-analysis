@@ -1,17 +1,7 @@
 /*
-  core/masks/compute_behavior.spthy -- f_H for the COMPUTE action class, CEREMONY-AGNOSTIC (AGNOSTIC_MASKS.md).
-  Collapses the old per-fact Calc_* (read !Req CALC_SK, wrote KeyResult) and Op_* (read !Op, wrote OpResult)
-  masks into one behaviour set. The behaviour is identical; only the input/output/correct-value differed,
-  and those are now the ceremony's job (it emits !Step + !StepData, and a thin adapter wraps Respond).
-
-  Each rule reads:
-    * !Step(P, rid, 'compute')          -- Layer 1: the ceremony presents a compute step
-    * !StepData(P, rid, genuine)         -- the correct result the step should yield (ceremony content)
-    * !OutcomePolicy(mask, 'compute', _) -- the human-model verdict (core/masks/outcome_policy.spthy)
-  and emits the response VALUE into a generic Respond(P, rid, value); a per-ceremony adapter turns that
-  into the protocol fact (KeyResult / OpResult). RespMask(P,mask) is gated by mask_state.spthy exactly as
-  before, so only the currently-active mask's rule fires; the action facts (Calc/Slip/Timeout/Key/Mask/
-  Answered/!Failed) are unchanged, so the lemmas are untouched.
+  f_H for COMPUTE (ceremony-agnostic). Attentive -> the correct value; Busy -> a fresh wrong value
+  (slip, top symbol != kdf); Careless -> no response (timeout). Reads !Step + !StepData + outcome_policy;
+  emits the value into Respond, which a per-ceremony adapter wraps (e.g. compute_keyresult).
 */
 
 // Attentive: the step is performed correctly -> the genuine value.

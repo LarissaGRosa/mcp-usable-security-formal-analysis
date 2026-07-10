@@ -1,13 +1,5 @@
 /*
-  core/masks/authorize_behavior.spthy -- f_H for the AUTHORIZE action class, AGNOSTIC_MASKS.md.
-  Collapses attentive_authorize / fearful_authorize. Unconditional (no genuineness, so no !StepData):
-  an Attentive user grants a legitimate sensitive request; a Fearful user actively REFUSES (abort),
-  a safe-fail distinct from Careless's passive timeout. A grant ALSO produces the output fact
-  Granted(P,aid) so a ceremony where the authorization GATES a downstream step (S3's send button
-  releasing the message) can consume it via a thin adapter -- the same output+adapter pattern as
-  confirm (Confirmed) and compare (Checked). Where unused it dangles harmlessly.
-
-  RespMask(P,mask) gated by mask_state.spthy as before.
+  f_H for AUTHORIZE (granting a sensitive op). Attentive grant (Authorized); Fearful abort (active refusal).
 */
 
 rule Authorize_grant [color=#27ae60]:

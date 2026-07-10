@@ -1,0 +1,4 @@
+/* phases/approve_shutout.spthy -- APPROVE_REQ kit WITH the number-matching shutout (P6): the
+   shutout-protected producer + the confirm behaviour. Needs core/mitigations.spthy for the block. */
+#include "../protocol/approval_shutout_ui.spthy"
+#include "../../../core/masks/confirm_behavior.spthy"

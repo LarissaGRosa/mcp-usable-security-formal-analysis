@@ -1,51 +1,14 @@
 /*
-  core/lexicon_tlx.spthy -- Layer 2 of the agnostic stressor interface (AGNOSTIC_STRESSOR_INTERFACE.md).
-  The USABILITY VERDICT, stated ONCE: it maps an objective interaction action (Layer 1 -- the !Step
-  tag a ceremony emits) to a NASA-TLX workload dimension + magnitude. The HCI knowledge lives HERE,
-  with a citation, instead of being baked into each detector's premise (the old sigma3 hard-coded the
-  task name 'CALC_SK' / 'SHARE_PW' in two separate detector files).
-
-  NASA-TLX (Hart & Staveland 1988) -- six workload subscales. This lexicon seeds the dimensions the
-  migrated detectors read:
-
-    Demands('compute', 'TemporalDemand', 'hi')   -- read by sigma3 TimePressure
-      a 'compute' step -- deriving a key / composing ciphertext, work the human cannot do in-head --
-      carries HIGH temporal demand (the cryptographic work is slow, so the step is under deadline).
-      Both ceremonies' time-pressured step (KDF CALC_SK; the email password compose) is a 'compute'.
-
-    Demands('compute', 'MentalDemand', 'hi')     -- read by sigma1 HighCognitiveLoad
-      the SAME 'compute' step is also high MENTAL demand -- this is the HCI judgment "a key
-      derivation / passphrase setup is hard" (cognitive load theory, Sweller 1988), stated ONCE here
-      instead of as a designer 'Hard' flag (old declared sigma1) or a 'kdf' op match (old inferred
-      sigma1). Both of those collapse into the single agnostic detector that reads this row.
-
-    Demands('compare', 'Effort', 'hi')           -- read by sigma6 Abstraction
-      a 'compare' step -- judging a key fingerprint / device certificate authentic -- is high EFFORT:
-      crypto has no physical analog and the abstract comparison overwhelms the mental model (Whitten
-      & Tygar 1999, the PGP key metaphor; Green & Petre's "hard mental operations"). Stated once here
-      instead of as a !VerifyReq match (old declared sigma6) or a 'verify' op match (old inferred).
-
-    Demands('authorize', 'Arousal', 'hi')        -- read by SecurityAnxiety
-      NON-TLX construct (this lexicon is the single "action -> usability construct" table, not only
-      NASA-TLX). An 'authorize' step -- granting a sensitive, high-stakes operation -- provokes
-      high low-trust AROUSAL; past the peak of the Yerkes-Dodson (1908) arousal-performance curve the
-      user freezes / refuses -> Fearful. Stated once here instead of an !AuthReq match (old sigma).
-
-  Levels are ordered constants 'lo' < 'med' < 'hi' (AGNOSTIC_STRESSOR_INTERFACE.md S5). Tamarin has
-  no built-in order on public atoms, so the order is seeded explicitly as a reflexive partial-order
-  fact !AtLeast(a,b) -- in core/types.spthy (V3 §2a), NOT here, because a profile may SWAP this
-  lexicon for an alternative demand profile (interface_* / population_*) and the order must survive that
-  swap. The lookup detectors read a demand level plus !AtLeast(lvl, thr): they fire on a BAND
-  (lvl >= thr), not one exact constant. Since every seeded demand below is 'hi' and every degrade
-  detector's threshold is 'hi', the only lvl satisfying !AtLeast(lvl,'hi') is 'hi' itself, so
-  behaviour is IDENTICAL to the old exact-'hi' match -- the band is the mechanism a graded row (a
-  'lo'/'med' action, or an expert-population threshold shift, V3 §2d) later exercises. As more
-  dimensions/levels are seeded, add one row per (action, dimension) here; the detectors stay
-  ceremony-blind.
-
-  Seeded by an unconditional rule so any theory that includes a migrated detector stays CLOSED. The
-  fact is persistent + read-only -> no consume/reproduce, no sources loop (repo MEMORY.md S6.2).
-  OnceLexicon bounds the seed (the empty-premise rule could otherwise re-fire unboundedly).
+  Layer 2 -- the demand lexicon: maps an action (the !Step tag) to a usability dimension + level, the
+  HCI judgment stated ONCE (with a citation) instead of baked into each detector. The lookup detectors
+  read a row + !AtLeast(lvl, thr) (the band; order in core/types.spthy) so a level below threshold
+  provably does not fire. Rows below (all 'hi'):
+    compute  Temporal + Mental hi  -- key derivation / passphrase is slow + hard (Sweller 1988; TLX)
+    compare  Effort hi             -- crypto has no physical analog (Whitten & Tygar 1999)
+    authorize Arousal hi           -- high-stakes op; over-arousal freezes (Yerkes-Dodson 1908)
+    share    Temporal + Mental hi  -- the email password disclosure step
+  A profile SWAPS this for an interface / population demand profile to shift a level (P7/P9). Seeded
+  once (persistent, read-only -> closed, no sources loop; OnceLexicon bounds it).
 */
 
 rule Seed_lexicon_tlx [color=#9b51e0]:

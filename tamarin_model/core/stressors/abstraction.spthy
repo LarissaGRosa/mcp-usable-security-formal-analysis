@@ -1,24 +1,8 @@
 /*
-  core/stressors/abstraction.spthy -- f_U for sigma6 Abstraction, CEREMONY-AGNOSTIC.
-
-  Migrated to the agnostic interface (AGNOSTIC_STRESSOR_INTERFACE.md). sigma6 used to exist in TWO
-  files keyed on ceremony specifics: this one matched !VerifyReq(P,vid,kind), and
-  abstraction_inferred.spthy (now deleted) matched the objective op !Op(P,_,'verify',_). Both encoded
-  the same judgment -- "this comparison is abstract / effortful" -- in the detector. That judgment now
-  lives ONCE in the lexicon, so the two collapse into this single detector, which reads:
-
-    * !Step(P, sid, action)            -- Layer 1: an OBJECTIVE interaction step (no task name)
-    * !Demands(action,'Effort','hi')   -- Layer 2: the usability verdict, from core/lexicon_tlx
-
-  A 'compare' step (verify a key fingerprint / device certificate) is high-effort per the lexicon, so
-  this fires for both ceremonies with no !VerifyReq / 'verify' token in the rule.
-
-  Crypto has no physical analog (Whitten & Tygar 1999, the PGP key metaphor); NASA-TLX Effort
-  (Hart & Staveland 1988). At onset it emits SetMask(P,'Naive') -- everything below SetMask is
-  UNCHANGED. !StressEnable(P) gates per party (Stage B); OnceAbstraction bounds the onset per party.
+  sigma6 Abstraction -- fires on a step whose Effort is at least 'hi' (the band) -> Naive.
+  Crypto has no physical analog (Whitten & Tygar 1999); NASA-TLX Effort.
 */
 
-// Threshold 'hi' matched as a BAND (V3 §2a); see cognitive_load.spthy for the mechanism.
 rule Trigger_Abstraction [color=#eb5757]:
     [ !Step(P, sid, action),
       !Demands(action, 'Effort', lvl), !AtLeast(lvl, 'hi'),

@@ -2,42 +2,23 @@ theory ToyCeremony_P1_CalcPressure
 begin
 
 /*
-  PROFILE P1 -- CALC_SK under pressure, on BOTH participants (V3 layered template, v2 detectors).
-  Protocol <-> interface <-> stressor layer <-> user: both parties are prompted to acknowledge the
-  received nonce (exposure) AND derive SK = kdf(N_A,N_B) under a session deadline, and three CALC
-  stressors read those prompts:
-    sigma1 HighCognitiveLoad  (compute is MentalDemand-hi)              -> Busy
-    sigma3 TimePressure v2    (the compute is UnderDeadline context)    -> Busy
-    sigma2 Distraction v2     (TWO concurrent prompts, Wickens MRT)     -> Careless
-  Either party can slip (Busy -> fresh wrong key) or time out (Careless), so a completed run can
-  carry disagreeing keys. Both parties enabled (human_common + stress_blake). Consolidates old 01 / 03 / 08 / 18 / 19.
-  Run: check.py --prove ceremonies/alex_blake_kdf/P1_calc_pressure.spthy
+  P1 -- CALC_SK under pressure, BOTH parties. The compute (deadline context) + a nonce-ack exposure
+  give the CALC trio its prompts: sigma1 Load (MentalDemand) + sigma3 Deadline (UnderDeadline) ->
+  Busy slip; sigma2 Concurrency (two prompts, Wickens) -> Careless timeout. A completed run can carry
+  disagreeing keys. Run: check.py --prove ceremonies/alex_blake_kdf/P1_calc_pressure.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
 #include "protocol/finish.spthy"
-
-// -- f2994a ORANGE: interface layer (compute prompts + nonce-ack exposure, both parties) + adapter --
-#include "interface/sender.spthy"
-#include "interface/recipient.spthy"
-#include "interface/nonce_ack.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, Alex targeting --
+#include "interface/recipient.spthy"      // Blake computes (P1_blake_slips)
+#include "interface/nonce_ack.spthy"      // second prompt -> sigma2 concurrency
 #include "bundles/human_common.spthy"
-#include "protocol/stress_blake.spthy"          // multi-party: enable Blake too
+#include "protocol/stress_blake.spthy"    // multi-party: stress Blake too
 
-// -- 27ae60 GREEN: the compute behaviour (Attentive->correct, Busy->slip, Careless->timeout) --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- eb5757 RED: the CALC trio (v2 detectors) --
-#include "../../core/stressors/cognitive_load.spthy"           // sigma1 (MentalDemand)
-#include "../../core/stressors/time_pressure_deadline.spthy"   // sigma3 (UnderDeadline context)
-#include "../../core/stressors/distraction_concurrent.spthy"   // sigma2 (k=2 competing prompts)
+// -- the CALC trio (v2 detectors) --
+#include "../../core/stressors/cognitive_load.spthy"           // sigma1
+#include "../../core/stressors/time_pressure_deadline.spthy"   // sigma3
+#include "../../core/stressors/distraction_concurrent.spthy"   // sigma2
 
 #include "experiments/P1_calc_pressure.spthy"
 

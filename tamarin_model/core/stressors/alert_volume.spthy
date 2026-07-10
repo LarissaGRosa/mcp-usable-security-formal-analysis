@@ -1,24 +1,6 @@
 /*
-  core/stressors/alert_volume.spthy -- f_U for sigma9 AlertVolume / DecisionFatigue, CEREMONY-AGNOSTIC.
-
-  Migrated to the agnostic interface (AGNOSTIC_STRESSOR_INTERFACE.md). This is a DENSITY detector, not
-  a per-step workload-level lookup, so it does not read the lexicon. The old rule (file
-  alert_volume_inferred.spthy) counted handled-decision markers -- three distinct !Did. This version
-  counts the OBJECTIVE decision steps the ceremony presents -- three distinct !Step(P,_,'decide') --
-  so it reads the SAME Layer-1 vocabulary as every other migrated detector and names no ceremony fact.
-  'decide' is a generic interaction-taxonomy category (choose among options), not a task name.
-
-  Alert / alarm fatigue (Cvach 2012; MFA prompt-bombing): >= k decision steps in one ceremony fatigues
-  the user into disengagement -> SetMask Careless. The THRESHOLD k = 3 is the HCI parameter (the design
-  doc's "named parameter, not rule arity"); Tamarin counts distinct facts by arity, so k is realised as
-  three !Step premises + Neq distinctness, documented here -- bump k by adding/removing a premise.
-  Bounded once per party (OneAlertVolume) so the count reasoning terminates.
-
-  NB: counting is at PRESENT time (the step is shown), not handle time -- fatigue from being shown the
-  alerts. The old !Did count was at handle time; no lemma distinguishes, and SetMask precedence
-  (S1_degrade_from_interface_step) is preserved because the decision producer's UIStep precedes the
-  !Step facts. Inequality must NOT be combined in one theory with sigma8's identically-named restriction
-  (kept apart: sigma8 in P2/P6, sigma9 in P4/S1).
+  sigma9 AlertVolume / DecisionFatigue (density) -- fires on >=3 distinct 'decide' prompts ->
+  Careless. Cvach 2012 (alarm fatigue). k=3 realised as three !Step premises + Neq distinctness.
 */
 
 rule Detect_AlertVolume [color=#eb5757]:

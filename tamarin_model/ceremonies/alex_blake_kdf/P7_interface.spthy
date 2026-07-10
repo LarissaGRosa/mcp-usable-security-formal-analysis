@@ -2,48 +2,24 @@ theory ToyCeremony_P7_Interface
 begin
 
 /*
-  PROFILE P7 · the interface lever (ROADMAP #2 -- first-class interfaces as demand-transformers).
-  An Attentive inline KDF brings up the session; then the VERIFY_KEY phase runs under the HARDENED
-  interface (core/interface_hardened_verify.spthy), which lowers the compare step's Effort so sigma6
-  Abstraction never fires -> no Naive -> no tampered-key mistake. Contrast with the baseline interface
-  (P2/P3/S0), where the same phase + detector make the mistake reachable. The pair is the RFC argument.
+  P7 -- the INTERFACE lever. The VERIFY_KEY compare runs under the HARDENED interface (Effort 'lo'),
+  so sigma6 Abstraction cannot fire (the band) -> no Naive -> no tampered-key mistake; and the
+  SET_POLICY control is CLEAR, so no task-mediated unsafe policy. The reachable/unreachable pair with
+  the baseline (P2) / misleading (P5) is the RFC argument.
   Run: check.py --prove ceremonies/alex_blake_kdf/P7_interface.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive)
 #include "protocol/finish.spthy"
+#include "bundles/human_manual.spthy"     // manual layer -- the interfaces below ARE the demand profile
 
-// -- f2994a ORANGE: interface layer (Alex's compute prompt brings up the session) + adapter --
-#include "interface/sender.spthy"
-#include "protocol/compute_keyresult.spthy"
+// -- the interfaces under test (swap for lexicon_tlx / interface_misleading_policy to flip outcomes) --
+#include "../../core/interface_hardened_verify.spthy"   // compare = Effort 'lo'
+#include "../../core/interface_clear_policy.spthy"       // set-policy = clear terminology
 
-// -- human plumbing, MANUAL (no lexicon_tlx: the demand profile is supplied by the interfaces
-//    under test). The INTERFACES: hardened verify (compare = low Effort; swap for lexicon_tlx to get
-//    the baseline high-Effort interface and the mistake becomes reachable) + the CLEAR set-policy
-//    control (swap for interface_misleading_policy and the unsafe policy becomes reachable, cf. P5). --
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
-#include "../../core/masks/outcome_policy.spthy"
-#include "protocol/stress_alex.spthy"
-#include "../../core/interface_hardened_verify.spthy"
-#include "../../core/interface_clear_policy.spthy"
-
-// -- 27ae60 GREEN: compute behaviour (Attentive, brings up session) --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- the SET_POLICY control under the clear interface (Pathway B, task-mediated) --
-#include "../../core/masks/policy_behavior.spthy"
-#include "protocol/policy_ui.spthy"
-
-// -- the VERIFY_KEY phase (sigma6 detector + agnostic compare masks) under the hardened interface --
-#include "protocol/verify_ui.spthy"
-#include "../../core/masks/compare_behavior.spthy"
-#include "../../core/masks/compare_keychecked.spthy"
-#include "../../core/stressors/abstraction.spthy"
+#include "phases/verify.spthy"
+#include "../../core/stressors/abstraction.spthy"        // sigma6 -- cannot fire under 'lo'
+#include "phases/policy.spthy"
 
 #include "experiments/P7_interface.spthy"
 

@@ -2,39 +2,15 @@ theory SecureEmail_S3_TrioMixed
 begin
 
 /*
-  PROFILE S3 -- MIXED trio spanning both pathways + the safe-fail:
-    sigma6 Abstraction (PGP fingerprint compare)                        -> Naive
-    sigma3 TimePressure v2 (password pane's deadline context)           -> Busy
-    SecurityAnxiety (Arousal-hi on the send authorize)                  -> Fearful
-  One trace family per pathway failure + the one degradation that HELPS secrecy: the Fearful
-  sender freezes at the send button and the message never leaves.
+  S3 -- MIXED trio spanning both pathways + the safe-fail: sigma6 Abstraction (PGP compare),
+  sigma3 Deadline (password pane), SecurityAnxiety (send authorize). One failure family per pathway
+  plus the one degradation that HELPS -- the Fearful sender freezes and the message never leaves.
   Run: check.py --prove ceremonies/secure_email/S3_trio_mixed.spthy
 */
 
-// -- crypto + framework --
-#include "protocol/crypto.spthy"
-#include "../../core/types.spthy"
+#include "spine.spthy"
 
-// -- 1f6fd0 BLUE: protocol layer --
-#include "protocol/keys.spthy"
-#include "protocol/mail.spthy"
-
-// -- f2994a ORANGE: interface layer (prompts + context) + effect adapters --
-#include "interface/sender.spthy"
-#include "interface/recipient.spthy"
-#include "interface/effects.spthy"
-
-// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, targeting --
-#include "bundles/human_common.spthy"
-
-// -- 27ae60 GREEN: the mask behaviours that drive outcomes (compare / share / authorize) --
-#include "../../core/masks/compare_behavior.spthy"
-#include "../../core/masks/compare_keychecked.spthy"
-#include "../../core/masks/share_behavior.spthy"
-#include "../../core/masks/authorize_behavior.spthy"
-#include "../../core/masks/outcome_degraded_click.spthy"
-
-// -- eb5757 RED: the trio --
+// -- the trio --
 #include "../../core/stressors/abstraction.spthy"
 #include "../../core/stressors/time_pressure_deadline.spthy"
 #include "../../core/stressors/security_anxiety.spthy"

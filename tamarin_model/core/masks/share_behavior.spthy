@@ -1,23 +1,6 @@
 /*
-  core/masks/share_behavior.spthy -- f_H for the SHARE action class, CEREMONY-AGNOSTIC (AGNOSTIC_MASKS.md).
-  The ceremony reports only OBSERVABLES in !StepData(P, rid, <recipient, correspondent, secret>):
-  who this share would go to (the reply-to / entered address), who the ceremony is actually WITH
-  (the known correspondent), and the payload. The VERDICT is derived HERE, like compare/confirm
-  (repo MEMORY.md lesson 14): the Attentive rule PERFORMS the recipient check -- matches
-  recipient = correspondent (you disclose the secret only to the person the ceremony is with) --
-  so a phishing reply-prompt whose reply-to is NOT the correspondent stalls an Attentive user.
-  The degraded masks do not look. This is what lets phishing EMERGE from an open mail channel
-  instead of being a hard-coded lure: a spoofed display name still delivers to the REAL
-  correspondent (harmless); capturing the secret requires a degraded recipient.
-
-    Attentive ('oob')          : recipient = correspondent -> secret off the wire.        -> Oob only
-    Careless ('inband-leak')   : in-band leak; intended recipient still gets it (silent). -> Out+Oob
-    Busy     ('misdeliver')    : fat-fingered to the wrong place; intended one locked out. -> Out
-
-  The BEHAVIOUR (mask -> outcome + the Share/LeakPw/MisdeliveredPw actions) lives here; a thin
-  per-ceremony EFFECT ADAPTER (secure_email interface/effects.spthy) turns the generic
-  ShareOutcome(P,rid,kind) + the !StepData observables into the channel facts (Out / Oob).
-  RespMask(P,mask) gated by mask_state.spthy as before.
+  f_H for SHARE (disclosing a secret over a channel). Attentive -> oob; Careless -> inband-leak (LeakPw);
+  Busy -> misdeliver (MisdeliveredPw). A per-ceremony effect adapter turns ShareOutcome into channel facts.
 */
 
 // Attentive: performs the recipient check -- shares only with the actual correspondent.

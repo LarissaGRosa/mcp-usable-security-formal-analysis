@@ -1,11 +1,6 @@
 /*
-  core/stressors/time_pressure_induced.spthy -- ADVERSARY-INDUCED sigma3 TimePressure (ROADMAP #6).
-
-  Unlike core/stressors/time_pressure.spthy (ENVIRONMENTAL: reads the lexicon's TemporalDemand for the
-  action), this detector fires on an !Urgent(sid) marker the ADVERSARY planted (core/adversary.spthy) --
-  the attacker manufactured the time pressure on a specific step. Same onset (SetMask Busy), but tagged
-  AdvInducedOnset so attribution lemmas can prove the degradation traces to the adversary, not to the
-  environment. !StressEnable(P) gates per party; OneInducedTimePressure bounds the onset.
+  Adversary-INDUCED TimePressure -- fires on InjectUrgency (core/adversary.spthy) against a prompt
+  the adversary controls -> Busy. The weaponised stressor (ROADMAP #6), not environmental.
 */
 
 rule Trigger_TimePressure_induced [color=#eb5757]:

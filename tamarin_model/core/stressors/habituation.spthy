@@ -1,27 +1,7 @@
 /*
-  core/stressors/habituation.spthy -- f_U for sigma8 Habituation, CEREMONY-AGNOSTIC.
-
-  Migrated to the agnostic interface (AGNOSTIC_STRESSOR_INTERFACE.md). Like sigma9 this is a DENSITY
-  detector (repeat-exposure count), not a per-step workload lookup, so it reads no lexicon. The old
-  rule counted handled-attentive approvals -- two distinct !Approved(P,_,'Attentive'). This version
-  counts the OBJECTIVE approval steps the ceremony presents -- two distinct !Step(P,_,'confirm') -- so
-  it reads the SAME Layer-1 vocabulary as every other migrated detector and names no ceremony fact.
-  'confirm' is a generic interaction-taxonomy category (accept/dismiss a prompt), distinct from sigma9's
-  'decide' (choose among options), so the two density detectors never cross-trigger.
-
-  Warning / security habituation (Anderson & Vance et al., CHI 2015; MFA prompt-bombing): after >= k
-  approval prompts the user reflexively approves -> SetMask Habituated (habituated_approve auto-approves
-  ANY prompt, incl. an injected one -- what prompt-bombing weaponizes). THRESHOLD k = 2 is the HCI
-  parameter, realised as two !Step premises + Neq distinctness (bump k by adding/removing a premise).
-  Bounded once per party (OnceHabituate) so the mask-history interval reasoning terminates.
-
-  NB: counting is at PRESENT time (prompt shown), not handle time. The old !Approved count additionally
-  required the priors were handled 'Attentive'; dropping that is faithful to prompt-bombing (you
-  habituate from being BOMBED with prompts) and preserves the lemmas -- the shutout block
-  (ShutoutBlocksAutoApprove) and recovery causality (mask_state gates) are independent of how sigma8
-  triggers. The distinctness restriction is named InequalityHabituation (NOT the generic Inequality
-  that sigma9 uses) so sigma8 and sigma9 can share one theory (the full-interface profile S3); both
-  restrictions constrain the same Neq action with the same formula, so co-inclusion is harmless.
+  sigma8 Habituation (density) -- fires on >=2 distinct 'confirm' prompts -> Habituated (reflexive
+  auto-approve, incl. an injected prompt). Anderson & Vance CHI 2015; MFA prompt-bombing.
+  Distinctness restriction is named InequalityHabituation so it can co-exist with sigma9.
 */
 
 rule Trigger_Habituation [color=#eb5757]:

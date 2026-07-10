@@ -1,22 +1,6 @@
 /*
-  core/stressors/repeated_failure.spthy -- f_U for sigma10 RepeatedFailure.
-
-  CHAINING detector. Unlike the other migrated detectors, this one does NOT read the Layer-1 !Step
-  interface (AGNOSTIC_STRESSOR_INTERFACE.md) -- and correctly so. Its trigger is not a step the
-  CEREMONY presents to the user, but a FAILURE OUTCOME the human layer itself produced: !Failed(P) is
-  emitted by core/masks/busy_op.spthy when a Busy user slips. So sigma10 reads a downstream signal of
-  another stressor (e.g. inferred sigma1 slip -> !Failed -> sigma10), which is why it is the model's
-  first chaining edge.
-
-  This is already ceremony-agnostic: !Failed(P) carries no task name and is produced by the core mask
-  layer, so a new ceremony incurs no vocabulary burden -- the marker arises automatically whenever a
-  slip occurs. Converting it to !Step would be wrong: a failure is not a presented interaction step.
-  (NASA-TLX Frustration is the human-factors anchor; the observable is the failure event, not a
-  per-step demand, so there is no lexicon row.)
-
-  At onset emits SetMask(P,'Careless') -- escalation to disengagement. Reads the persistent !Failed
-  read-only (no reproduce). OneRepeatedFailure bounds it once/party (else it re-fires on the
-  persistent !Failed and blows up mask_state.spthy's interval reasoning).
+  sigma10 RepeatedFailure (chaining) -- reads the !Failed outcome a prior slip left (not a step)
+  -> Careless. The escalation edge: one failure degrades the next decision.
 */
 
 rule Detect_RepeatedFailure [color=#eb5757]:

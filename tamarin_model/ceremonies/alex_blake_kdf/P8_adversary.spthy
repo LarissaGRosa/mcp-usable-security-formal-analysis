@@ -2,38 +2,20 @@ theory ToyCeremony_P8_Adversary
 begin
 
 /*
-  PROFILE P8 · adversary-induced stressor (ROADMAP #6, Tier 2). An Attentive inline KDF brings up the
-  session; then an APPROVE_REQ prompt with NO environmental stressor. The adversary injects urgency
-  (core/adversary.spthy) on a prompt it controls -> the adversary-induced TimePressure detector
-  (core/stressors/time_pressure_induced.spthy) -> Busy -> Confirm_autoapprove auto-approves the injected
-  prompt. The degradation is attributable to the adversary (see experiments/P8_adversary.spthy).
+  P8 -- adversary-INDUCED stressor. An Attentive KDF brings up the session; an APPROVE prompt is
+  posed with NO environmental stressor. The only route to Busy is the adversary injecting urgency
+  (adversary.spthy -> time_pressure_induced) -> the rushed user auto-approves the injected prompt.
+  Attribution lemmas trace the auto-approval to the adversary.
   Run: check.py --prove ceremonies/alex_blake_kdf/P8_adversary.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive)
 #include "protocol/finish.spthy"
-
-// -- f2994a ORANGE: interface layer (Alex's compute prompt brings up the session) + adapter --
-#include "interface/sender.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- human plumbing (Alex) --
 #include "bundles/human_common.spthy"
 
-// -- 27ae60 GREEN: compute behaviour (Attentive, brings up session) --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- APPROVE_REQ prompt + the agnostic confirm masks (NO environmental stressor on it) --
-#include "protocol/approval_ui.spthy"
-#include "../../core/masks/confirm_behavior.spthy"
-
-// -- eb5757 RED: the adversary capability + adversary-induced TimePressure (the ONLY route to Busy) --
-#include "../../core/adversary.spthy"
-#include "../../core/stressors/time_pressure_induced.spthy"
+#include "phases/approve.spthy"           // APPROVE prompt + confirm behaviour (no environmental stressor)
+#include "../../core/adversary.spthy"                     // urgency-injection capability
+#include "../../core/stressors/time_pressure_induced.spthy"  // the ONLY route to Busy here
 
 #include "experiments/P8_adversary.spthy"
 

@@ -8,19 +8,41 @@ sense) that composes the shared spine plus the phase bundles / stressors it exer
 
 ## Layout (V3 layered template — same as `secure_email`)
 
+A profile entry reads as a short manifest — one `spine` line + one line per phase-kit + one line per
+stressor. **To review an experiment, read its `P<N>_*.spthy`**: the includes ARE the story.
+
 | Path | Role |
 |---|---|
-| `P<N>_<name>.spthy` | **Profile entry-point theories** — each is a manifest: crypto → protocol → interface → human layer → stressors → lemmas. *These are what you run.* |
-| `protocol/` | 🔵 blue layer: `kdf.spthy` (init + nonce wire), `finish.spthy` (plain finish + session) / `finish_confirmed.spthy` (the key-confirmation shutdown), the post-KDF prompt producers (`approval_ui`, `approval_shutout_ui`, `verify_ui`, `authorize_ui`, `policy_ui`, `warning_ui`), `infer_harness` (P4 analyzer poser), the compute adapters (`compute_keyresult` / `compute_opresult`), and the `stress_alex` / `stress_blake` enables. |
-| `interface/` | 🟠 orange layer: one rule per control, emits `!Step`+`!StepData`(+`!UnderDeadline`). `sender` / `recipient` (the compute prompts), `nonce_ack` (the exposure prompt that gives σ2-concurrency its second prompt). |
-| `bundles/human_common.spthy` | mask_state + answered_once + outcome_policy + lexicon + `stress_alex` (Alex-default; add `stress_blake` for the multi-party cases). Swap-profiles (P7/P9) compose the human layer manually instead. |
-| `experiments/` | Lemma-only files, one per profile (same `P<N>_<name>`). |
-| `../../core/` | The reusable, party-generic human layer: `masks/`, `stressors/`, `transitions/`, `mitigations`, `lexicon_tlx` / `interface_*` / `population_*`. |
+| `P<N>_<name>.spthy` | **Profile entry-point theories** (what you run). Each = `spine` + finish variant + human layer + phase kits + the stressors it arms + its lemmas. |
+| `spine.spthy` | the universal "Alex derives the key" pipeline in ONE include: framework + `kdf` (nonce wire) + Alex's compute prompt + adapter + compute behaviour. |
+| `phases/` | one **kit** per post-KDF control = its producer + behaviour + adapter (the parts that always co-occur): `approve`, `approve_shutout`, `verify`, `authorize`, `policy`. A profile adds the *stressor* separately (it's the experiment's variable). |
+| `protocol/` | 🔵 `kdf`, `finish` / `finish_confirmed`, the prompt producers (`approval_ui`, `verify_ui`, …, `warning_ui`), `infer_harness` (P4), the compute adapters, `stress_alex` / `stress_blake`. |
+| `interface/` | 🟠 one rule per control (`!Step`+`!StepData`+context): `sender` / `recipient` (compute), `nonce_ack` (σ2's second prompt). |
+| `bundles/` | `human_manual` (mask_state + answered_once + outcome_policy + Alex enable) and `human_common` (= human_manual + `lexicon_tlx`). Swap-profiles (P7/P9/P10/P11) use `human_manual` + their own demand seed. |
+| `experiments/` | Lemma-only files, one per profile. |
+| `../../core/` | Reusable human layer: `masks/`, `stressors/`, `transitions/`, `mitigations`, `lexicon_tlx` / `interface_` / `population_` demand profiles. |
 
 Each profile must be **closed** (every LHS fact has a producer) or Tamarin rejects it. Triggering is a
 graded **dose-response**: the lexicon rates a step `'lo' < 'med' < 'hi'` and a detector fires on a BAND
 (`!AtLeast(lvl, thr)`, order seeded in `core/types.spthy`). See
 [`../../docs/V3_UNIFY_REALISM_PLAN.md`](../../docs/V3_UNIFY_REALISM_PLAN.md).
+
+### Review map — what each profile composes
+
+| Profile | finish | human | phases (+ stressor) | extra |
+|---|---|---|---|---|
+| P0 | plain | common | — | + recipient (Blake computes) |
+| P1 | plain | common+blake | — (CALC: σ1+σ3+σ2) | + recipient + nonce_ack |
+| P2 | plain | common | approve+σ8, verify+σ6, authorize+anxiety | + warning |
+| P3 | plain | common+blake | CALC σ1σ3σ2 + approve+σ8 + verify+σ6 + authorize+anx | + recipient + nonce_ack + usability_properties |
+| P4 | — | manual* | *(analyzer harness — bespoke, no spine)* | infer_harness |
+| P5 | — | manual* | *(policy-only — bespoke, no spine)* | policy + both design seeds |
+| P6 | **confirmed** | common | approve_shutout+σ8, verify+σ6 (σ1 on CALC) | + mitigations |
+| P7 | plain | **manual** | verify+σ6, policy | + hardened_verify + clear_policy |
+| P8 | plain | common | approve (+ induced σ3) | + adversary |
+| P9 | plain | **manual** | — (CALC: σ1) | + population_expert |
+| P10 | plain | **manual** | — (CALC: σ1 + additive) | + nonce_ack + moderate-demand seed |
+| P11 | plain | **manual** | authorize (+ anxiety) | + moderate-arousal seed |
 
 ## Profile index
 

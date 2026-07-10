@@ -67,9 +67,14 @@ by the same proof and is not proven twice).
 
 ## Files
 
+Each profile entry is just **`#include "spine.spthy"` + the stressors it arms + its lemmas** — so
+reviewing a profile means reading ~6 lines. `spine.spthy` is the shared base (crypto + protocol +
+interface + human layer + the compare/share/authorize behaviours) that S0–S4 all reuse identically.
+
 ```
 secure_email/
-├── S0_baseline.spthy … S4_worstcase.spthy   # profile entry points (includes read as a summary)
+├── S0_baseline.spthy … S4_worstcase.spthy   # profile entry points (spine + stressors + lemmas)
+├── spine.spthy        # the shared base every profile includes (13 lines → 1)
 ├── protocol/          🔵 crypto.spthy · keys.spthy (participants+Eve, keygen, publish, DY fetch)
 │                         mail.spthy (send/store/unlock, open pwreq channel, corrupt-OOB delivery)
 │                         stress_alex.spthy · stress_blake.spthy (🟣 targeting)

@@ -1,24 +1,7 @@
 /*
-  core/masks/compare_behavior.spthy -- f_H for the COMPARE action class, CEREMONY-AGNOSTIC (AGNOSTIC_MASKS.md).
-  Collapses the old *_verify (read !VerifyReq, wrote !KeyChecked, emitted Accept) and *_verify_op (read
-  !Op 'verify', wrote VerifyDone) masks. The ceremony reports only OBSERVABLES in
-  !StepData(P,vid,<offered,reference>) -- the artifact the UI displays and the trusted reference an
-  attentive check would consult (keyserver entry, session fingerprint). The VERDICT is derived HERE,
-  in the response layer: the Attentive rule PERFORMS the comparison (matches offered = reference), it
-  does not read a producer-declared 'genuine'/'tampered' oracle tag. The response manifests as a
-  generic Checked(P,vid) that a thin per-ceremony adapter wraps (!KeyChecked / VerifyDone).
-
-    Attentive ('discerning') fires only when offered = reference (the pattern <k,k>) -> on a
-      substituted artifact NO rule fires (the verification stalls -- the attentive user rejects).
-      Preserves P3_attentive_never_accepts_tampered because a substituted artifact cannot equal the
-      unforgeable reference; and if an adversary re-offers the GENUINE artifact, acceptance is correct.
-    Naive ('credulous') accepts ANY artifact without looking at !StepData at all -> a Norman MISTAKE
-      (confident wrong action from no mental model); Accept(vid) is emitted so a VerifyShutout
-      mitigation (Accept on a Tampered vid forbidden) can block the harmful case. Tampered(vid)
-      remains the PRODUCER's provenance marker -- lemma vocabulary, never read by a response rule.
-
-  RespMask(P,mask) is gated by mask_state.spthy exactly as before. Action facts (Verify/Accept/Mistake/
-  Answered) are unchanged, so the lemmas are untouched.
+  f_H for COMPARE (ceremony-agnostic). Attentive PERFORMS the check -- fires only when offered =
+  reference (the <k,k> pattern), so a substituted artifact stalls. Naive accepts ANY artifact -> a
+  Mistake. The verdict is DERIVED here, never producer-declared. Emits a generic Checked (adapter-wrapped).
 */
 
 // Attentive: performs the comparison -- fires only when the offered artifact equals the reference.

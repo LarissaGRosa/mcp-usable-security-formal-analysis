@@ -1,8 +1,6 @@
 /*
-  core/masks/compare_verifydone.spthy -- thin EFFECT ADAPTER for the agnostic compare behaviour.
-  Manifests the generic Checked(P,vid) as VerifyDone (the P4 infer_harness output that Finish_verify
-  consumes), where the real verify path uses !KeyChecked. A theory includes EITHER this or
-  compare_keychecked, never both.
+  Effect adapter: Checked(P,vid) -> VerifyDone (the P4 infer_harness output).
+  A theory includes EITHER this or compare_keychecked, never both.
 */
 
 rule Checked_to_VerifyDone [color=#f2994a]:

@@ -2,41 +2,18 @@ theory ToyCeremony_P9_Population
 begin
 
 /*
-  PROFILE P9 · per-population lexicon calibration (ROADMAP #4, Tier 2). The CALC_SK phase with the
-  sigma1/sigma3 workload detectors, analysed for the EXPERT population (core/population_expert.spthy,
-  included INSTEAD of the baseline lexicon): compute is low Mental+Temporal demand, so the workload
-  stressors cannot fire and the expert never slips. Contrast P1 (novice/baseline): slip reachable.
-  Run: check.py --prove ceremonies/alex_blake_kdf/P9_population.spthy
+  P9 -- per-population calibration. The CALC phase for the EXPERT population (population_expert rates
+  compute demand 'lo'): 'lo' < the 'hi' threshold (!AtLeast band), so sigma1 cannot fire and the
+  expert never slips. Contrast P1 (novice/baseline lexicon): slip reachable. The pair is the RFC
+  population argument. Run: check.py --prove ceremonies/alex_blake_kdf/P9_population.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
 #include "protocol/finish.spthy"
+#include "bundles/human_manual.spthy"     // manual layer -- population below is the demand profile
+#include "../../core/population_expert.spthy"   // compute = low Mental+Temporal demand
 
-// -- f2994a ORANGE: interface layer (Alex's compute prompt) + adapter --
-#include "interface/sender.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- human plumbing, MANUAL (no lexicon_tlx: the POPULATION supplies the demand profile).
-//    Expert = low compute demand. Swap population_expert for core/lexicon_tlx.spthy to analyse the
-//    novice/baseline population, where the slip becomes reachable (cf. P1). --
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
-#include "../../core/masks/outcome_policy.spthy"
-#include "protocol/stress_alex.spthy"
-#include "../../core/population_expert.spthy"
-
-// -- 27ae60 GREEN: compute behaviour --
-#include "../../core/masks/compute_behavior.spthy"
-
-// -- eb5757 RED: the WORKLOAD stressor sigma1 (demand-sensitive, so the population lever moves it).
-//    The 'lo' expert demand is below the 'hi' threshold (!AtLeast), so sigma1 cannot fire -> no slip.
-//    (sigma3-deadline reads a CONTEXT, not demand, so it is not population-sensitive and is omitted;
-//    sigma2 distraction is environmental -- both omitted to isolate the population effect.) --
-#include "../../core/stressors/cognitive_load.spthy"
+#include "../../core/stressors/cognitive_load.spthy"   // sigma1 -- cannot fire at 'lo'
 
 #include "experiments/P9_population.spthy"
 

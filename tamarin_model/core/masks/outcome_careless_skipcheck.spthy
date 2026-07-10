@@ -1,20 +1,6 @@
 /*
-  core/masks/outcome_careless_skipcheck.spthy -- OPT-IN outcome row: the CARELESS user SKIPS the
-  security check (an extension of the outcome matrix, like outcome_habituated_clickthrough).
-
-  The default matrix gives Careless no 'compare' row: a careless user's verification stalls
-  (safe-fail timeout). This row states the cited alternative: users under attentional degradation
-  do not stall the ceremony -- they SKIP the fingerprint verification and proceed as if it passed
-  (Whitten & Tygar 1999: users omit/mishandle the key-verification step; the check is what gets
-  dropped, not the task). Skipping the comparison = accepting whatever was offered:
-
-    Careless + compare -> credulous   (accepts ANY offered artifact -> a Mistake, like Naive)
-
-  Opt-in, NOT global: P3 proves `mistake_requires_abstraction` under the default calibration
-  (sigma2 -> Careless must not create compare mistakes there). A profile that includes THIS row
-  models the skip-the-check hypothesis (secure_email v2 trio S1: concurrency-distracted sender
-  skips the fingerprint check -> accepts the DY-substituted key). Persistent + read-only, seeded
-  unconditionally -> closed theory; OnceCarelessSkipcheck bounds the seed.
+  Opt-in outcome row: Careless + compare -> credulous (skips the fingerprint check; Whitten & Tygar 1999).
+  Harmful only on a tampered artifact. Include where the story needs a Careless skip.
 */
 
 rule Seed_careless_skipcheck [color=#9b51e0]:

@@ -2,44 +2,19 @@ theory SecureEmail_S1_TrioPGP
 begin
 
 /*
-  PROFILE S1 -- TRIO on the PGP (key-verification) surface:
-    sigma6 Abstraction (lexicon Effort-hi on the fingerprint compare)  -> Naive
-    sigma8 Habituation (the two button confirms, k=2)                  -> Habituated
-    sigma2 Distraction v2 (TWO prompts pending, Wickens MRT)           -> Careless
-  plus the two opt-in rows their stories need: Habituated CLICK-THROUGH and Careless
-  SKIP-THE-CHECK (Whitten & Tygar). All three converge on the same weak point: the DY-substituted
-  keyserver answer survives a degraded comparison and the message is encrypted to the adversary.
-  Run: check.py --prove ceremonies/secure_email/S1_trio_pgp.spthy
+  S1 -- TRIO on the PGP key-verification surface: sigma6 Abstraction (Naive), sigma8 Habituation
+  (click-through), sigma2 Concurrency (skip-the-check). All three converge on the same weak point --
+  the DY-substituted keyserver answer survives a degraded compare and the message is encrypted to the
+  adversary. Run: check.py --prove ceremonies/secure_email/S1_trio_pgp.spthy
 */
 
-// -- crypto + framework --
-#include "protocol/crypto.spthy"
-#include "../../core/types.spthy"
+#include "spine.spthy"
 
-// -- 1f6fd0 BLUE: protocol layer --
-#include "protocol/keys.spthy"
-#include "protocol/mail.spthy"
-
-// -- f2994a ORANGE: interface layer (prompts + context) + effect adapters --
-#include "interface/sender.spthy"
-#include "interface/recipient.spthy"
-#include "interface/effects.spthy"
-
-// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, targeting --
-#include "bundles/human_common.spthy"
-
-// -- 27ae60 GREEN: the mask behaviours that drive outcomes (compare / share / authorize) --
-#include "../../core/masks/compare_behavior.spthy"
-#include "../../core/masks/compare_keychecked.spthy"
-#include "../../core/masks/share_behavior.spthy"
-#include "../../core/masks/authorize_behavior.spthy"
-#include "../../core/masks/outcome_degraded_click.spthy"
-
-// -- eb5757 RED: the trio --
+// -- the trio --
 #include "../../core/stressors/abstraction.spthy"
 #include "../../core/stressors/habituation.spthy"
 #include "../../core/stressors/distraction_concurrent.spthy"
-// -- 9b51e0 PURPLE: opt-in outcome rows this trio's stories need --
+// -- opt-in outcome rows this trio's stories need --
 #include "../../core/masks/outcome_habituated_clickthrough.spthy"
 #include "../../core/masks/outcome_careless_skipcheck.spthy"
 

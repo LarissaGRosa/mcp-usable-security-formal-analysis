@@ -2,47 +2,25 @@ theory ToyCeremony_P11_InvertedU
 begin
 
 /*
-  PROFILE P11 -- the INVERTED-U facilitating zone (V3 §1b/§2b; Yerkes-Dodson 1908).
-  SecurityAnxiety fires only past the peak of the arousal curve -- Arousal at least 'hi' (the band,
-  via !AtLeast). Here the AUTHORIZE control is rated MODERATE arousal ('med'): below that threshold,
-  in the facilitating zone, so SecurityAnxiety never onsets and the user stays Attentive and GRANTS.
-  Contrast P2 / P3, where the same authorize is 'hi' (over-arousal) and the Fearful abort is
-  reachable. The pair is the inverted-U: moderate stakes do NOT freeze the user; only high ones do.
+  P11 -- the INVERTED-U facilitating zone (Yerkes-Dodson). The AUTHORIZE control is MODERATE arousal
+  ('med'), below SecurityAnxiety's 'hi' threshold -- so anxiety never fires, the user stays Attentive
+  and GRANTS, and the Fearful abort is unreachable. Contrast P2/P3 at 'hi' (abort reachable): moderate
+  stakes do not freeze the user, only high ones do.
   Run: check.py --prove ceremonies/alex_blake_kdf/P11_inverted_u.spthy
 */
 
-// -- crypto + framework --
-#include "../../core/types.spthy"
-
-// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
-#include "protocol/kdf.spthy"
+#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive)
 #include "protocol/finish.spthy"
+#include "bundles/human_manual.spthy"     // manual layer -- the moderate-arousal seed below is the profile
 
-// -- f2994a ORANGE: interface (compute brings up the session) + adapter --
-#include "interface/sender.spthy"
-#include "protocol/compute_keyresult.spthy"
-
-// -- MODERATE arousal profile (profile-local): the authorize is 'med' -- in the facilitating zone,
-//    below SecurityAnxiety's 'hi' threshold. (Contrast lexicon_tlx, which rates authorize 'hi'.) --
+// moderate arousal seed (profile-local): authorize is 'med' -- the facilitating zone
 rule Seed_moderate_arousal [color=#9b51e0]:
     [ ] --[ SeedModArousal() ]->
     [ !Demands('authorize', 'Arousal', 'med') ]
-restriction OnceModArousal:
-  "All #i #j. SeedModArousal()@i & SeedModArousal()@j ==> #i = #j"
+restriction OnceModArousal: "All #i #j. SeedModArousal()@i & SeedModArousal()@j ==> #i = #j"
 
-// -- human plumbing, MANUAL (the moderate-arousal seed above is the demand profile) --
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
-#include "../../core/masks/outcome_policy.spthy"
-#include "protocol/stress_alex.spthy"
-
-// -- 27ae60 GREEN: compute behaviour (Attentive, brings up session) + authorize behaviour --
-#include "../../core/masks/compute_behavior.spthy"
-#include "../../core/masks/authorize_behavior.spthy"
-
-// -- AUTHORIZE control + SecurityAnxiety (which must NOT fire at 'med' arousal) --
-#include "protocol/authorize_ui.spthy"
-#include "../../core/stressors/security_anxiety.spthy"
+#include "phases/authorize.spthy"
+#include "../../core/stressors/security_anxiety.spthy"   // cannot fire at 'med' arousal
 
 #include "experiments/P11_inverted_u.spthy"
 

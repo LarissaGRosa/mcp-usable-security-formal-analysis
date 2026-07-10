@@ -1,21 +1,6 @@
 /*
-  core/masks/policy_behavior.spthy -- f_H for the SET_POLICY action class, CEREMONY-AGNOSTIC (AGNOSTIC_MASKS.md).
-  PATHWAY B: a TASK-MEDIATED mistake with NO mask change. Unlike every other behaviour file, this one
-  does NOT read !OutcomePolicy -- the outcome is determined by the TASK, not by the human's mask. The
-  SAME Attentive user sets a SAFE policy under a clear control and an UNSAFE one (a Mistake) under a
-  misleading control (the AWS S3 "Any Authenticated Users" case; sigma4 MisleadingTerminology).
-
-  The control's design quality is an INTERFACE-level fact, not step data: this file reads the
-  persistent !ControlDesign('set-policy', quality) row seeded by a named interface include
-  (core/interface_clear_policy.spthy / core/interface_misleading_policy.spthy), exactly the way the
-  detectors read !Demands rows. The 'set-policy' !Step carries NO !StepData -- payloads hold values
-  or observables only; design judgments live in named seeds (repo MEMORY.md lesson 14). This makes
-  the design quality a PROFILE assumption: include the clear seed and the unsafe policy is
-  unreachable (P7); include the misleading seed and it is reachable (P5/S0/S1); include both to
-  quantify over both designs. Each pid is answered once (answered_once), so with both seeds a trace
-  commits each control to one design.
-
-  RespMask(P,'Attentive') is gated by mask_state.spthy: the user is genuinely un-degraded, yet errs.
+  f_H for SET-POLICY (Pathway B, task-mediated). An Attentive user sets the SAFE policy under a clear
+  control and the UNSAFE one under a misleading control (reads !ControlDesign) -- a mistake with NO mask change.
 */
 
 rule Policy_clear [color=#27ae60]:
