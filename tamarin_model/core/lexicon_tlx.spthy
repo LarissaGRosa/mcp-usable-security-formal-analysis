@@ -32,16 +32,23 @@
       user freezes / refuses -> Fearful. Stated once here instead of an !AuthReq match (old sigma).
 
   Levels are ordered constants 'lo' < 'med' < 'hi' (AGNOSTIC_STRESSOR_INTERFACE.md S5). Tamarin has
-  no built-in order on public atoms, so detectors EXACT-MATCH the level they fire on -- no ordering
-  relation is needed yet. As more dimensions/levels are seeded (sigma1 MentalDemand, sigma6 Effort,
-  ...), add one row per (action, dimension) here; the detectors stay ceremony-blind.
+  no built-in order on public atoms, so the order is seeded explicitly as a reflexive partial-order
+  fact !AtLeast(a,b) -- in core/types.spthy (V3 §2a), NOT here, because a profile may SWAP this
+  lexicon for an alternative demand profile (interface_* / population_*) and the order must survive that
+  swap. The lookup detectors read a demand level plus !AtLeast(lvl, thr): they fire on a BAND
+  (lvl >= thr), not one exact constant. Since every seeded demand below is 'hi' and every degrade
+  detector's threshold is 'hi', the only lvl satisfying !AtLeast(lvl,'hi') is 'hi' itself, so
+  behaviour is IDENTICAL to the old exact-'hi' match -- the band is the mechanism a graded row (a
+  'lo'/'med' action, or an expert-population threshold shift, V3 §2d) later exercises. As more
+  dimensions/levels are seeded, add one row per (action, dimension) here; the detectors stay
+  ceremony-blind.
 
   Seeded by an unconditional rule so any theory that includes a migrated detector stays CLOSED. The
   fact is persistent + read-only -> no consume/reproduce, no sources loop (repo MEMORY.md S6.2).
   OnceLexicon bounds the seed (the empty-premise rule could otherwise re-fire unboundedly).
 */
 
-rule Seed_lexicon_tlx:
+rule Seed_lexicon_tlx [color=#9b51e0]:
     [ ]
   --[ SeedLexicon() ]->
     [ !Demands('compute',   'TemporalDemand', 'hi'),

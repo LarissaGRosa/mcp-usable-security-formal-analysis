@@ -10,8 +10,9 @@
     Careless + compute -> timeout    (no response; safe-fail stall)
 
   COMPARE action class (collapses the old *_verify and *_verify_op masks). The disposition, not a
-  single outcome, because the result depends on whether the artifact is genuine (carried in !StepData):
-    Attentive + compare -> discerning  (accepts ONLY a genuine artifact; rejects/stalls on tampered)
+  single outcome, because the result depends on the step's observables <offered, reference> in
+  !StepData (the verdict is DERIVED in compare_behavior, never declared by the producer):
+    Attentive + compare -> discerning  (performs the comparison; accepts only offered = reference)
     Naive    + compare -> credulous   (accepts ANY artifact -> a process Mistake; harmful iff tampered)
 
   CONFIRM action class = approval prompts (collapses attentive/busy/careless/habituated_approve). Kind
@@ -31,7 +32,7 @@
   migrated (compare/confirm/decide/authorize/share), add their rows here -- one table, reused.
 */
 
-rule Seed_outcome_policy:
+rule Seed_outcome_policy [color=#9b51e0]:
     [ ]
   --[ SeedOutcomePolicy() ]->
     [ !OutcomePolicy('Attentive', 'compute', 'correct'),

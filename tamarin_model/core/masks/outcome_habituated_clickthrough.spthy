@@ -1,0 +1,27 @@
+/*
+  core/masks/outcome_habituated_clickthrough.spthy -- OPT-IN outcome row: GENERALIZED warning
+  habituation (an extension of the outcome matrix, the way interface_hardened_verify extends the
+  demand lexicon).
+
+  The default matrix (outcome_policy.spthy) gives Habituated a degraded outcome only for the
+  'confirm' class (autoapprove). This row states the STRONGER, cited claim that habituation
+  GENERALIZES across similar-looking security dialogs (Anderson, Vance et al., CHI 2015: habituation
+  to one warning transfers to novel warnings that look alike): a user habituated by repeated
+  confirm dialogs also CLICKS THROUGH the key-verification step without inspecting it --
+
+    Habituated + compare -> credulous   (accepts ANY offered artifact -> a Mistake, like Naive)
+
+  It is opt-in, not global, because profiles P2/P3 prove `mistake_requires_abstraction` under the
+  DEFAULT calibration (a compare mistake needs sigma6); a profile that includes THIS row models the
+  generalized-habituation hypothesis instead (see secure_email S2: the Proton Trust-key double modal
+  habituates, then the click-through accepts a substituted key). Persistent + read-only, seeded
+  unconditionally -> closed theory, no sources loop; OnceHabClickthrough bounds the seed.
+*/
+
+rule Seed_habituated_clickthrough [color=#9b51e0]:
+    [ ]
+  --[ SeedHabClickthrough() ]->
+    [ !OutcomePolicy('Habituated', 'compare', 'credulous') ]
+
+restriction OnceHabClickthrough:
+  "All #i #j. SeedHabClickthrough()@i & SeedHabClickthrough()@j ==> #i = #j"

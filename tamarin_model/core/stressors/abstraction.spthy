@@ -18,9 +18,10 @@
   UNCHANGED. !StressEnable(P) gates per party (Stage B); OnceAbstraction bounds the onset per party.
 */
 
-rule Trigger_Abstraction:
+// Threshold 'hi' matched as a BAND (V3 §2a); see cognitive_load.spthy for the mechanism.
+rule Trigger_Abstraction [color=#eb5757]:
     [ !Step(P, sid, action),
-      !Demands(action, 'Effort', 'hi'),
+      !Demands(action, 'Effort', lvl), !AtLeast(lvl, 'hi'),
       !StressEnable(P) ]
   --[ Abstraction(P), SetMask(P,'Naive') ]->
     [ ]

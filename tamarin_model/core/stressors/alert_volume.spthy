@@ -21,7 +21,7 @@
   (kept apart: sigma8 in P2/P6, sigma9 in P4/S1).
 */
 
-rule Detect_AlertVolume:
+rule Detect_AlertVolume [color=#eb5757]:
     [ !Step(P, r1, 'decide'), !Step(P, r2, 'decide'), !Step(P, r3, 'decide'), !StressEnable(P) ]
   --[ AlertVolume(P), Neq(r1,r2), Neq(r1,r3), Neq(r2,r3), SetMask(P,'Careless') ]->
     [ ]

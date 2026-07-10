@@ -1,29 +1,34 @@
 /*
   core/masks/compare_behavior.spthy -- f_H for the COMPARE action class, CEREMONY-AGNOSTIC (AGNOSTIC_MASKS.md).
   Collapses the old *_verify (read !VerifyReq, wrote !KeyChecked, emitted Accept) and *_verify_op (read
-  !Op 'verify', wrote VerifyDone) masks. The genuineness of the artifact under comparison is carried in
-  !StepData(P,vid,'genuine'|'tampered') (the compare analogue of compute's correct-value); the response
-  manifests as a generic Checked(P,vid) that a thin per-ceremony adapter wraps (!KeyChecked / VerifyDone).
+  !Op 'verify', wrote VerifyDone) masks. The ceremony reports only OBSERVABLES in
+  !StepData(P,vid,<offered,reference>) -- the artifact the UI displays and the trusted reference an
+  attentive check would consult (keyserver entry, session fingerprint). The VERDICT is derived HERE,
+  in the response layer: the Attentive rule PERFORMS the comparison (matches offered = reference), it
+  does not read a producer-declared 'genuine'/'tampered' oracle tag. The response manifests as a
+  generic Checked(P,vid) that a thin per-ceremony adapter wraps (!KeyChecked / VerifyDone).
 
-    Attentive ('discerning') accepts ONLY a genuine artifact -> on tampered, NO rule fires (the
-      verification stalls -- the attentive user rejects). So Verify(_,_,'Attentive') is only ever on a
-      genuine vid (preserves P3_attentive_never_accepts_tampered).
-    Naive ('credulous') accepts ANY artifact -> a Norman MISTAKE (confident wrong action from no mental
-      model), regardless of genuineness; Accept(vid) is emitted so a VerifyShutout mitigation (Accept on
-      a Tampered vid forbidden) can block the harmful case. The Tampered(vid) marker is the producer's.
+    Attentive ('discerning') fires only when offered = reference (the pattern <k,k>) -> on a
+      substituted artifact NO rule fires (the verification stalls -- the attentive user rejects).
+      Preserves P3_attentive_never_accepts_tampered because a substituted artifact cannot equal the
+      unforgeable reference; and if an adversary re-offers the GENUINE artifact, acceptance is correct.
+    Naive ('credulous') accepts ANY artifact without looking at !StepData at all -> a Norman MISTAKE
+      (confident wrong action from no mental model); Accept(vid) is emitted so a VerifyShutout
+      mitigation (Accept on a Tampered vid forbidden) can block the harmful case. Tampered(vid)
+      remains the PRODUCER's provenance marker -- lemma vocabulary, never read by a response rule.
 
   RespMask(P,mask) is gated by mask_state.spthy exactly as before. Action facts (Verify/Accept/Mistake/
   Answered) are unchanged, so the lemmas are untouched.
 */
 
-// Attentive: accepts only a genuine artifact.
-rule Compare_attentive:
-    [ !Step(P, vid, 'compare'), !StepData(P, vid, 'genuine'), !OutcomePolicy(mask, 'compare', 'discerning') ]
+// Attentive: performs the comparison -- fires only when the offered artifact equals the reference.
+rule Compare_attentive [color=#27ae60]:
+    [ !Step(P, vid, 'compare'), !StepData(P, vid, <k, k>), !OutcomePolicy(mask, 'compare', 'discerning') ]
   --[ Verify(P, vid, mask), RespMask(P, mask), Accept(P, vid), Answered(vid) ]->
     [ Checked(P, vid) ]
 
 // Naive: accepts ANY artifact -> a Mistake (harmful iff the producer marked the vid Tampered).
-rule Compare_naive:
+rule Compare_naive [color=#27ae60]:
     [ !Step(P, vid, 'compare'), !OutcomePolicy(mask, 'compare', 'credulous') ]
   --[ Verify(P, vid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Mistake(P, vid), Accept(P, vid), Answered(vid) ]->
     [ Checked(P, vid) ]

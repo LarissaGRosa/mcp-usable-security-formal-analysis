@@ -19,7 +19,7 @@
   persistent !Failed and blows up mask_state.spthy's interval reasoning).
 */
 
-rule Detect_RepeatedFailure:
+rule Detect_RepeatedFailure [color=#eb5757]:
     [ !Failed(P), !StressEnable(P) ]
   --[ RepeatedFailure(P), SetMask(P,'Careless') ]->
     [ ]

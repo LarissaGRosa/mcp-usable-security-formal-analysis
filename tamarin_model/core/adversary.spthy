@@ -17,7 +17,7 @@
   RFC must defend (number-matching MFA / shutout defeats the resulting auto-approval; see P6 / P8).
 */
 
-rule Adv_inject_urgency:
+rule Adv_inject_urgency [color=#922b21]:
     [ In(pid) ]
   --[ InjectUrgency(pid), AdvInduced('TimePressure') ]->
     [ !Urgent(pid) ]

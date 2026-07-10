@@ -15,20 +15,20 @@
 */
 
 // Attentive: the step is performed correctly -> the genuine value.
-rule Compute_correct:
+rule Compute_correct [color=#27ae60]:
     [ !Step(P, rid, 'compute'), !StepData(P, rid, genuine), !OutcomePolicy(mask, 'compute', 'correct') ]
   --[ Calc(P, mask), RespMask(P, mask), Key(P, genuine), Answered(rid) ]->
     [ Respond(P, rid, genuine) ]
 
 // Busy: a slip -> a FRESH wrong value (top symbol != kdf, so it can never equal the genuine kdf(_,_)).
 // !Failed marks the objective failure outcome (read by sigma10 RepeatedFailure where present).
-rule Compute_slip:
+rule Compute_slip [color=#27ae60]:
     [ !Step(P, rid, 'compute'), Fr(~wrong), !OutcomePolicy(mask, 'compute', 'slip') ]
   --[ Calc(P, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Slip(P), Key(P, ~wrong), Answered(rid) ]->
     [ Respond(P, rid, ~wrong), !Failed(P) ]
 
 // Careless: disengagement -> no response (the step stalls; safe-fail). No Respond, so no protocol fact.
-rule Compute_timeout:
+rule Compute_timeout [color=#27ae60]:
     [ !Step(P, rid, 'compute'), !OutcomePolicy(mask, 'compute', 'timeout') ]
   --[ Calc(P, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Timeout(P), Answered(rid) ]->
     [ ]

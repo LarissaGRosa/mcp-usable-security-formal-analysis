@@ -17,7 +17,7 @@
   Include INSTEAD of core/lexicon_tlx.spthy to analyse the ceremony for the expert population.
 */
 
-rule Seed_population_expert:
+rule Seed_population_expert [color=#9b51e0]:
     [ ]
   --[ SeedPopulation('expert') ]->
     [ !Demands('compute', 'MentalDemand',   'lo'),

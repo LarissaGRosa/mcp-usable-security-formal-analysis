@@ -14,3 +14,19 @@ functions: kdf/2     // free 2-ary symbol: kdf(a,b)=kdf(a',b') iff a=a' & b=b'
 //  constant-keyed lemma mix facts across instances.) Keyed on the Start(p) action.
 restriction OneInstancePerHuman:
   "All p #i #j. Start(p)@i & Start(p)@j ==> #i = #j"
+
+// The demand-LEVEL order 'lo' < 'med' < 'hi' as a reflexive partial order (V3 §2a, dose-response).
+// A lookup detector with threshold thr fires on !Demands(action,dim,lvl) & !AtLeast(lvl,thr) -- a
+// BAND, not one exact constant. This lives in types.spthy (included exactly once by every profile)
+// rather than in lexicon_tlx.spthy, because a profile may SWAP the lexicon for an alternative demand
+// profile (interface_* / population_*) and the order must be present regardless of that choice.
+// Persistent + read-only -> closed theory, no sources loop; OnceLevels bounds the seed.
+rule Seed_levels:
+    [ ]
+  --[ SeedLevels() ]->
+    [ !AtLeast('hi','hi'), !AtLeast('hi','med'), !AtLeast('hi','lo'),
+      !AtLeast('med','med'), !AtLeast('med','lo'),
+      !AtLeast('lo','lo') ]
+
+restriction OnceLevels:
+  "All #i #j. SeedLevels()@i & SeedLevels()@j ==> #i = #j"

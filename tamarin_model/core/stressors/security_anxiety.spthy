@@ -16,9 +16,14 @@
   per party (Stage B); OnceSecurityAnxiety bounds the onset per party.
 */
 
-rule Trigger_SecurityAnxiety:
+// INVERTED-U (Yerkes-Dodson 1908), V3 §2b. Fearful is the OVER-arousal (right) arm of the curve:
+// it fires only when Arousal is at least 'hi', matched as a band. Moderate arousal ('med') is the
+// facilitating zone below this threshold -- !AtLeast('med','hi') does not hold, so an Arousal-'med'
+// control provably stays Attentive. With the lexicon seeding authorize at 'hi' this is exactly the
+// old exact match; a 'med'-arousal control exercises the facilitating band.
+rule Trigger_SecurityAnxiety [color=#eb5757]:
     [ !Step(P, sid, action),
-      !Demands(action, 'Arousal', 'hi'),
+      !Demands(action, 'Arousal', lvl), !AtLeast(lvl, 'hi'),
       !StressEnable(P) ]
   --[ SecurityAnxiety(P), SetMask(P,'Fearful') ]->
     [ ]

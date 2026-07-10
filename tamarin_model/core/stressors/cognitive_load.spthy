@@ -18,9 +18,12 @@
   (Stage B); OneStressPerParty bounds the onset to one per party.
 */
 
-rule Trigger_HighCognitiveLoad:
+// Threshold 'hi' matched as a BAND (V3 §2a): fires when the step's MentalDemand is at least 'hi'.
+// With the lexicon seeding only 'hi' this is exactly the old exact match; a graded 'lo'/'med' row
+// (or a raised expert-population threshold) provably does not fire.
+rule Trigger_HighCognitiveLoad [color=#eb5757]:
     [ !Step(P, sid, action),
-      !Demands(action, 'MentalDemand', 'hi'),
+      !Demands(action, 'MentalDemand', lvl), !AtLeast(lvl, 'hi'),
       !StressEnable(P) ]
   --[ Load(P), SetMask(P,'Busy') ]->
     [ ]

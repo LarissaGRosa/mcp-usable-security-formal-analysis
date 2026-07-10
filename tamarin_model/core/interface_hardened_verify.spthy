@@ -20,7 +20,7 @@
   THIS instead of (the compare rows of) lexicon_tlx to model the hardened interface.
 */
 
-rule Seed_interface_hardened_verify:
+rule Seed_interface_hardened_verify [color=#9b51e0]:
     [ ]
   --[ SeedInterface('hardened_verify') ]->
     [ !Demands('compare', 'Effort', 'lo'),

@@ -1,34 +1,40 @@
 /*
   core/masks/confirm_behavior.spthy -- f_H for the CONFIRM action class (approval prompts), AGNOSTIC_MASKS.md.
-  Collapses attentive_approve / busy_approve / careless_approve / habituated_approve. The prompt KIND
-  ('self' | 'injected') is carried in !StepData; only Attentive inspects it (it verifies and approves only
-  its own prompt). The degraded masks ignore kind; the lemmas read the action facts Approve/AutoApprove.
+  Collapses attentive_approve / busy_approve / careless_approve / habituated_approve. The ceremony
+  reports only OBSERVABLES in !StepData(P,pid,<claimed, own>) -- the intent the prompt claims to
+  authorize vs the user's OWN pending intent (the login/request they actually initiated; an
+  unforgeable fresh token when they initiated nothing). The VERDICT is derived HERE, in the response
+  layer: the Attentive rule PERFORMS the self-check (matches claimed = own), it does not read a
+  producer-declared 'self'/'injected' oracle tag -- same observables discipline as the compare class
+  (repo MEMORY.md lesson 14). Injected(pid) stays the PRODUCER's provenance action, lemma vocabulary
+  only; the lemmas read the action facts Approve/AutoApprove as before.
 
-    Attentive  ('verify-self') : approves ONLY a self prompt -> on injected, NO rule fires (rejects).
-    Busy/Habituated ('autoapprove') : reflexively approve ANY prompt -> AutoApprove (a VerifyShutout/
-      ShutoutBlocksAutoApprove mitigation gates this on a Shutout-protected prompt).
+    Attentive  ('verify-self') : fires only when claimed = own (the pattern <k,k>) -> on an injected
+      prompt NO rule fires (the user has no matching intent and rejects).
+    Busy/Habituated ('autoapprove') : reflexively approve ANY prompt without looking -> AutoApprove
+      (a Shutout / ShutoutBlocksAutoApprove mitigation gates this on a Shutout-protected prompt).
     Careless ('dismiss') : times out, no approval.
 
   The two APPROVE outcomes emit a generic Confirmed(P,pid,mask) so a ceremony where the approval GATES a
-  downstream action (e.g. a device signature in fido_auth) can consume it via a thin effect adapter --
+  downstream action (e.g. a device signature) can consume it via a thin effect adapter --
   the same output+adapter pattern as compute (Respond) and compare (Checked). Where unused it dangles
   harmlessly. RespMask(P,mask) gated by mask_state.spthy as before; Approve(P,pid,mask) carries the mask.
 */
 
-// Attentive: verifies, approves only a self prompt.
-rule Confirm_attentive_verify:
-    [ !Step(P, pid, 'confirm'), !StepData(P, pid, 'self'), !OutcomePolicy(mask, 'confirm', 'verify-self') ]
+// Attentive: performs the self-check -- fires only when the claimed intent equals the user's own.
+rule Confirm_attentive_verify [color=#27ae60]:
+    [ !Step(P, pid, 'confirm'), !StepData(P, pid, <k, k>), !OutcomePolicy(mask, 'confirm', 'verify-self') ]
   --[ Approve(P, pid, mask), RespMask(P, mask), Verified(P, pid), Answered(pid) ]->
     [ Confirmed(P, pid, mask) ]
 
 // Busy / Habituated: reflexively approve ANY prompt (incl. an injected one -> prompt-bombing).
-rule Confirm_autoapprove:
+rule Confirm_autoapprove [color=#27ae60]:
     [ !Step(P, pid, 'confirm'), !OutcomePolicy(mask, 'confirm', 'autoapprove') ]
   --[ Approve(P, pid, mask), RespMask(P, mask), AutoApprove(P, pid), Mask(P,'Attentive',mask), Answered(pid) ]->
     [ Confirmed(P, pid, mask) ]
 
 // Careless: dismisses the prompt without acting -> timeout, no approval (safe-fail).
-rule Confirm_dismiss:
+rule Confirm_dismiss [color=#27ae60]:
     [ !Step(P, pid, 'confirm'), !OutcomePolicy(mask, 'confirm', 'dismiss') ]
   --[ Approve(P, pid, mask), RespMask(P, mask), Timeout(P), Answered(pid) ]->
     [ ]

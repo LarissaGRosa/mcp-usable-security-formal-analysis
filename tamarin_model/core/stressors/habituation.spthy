@@ -19,16 +19,17 @@
   required the priors were handled 'Attentive'; dropping that is faithful to prompt-bombing (you
   habituate from being BOMBED with prompts) and preserves the lemmas -- the shutout block
   (ShutoutBlocksAutoApprove) and recovery causality (mask_state gates) are independent of how sigma8
-  triggers. Inequality must NOT share a theory with sigma9's identically-named restriction (kept apart:
-  sigma8 in P2/P6, sigma9 in P4/S1).
+  triggers. The distinctness restriction is named InequalityHabituation (NOT the generic Inequality
+  that sigma9 uses) so sigma8 and sigma9 can share one theory (the full-interface profile S3); both
+  restrictions constrain the same Neq action with the same formula, so co-inclusion is harmless.
 */
 
-rule Trigger_Habituation:
+rule Trigger_Habituation [color=#eb5757]:
     [ !Step(P, pid1, 'confirm'), !Step(P, pid2, 'confirm'), !StressEnable(P) ]
   --[ Habituate(P), Neq(pid1, pid2), SetMask(P,'Habituated') ]->
     [ ]
 
-restriction Inequality:
+restriction InequalityHabituation:
   "All x #i. Neq(x,x)@i ==> F"
 
 restriction OnceHabituate:

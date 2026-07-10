@@ -10,12 +10,12 @@
   RespMask(P,mask) gated by mask_state.spthy as before.
 */
 
-rule Decide_handle:
+rule Decide_handle [color=#27ae60]:
     [ !Step(P, did, 'decide'), !OutcomePolicy(mask, 'decide', 'handle') ]
   --[ Confirm(P, did, mask), RespMask(P, mask), Handled(P, did), Answered(did) ]->
     [ DecisionDone(P, did) ]
 
-rule Decide_timeout:
+rule Decide_timeout [color=#27ae60]:
     [ !Step(P, did, 'decide'), !OutcomePolicy(mask, 'decide', 'fatigue') ]
   --[ Confirm(P, did, mask), RespMask(P, mask), Timeout(P), Handled(P, did), Answered(did) ]->
     [ DecisionDone(P, did) ]

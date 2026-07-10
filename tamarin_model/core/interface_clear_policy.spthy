@@ -1,0 +1,30 @@
+/*
+  core/interface_clear_policy.spthy -- a first-class INTERFACE as a design-quality declaration
+  (ROADMAP #2, the same lever as interface_hardened_verify -- there for the DEMAND a step imposes,
+  here for the TERMINOLOGY HONESTY of a configuration control).
+
+  A 'set-policy' step's outcome is task-mediated (Pathway B, sigma4 MisleadingTerminology): the SAME
+  Attentive user sets a safe policy under a clear control and an unsafe one under a confusing
+  control. That design quality is a property of the INTERFACE, not of a step instance -- so it is
+  declared ONCE here as a persistent !ControlDesign row the policy behaviour reads, exactly the way
+  detectors read !Demands rows. It is NEVER carried in !StepData: step payloads hold values or
+  observables only, verdicts and design judgments live in named seeds (repo MEMORY.md lesson 14).
+
+  THIS interface: the control is CLEAR (honest, unambiguous terminology -- e.g. an expiration picker
+  that states the retention window plainly, or an ACL option that names its audience precisely).
+  Under it, Policy_misleading can never fire: the unsafe policy is UNREACHABLE (see P7). The proof
+  pair with the misleading interface (P5/S0/S1) yields the normative requirement -- "the control's
+  options MUST state their effect in plain, unambiguous terms."
+
+  Seeded unconditionally (persistent, read-only -> closed theory, no sources loop). A profile
+  includes THIS and/or interface_misleading_policy; including both quantifies over both designs.
+*/
+
+rule Seed_interface_clear_policy [color=#9b51e0]:
+    [ ]
+  --[ SeedInterface('clear_policy') ]->
+    [ !ControlDesign('set-policy', 'clear'),
+      !Interface('clear_policy') ]
+
+restriction OnceClearPolicy:
+  "All #i #j. SeedInterface('clear_policy')@i & SeedInterface('clear_policy')@j ==> #i = #j"
