@@ -5,10 +5,10 @@
 
   The persistent !Session it reads is created once by protocol/session.spthy (include that
   alongside). Two prompt sources, each READING !Session (loop-free):
-    * UI_issue_self_prompt -- a legitimate, session-bound prompt (kind 'self'); fresh ~pid
-      is never sent on the wire, so the adversary cannot forge it.
-    * UI_inject_prompt     -- an adversary-crafted prompt (kind 'injected'; pid from In),
-      modelling MFA prompt-bombing. Injected(pid) marks it for the lemmas.
+    * UI_issue_self_prompt -- a legitimate, session-bound prompt (claims the user's own intent);
+      fresh ~pid is never sent on the wire, so the adversary cannot forge it.
+    * UI_inject_prompt     -- an adversary-crafted prompt (pid from In) claiming an intent the user
+      never had, modelling MFA prompt-bombing. Injected(pid) marks it for the lemmas.
 */
 
 // !Step('Alex',_,'confirm'): Layer-1 objective step (agnostic interface). An approval prompt is a
@@ -17,12 +17,16 @@ rule UI_issue_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
     [ !Step('Alex', ~pid, 'confirm'),
-      // !StepData = the prompt kind, the ground truth the confirm masks consult (Attentive approves
-      // only a 'self' prompt; see confirm_behavior.spthy).
-      !StepData('Alex', ~pid, 'self') ]
+      // !StepData = OBSERVABLES <claimed, own>: this prompt claims the request the user actually
+      // initiated. The verdict is derived in confirm_behavior (Attentive matches claimed = own),
+      // never declared by the producer (repo MEMORY.md lesson 14).
+      !StepData('Alex', ~pid, <~pid, ~pid>) ]
 
+// Adversary-crafted prompt (pid from In); ~own is the user's actual pending intent (fresh, never on
+// the wire), so claimed = own is underivable and Confirm_attentive_verify can never fire on it.
+// Injected(pid) stays as provenance for the lemmas.
 rule UI_inject_prompt:
-    [ !Session('Alex', idA, sk), In(pid) ]
+    [ !Session('Alex', idA, sk), In(pid), Fr(~own) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid) ]->
     [ !Step('Alex', pid, 'confirm'),
-      !StepData('Alex', pid, 'injected') ]
+      !StepData('Alex', pid, <pid, ~own>) ]

@@ -9,25 +9,34 @@ begin
   Run: check.py --prove ceremonies/alex_blake_kdf/P9_population.spthy
 */
 
-#include "ceremony.base.spthy"
+// -- crypto + framework --
+#include "../../core/types.spthy"
 
-// -- human-layer plumbing (gates + answer discipline + Alex enable) --
-#include "bundles/human_common.spthy"
+// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
+#include "protocol/kdf.spthy"
+#include "protocol/finish.spthy"
 
-// -- the POPULATION under analysis: expert (low compute demand). Swap for core/lexicon_tlx.spthy to
-//    analyse the novice/baseline population, where the slip becomes reachable. --
-#include "../../core/population_expert.spthy"
-#include "../../core/masks/outcome_policy.spthy"
-
-// -- CALC_SK producer + the agnostic compute masks --
-#include "protocol/msg3_request.spthy"
-#include "../../core/masks/compute_behavior.spthy"
+// -- f2994a ORANGE: interface layer (Alex's compute prompt) + adapter --
+#include "interface/sender.spthy"
 #include "protocol/compute_keyresult.spthy"
 
-// -- workload stressors only (population-sensitive); sigma2 distraction is environmental, omitted to
-//    isolate the population effect --
+// -- human plumbing, MANUAL (no lexicon_tlx: the POPULATION supplies the demand profile).
+//    Expert = low compute demand. Swap population_expert for core/lexicon_tlx.spthy to analyse the
+//    novice/baseline population, where the slip becomes reachable (cf. P1). --
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
+#include "../../core/masks/outcome_policy.spthy"
+#include "protocol/stress_alex.spthy"
+#include "../../core/population_expert.spthy"
+
+// -- 27ae60 GREEN: compute behaviour --
+#include "../../core/masks/compute_behavior.spthy"
+
+// -- eb5757 RED: the WORKLOAD stressor sigma1 (demand-sensitive, so the population lever moves it).
+//    The 'lo' expert demand is below the 'hi' threshold (!AtLeast), so sigma1 cannot fire -> no slip.
+//    (sigma3-deadline reads a CONTEXT, not demand, so it is not population-sensitive and is omitted;
+//    sigma2 distraction is environmental -- both omitted to isolate the population effect.) --
 #include "../../core/stressors/cognitive_load.spthy"
-#include "../../core/stressors/time_pressure.spthy"
 
 #include "experiments/P9_population.spthy"
 

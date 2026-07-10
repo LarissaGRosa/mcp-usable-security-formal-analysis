@@ -1,24 +1,21 @@
 /*
   protocol/policy_ui.spthy -- PROTOCOL LAYER, a SET_POLICY step (AWS-S3-style access config).
-  The ceremony is EXTENDED with the minimal supplied info the bare protocol cannot yield: the
-  option's terminology honesty (sigma4 MisleadingTerminology is presentation, not inferable from
-  the protocol structure). One step, either 'clear' or 'misleading'. MisleadingShown marks the
-  bad-design case for the lemmas.
+  One rule: the ceremony only reports that a configuration control was presented (the objective
+  Layer-1 !Step). The control's terminology honesty is NOT the step's to declare -- it is an
+  interface-level assumption a profile opts into by including core/interface_clear_policy.spthy
+  and/or core/interface_misleading_policy.spthy (the !ControlDesign row policy_behavior reads).
+  Reads the persistent !Party handle (the linear AlexInit is consumed by the message flow in
+  profiles like P7); OncePolicyPrompt bounds it to one control per party.
 */
 
-// !Step('set-policy') + !StepData(terminology): the agnostic interface. The terminology honesty is the
-// TASK's, so policy_behavior reads it (not outcome_policy) -- Pathway B is task-mediated.
-rule UI_policy_clear:
-    [ AlexInit(idA), Fr(~pid) ]
-  --[ PolicyPrompt('Alex', ~pid, 'clear') ]->
+rule UI_policy_prompt:
+    [ !Party('Alex', idA), Fr(~pid) ]
+  --[ PolicyPrompt('Alex', ~pid) ]->
     [ PolicyPending(idA, ~pid),
-      !Step('Alex', ~pid, 'set-policy'), !StepData('Alex', ~pid, 'clear') ]
+      !Step('Alex', ~pid, 'set-policy') ]
 
-rule UI_policy_misleading:
-    [ AlexInit(idA), Fr(~pid) ]
-  --[ PolicyPrompt('Alex', ~pid, 'misleading'), MisleadingShown(~pid) ]->
-    [ PolicyPending(idA, ~pid),
-      !Step('Alex', ~pid, 'set-policy'), !StepData('Alex', ~pid, 'misleading') ]
+restriction OnePolicyPromptPerParty:
+  "All p pid1 pid2 #i #j. PolicyPrompt(p, pid1)@i & PolicyPrompt(p, pid2)@j ==> #i = #j"
 
 rule A_finish_policy:
     [ PolicyPending(idA, pid), PolicyDone('Alex', pid) ]

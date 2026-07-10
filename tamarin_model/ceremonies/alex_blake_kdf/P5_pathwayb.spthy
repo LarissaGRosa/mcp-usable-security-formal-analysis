@@ -3,16 +3,20 @@ begin
 
 /*
   PROFILE P5 · Pathway B (sigma4 MisleadingTerminology, AWS-S3 mistake).
-  Profile = < C0 + SET_POLICY, {Attentive}, {} (no stressor) >. The task-mediated pathway: the
-  mistake is read from the request's terminology flag in f_H, with NO mask change. Kept distinct
-  from the mask-mediated profiles (it is the second pathway, not a third stressor). Replaces old 13.
+  Profile = < C0 + SET_POLICY, {Attentive}, {} (no stressor), BOTH control designs >. The
+  task-mediated pathway: the mistake follows from the CONTROL'S design quality -- an interface-level
+  !ControlDesign row (both seeds included here, so the theory quantifies over clear AND misleading
+  designs) -- with NO mask change. Kept distinct from the mask-mediated profiles (it is the second
+  pathway, not a third stressor). Contrast P7: clear seed ONLY -> unsafe policy unreachable.
   Run: check.py --prove ceremonies/alex_blake_kdf/P5_pathwayb.spthy
 */
 
 #include "../../core/types.spthy"
 
-// -- human layer: task-mediated SET_POLICY f_H (mistake on misleading terminology, Pathway B) --
+// -- human layer: task-mediated SET_POLICY f_H (Pathway B) + BOTH control-design interfaces --
 #include "../../core/masks/policy_behavior.spthy"
+#include "../../core/interface_clear_policy.spthy"
+#include "../../core/interface_misleading_policy.spthy"
 #include "../../core/transitions/mask_state.spthy"
 #include "../../core/transitions/answered_once.spthy"
 

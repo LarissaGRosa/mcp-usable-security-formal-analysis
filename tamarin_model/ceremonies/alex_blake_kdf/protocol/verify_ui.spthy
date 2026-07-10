@@ -13,12 +13,15 @@ rule UI_verify_genuine:
     [ !Session('Alex', idA, sk), Fr(~vid) ]
   --[ VerifyPrompt('Alex', ~vid, 'genuine') ]->
     [ !Step('Alex', ~vid, 'compare'),
-      // !StepData = the ground truth for the compare masks: this artifact is genuine
-      // (Compare_attentive accepts only a 'genuine' one; see compare_behavior.spthy).
-      !StepData('Alex', ~vid, 'genuine') ]
+      // !StepData = OBSERVABLES <offered, reference>: here the displayed fingerprint IS the true one.
+      // The verdict is derived in compare_behavior (Attentive matches offered = reference), not here.
+      !StepData('Alex', ~vid, <~vid, ~vid>) ]
 
+// Adversary substitutes the displayed fingerprint (vid from In); ~ref is the prompt's true
+// fingerprint (fresh, never on the wire), so offered = reference is underivable for the adversary
+// and Compare_attentive can never fire on this step. Tampered(vid) stays as provenance for lemmas.
 rule UI_verify_tampered:
-    [ !Session('Alex', idA, sk), In(vid) ]
+    [ !Session('Alex', idA, sk), In(vid), Fr(~ref) ]
   --[ VerifyPrompt('Alex', vid, 'tampered'), Tampered(vid) ]->
     [ !Step('Alex', vid, 'compare'),
-      !StepData('Alex', vid, 'tampered') ]
+      !StepData('Alex', vid, <vid, ~ref>) ]

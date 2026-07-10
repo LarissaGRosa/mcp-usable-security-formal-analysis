@@ -12,25 +12,44 @@ begin
 */
 
 // -- spine (NOT ceremony.base: Blake must be degradable) --
+// -- crypto + framework --
 #include "../../core/types.spthy"
-#include "protocol/init.spthy"
-#include "protocol/messages.spthy"
-#include "protocol/blake_calc_stressable.spthy"
 
-// -- human-layer plumbing --
+// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
+#include "protocol/kdf.spthy"
+#include "protocol/finish.spthy"
+
+// -- f2994a ORANGE: interface layer (compute prompts + nonce-ack exposure, both parties) + adapter --
+#include "interface/sender.spthy"
+#include "interface/recipient.spthy"
+#include "interface/nonce_ack.spthy"
+#include "protocol/compute_keyresult.spthy"
+
+// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, Alex targeting --
 #include "bundles/human_common.spthy"
+#include "protocol/stress_blake.spthy"          // multi-party worst case: enable Blake too
 
-// -- CALC_SK phase (Alex producer + masks + sigma1/sigma3/sigma2) --
-#include "bundles/calc_phase.spthy"
+// -- 27ae60 GREEN: compute behaviour (Attentive/Busy/Careless) --
+#include "../../core/masks/compute_behavior.spthy"
 
-// -- session + the three post-KDF phases --
-#include "protocol/session.spthy"
-#include "bundles/approve_phase.spthy"
-#include "bundles/verify_phase.spthy"
-#include "bundles/authorize_phase.spthy"
+// -- eb5757 RED: the CALC trio (v2 detectors), both parties --
+#include "../../core/stressors/cognitive_load.spthy"           // sigma1
+#include "../../core/stressors/time_pressure_deadline.spthy"   // sigma3
+#include "../../core/stressors/distraction_concurrent.spthy"   // sigma2
 
-// -- enable Blake too --
-#include "protocol/stress_blake.spthy"
+// == post-KDF phases (interface prompts read !Session; behaviours + their stressors) ==
+#include "protocol/approval_ui.spthy"
+#include "../../core/masks/confirm_behavior.spthy"
+#include "../../core/stressors/habituation.spthy"              // sigma8
+
+#include "protocol/verify_ui.spthy"
+#include "../../core/masks/compare_behavior.spthy"
+#include "../../core/masks/compare_keychecked.spthy"
+#include "../../core/stressors/abstraction.spthy"              // sigma6
+
+#include "protocol/authorize_ui.spthy"
+#include "../../core/masks/authorize_behavior.spthy"
+#include "../../core/stressors/security_anxiety.spthy"         // Anxiety
 
 // -- generic usability-security invariants (ROADMAP #3 library; proven here in the worst case) --
 #include "../../core/usability_properties.spthy"

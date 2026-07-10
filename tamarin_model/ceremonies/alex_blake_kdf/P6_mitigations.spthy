@@ -11,35 +11,32 @@ begin
   Run: check.py --prove ceremonies/alex_blake_kdf/P6_mitigations.spthy
 */
 
-#include "ceremony.base.spthy"
+// -- crypto + framework --
+#include "../../core/types.spthy"
 
-// -- human-layer plumbing --
+// -- 1f6fd0 BLUE: protocol layer (init + nonce wire) + the SHUTDOWN finish (key-confirmation) --
+#include "protocol/kdf.spthy"
+#include "protocol/finish_confirmed.spthy"
+
+// -- f2994a ORANGE: interface layer (Alex's compute prompt) + compute adapter --
+#include "interface/sender.spthy"
+#include "protocol/compute_keyresult.spthy"
+
+// -- human plumbing (Alex) + the mitigation restrictions (shutout + verify-shutout) --
 #include "bundles/human_common.spthy"
-
-// -- the mitigation restrictions (shutout auto-approve block + verify-shutout) --
 #include "../../core/mitigations.spthy"
 
-// -- CALC_SK with key-confirmation shutdown + the masks/stressor that produce the slip --
-#include "protocol/msg3_request_confirmed.spthy"
-// agnostic compute behaviour + KeyResult adapter (replaces attentive_calc / busy_calc)
-#include "../../core/masks/outcome_policy.spthy"
+// -- 27ae60 GREEN: compute behaviour; eb5757 RED: sigma1 drives the slip (caught by the shutdown) --
 #include "../../core/masks/compute_behavior.spthy"
-#include "protocol/compute_keyresult.spthy"
-// usability lexicon (Layer 2): the agnostic sigma1 reads !Demands from here
-#include "../../core/lexicon_tlx.spthy"
 #include "../../core/stressors/cognitive_load.spthy"
 
-// -- session + shutout-protected APPROVE phase (sigma8) --
-#include "protocol/session.spthy"
+// == shutout-protected APPROVE phase (sigma8, blocked by ShutoutBlocksAutoApprove) ==
 #include "protocol/approval_shutout_ui.spthy"
-// agnostic confirm behaviour (replaces attentive_approve / habituated_approve); outcome_policy above.
 #include "../../core/masks/confirm_behavior.spthy"
 #include "../../core/stressors/habituation.spthy"
 
-// -- VERIFY phase (sigma6) under verify-shutout --
+// == VERIFY phase (sigma6) under verify-shutout ==
 #include "protocol/verify_ui.spthy"
-// agnostic compare behaviour + !KeyChecked adapter (replaces attentive_verify / naive_verify);
-// outcome_policy already included above (compute cluster).
 #include "../../core/masks/compare_behavior.spthy"
 #include "../../core/masks/compare_keychecked.spthy"
 #include "../../core/stressors/abstraction.spthy"

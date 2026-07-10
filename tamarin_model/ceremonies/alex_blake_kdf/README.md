@@ -6,61 +6,62 @@ sense) that composes the shared spine plus the phase bundles / stressors it exer
 `../../../usability_extension_plan.md` (status in §0), `../../../mask_machinery_formalization.md`
 (§6), and `../../../tamarin_model/MULTIPARTY_EXTENSIBILITY_PLAN.md` (the A–D consolidation) for design.
 
-## Layout
+## Layout (V3 layered template — same as `secure_email`)
 
 | Path | Role |
 |---|---|
-| `ceremony.base.spthy` | **Shared spine** (`#include`-d, not standalone): core types + `protocol/init` + `protocol/messages` (Msg1/Msg2) + `protocol/blake_calc` (Blake's default Attentive CALC_SK). |
-| `P<N>_<name>.spthy` (e.g. `P1_calc_pressure.spthy`) | **Profile entry-point theories** — each composes the spine + bundles + its lemmas. *These are what you run.* |
-| `bundles/` | **Phase bundles**: one include per ceremony phase = its producer + every mask for it + every stressor targeting it (`calc_phase`, `approve_phase`, `verify_phase`, `authorize_phase`), plus `human_common` (the gates + Alex enable). |
-| `protocol/` | Protocol-layer fragments: `init`, `messages`, Blake's CALC_SK (`blake_calc` default / `blake_calc_stressable` opt-in), the Msg3 variants (`msg3_inline` / `msg3_request` / `msg3_request_confirmed`), the UI phases, `infer_harness` (the inferred-tier poser), and the `stress_alex` / `stress_blake` enables. |
+| `P<N>_<name>.spthy` | **Profile entry-point theories** — each is a manifest: crypto → protocol → interface → human layer → stressors → lemmas. *These are what you run.* |
+| `protocol/` | 🔵 blue layer: `kdf.spthy` (init + nonce wire), `finish.spthy` (plain finish + session) / `finish_confirmed.spthy` (the key-confirmation shutdown), the post-KDF prompt producers (`approval_ui`, `approval_shutout_ui`, `verify_ui`, `authorize_ui`, `policy_ui`, `warning_ui`), `infer_harness` (P4 analyzer poser), the compute adapters (`compute_keyresult` / `compute_opresult`), and the `stress_alex` / `stress_blake` enables. |
+| `interface/` | 🟠 orange layer: one rule per control, emits `!Step`+`!StepData`(+`!UnderDeadline`). `sender` / `recipient` (the compute prompts), `nonce_ack` (the exposure prompt that gives σ2-concurrency its second prompt). |
+| `bundles/human_common.spthy` | mask_state + answered_once + outcome_policy + lexicon + `stress_alex` (Alex-default; add `stress_blake` for the multi-party cases). Swap-profiles (P7/P9) compose the human layer manually instead. |
 | `experiments/` | Lemma-only files, one per profile (same `P<N>_<name>`). |
-| `../../core/` | The reusable, party-generic human layer: `masks/`, `stressors/`, `transitions/`, `mitigations`. |
+| `../../core/` | The reusable, party-generic human layer: `masks/`, `stressors/`, `transitions/`, `mitigations`, `lexicon_tlx` / `interface_*` / `population_*`. |
 
-Each profile must be **closed** (every LHS fact has a producer) or Tamarin rejects it — see the
-wellformedness note in the plan's Appendix A.
+Each profile must be **closed** (every LHS fact has a producer) or Tamarin rejects it. Triggering is a
+graded **dose-response**: the lexicon rates a step `'lo' < 'med' < 'hi'` and a detector fires on a BAND
+(`!AtLeast(lvl, thr)`, order seeded in `core/types.spthy`). See
+[`../../docs/V3_UNIFY_REALISM_PLAN.md`](../../docs/V3_UNIFY_REALISM_PLAN.md).
 
 ## Profile index
 
-The model is **7 profiles** (consolidated from the original 21 single-construct experiments; Stage D
-of the multi-party plan). Each mask-mediated profile exercises **≥3 stressors**.
+**12 profiles** (P0–P11). Each mask-mediated failure profile exercises ≥3 stressors; P10/P11 are
+focused single-mechanism realism demonstrations.
 
 | Profile (theory) | Scope | Stressors | Key lemmas |
 |---|---|---|---|
-| `P0_baseline` (`ToyCeremony_P0_Baseline`) | Attentive inline KDF — the unperturbed baseline | — | `P0_completes`, `P0_agreement` |
-| `P1_calc_pressure` (`ToyCeremony_P1_CalcPressure`) | CALC_SK under pressure, on **both** Alex and Blake | σ₁, σ₃, σ₂ | slip/timeout reachable, Blake slips, `P1_load_requires_enable`, `P1_busy_no_correct_key` (7) |
-| `P2_postkdf_recovery` (`ToyCeremony_P2_PostKdfRecovery`) | APPROVE + VERIFY + AUTHORIZE under stress, with recovery | σ₈, σ₆, SecurityAnxiety | auto-approve/mistake/abort reachable, `P2_recovery_requires_warning`, `P2_mistake_requires_abstraction` (7) |
-| `P3_worstcase` (`ToyCeremony_P3_WorstCase`) | the maximal profile — all phases/masks/stressors on **both** parties (§6a) | all CALC + post-KDF | every failure reachable, Blake slips, composed safety (8) |
-| `P4_inferred` (`ToyCeremony_P4_Inferred`) | the fully-inferred tier (analyzer direction), one merged poser | inferred σ₁, σ₆, σ₁₀, σ₉ | inferred slip/mistake/chaining/fatigue, `P4_escalation_requires_failure` (6) |
-| `P5_pathwayb` (`ToyCeremony_P5_PathwayB`) | **Pathway B** — task-mediated mistake, no mask change | σ₄ (presentation) | `P5_mistake_is_task_mediated_not_mask`, `P5_mistake_requires_misleading` (4) |
-| `P6_mitigations` (`ToyCeremony_P6_Mitigations`) | three Poka-Yoke mitigations in one ceremony | σ₁, σ₈, σ₆ + fixes | `P6_no_slip_completion`, `P6_shutout_blocks_injected`, `P6_no_tampered_mistake` (6) |
+| `P0_baseline` | layered pipeline, no stressor — the unperturbed baseline | — | `P0_completes`, `P0_agreement` |
+| `P1_calc_pressure` | CALC under pressure, **both** parties | σ₁, σ₃-deadline, σ₂-concurrency | slip/timeout reachable, Blake slips, `P1_load_requires_enable`, `P1_busy_no_correct_key` (7) |
+| `P2_postkdf_recovery` | APPROVE + VERIFY + AUTHORIZE, with recovery | σ₈, σ₆, SecurityAnxiety | auto-approve/mistake/abort reachable, `P2_recovery_requires_warning` (7) |
+| `P3_worstcase` | maximal — all phases/masks/stressors, **both** parties (§6a) | all CALC + post-KDF | every failure reachable, Blake slips, composed safety (8) |
+| `P4_inferred` | fully-inferred tier (analyzer direction), one merged poser | inferred σ₁, σ₆, σ₁₀, σ₉ | inferred slip/mistake/chaining/fatigue (6) |
+| `P5_pathwayb` | **Pathway B** — task-mediated mistake, no mask change | σ₄ (presentation) | `P5_mistake_is_task_mediated_not_mask` (4) |
+| `P6_mitigations` | three Poka-Yoke mitigations in one ceremony | σ₁, σ₈, σ₆ + fixes | `P6_no_slip_completion`, `P6_shutout_blocks_injected`, `P6_no_tampered_mistake` (6) |
+| `P7_interface` | the interface lever: hardened verify (Effort 'lo') + clear policy | σ₆ (kept from firing) | `P7_no_abstraction`, `P7_no_mistake`, `P7_no_unsafe_policy` (6) |
+| `P8_adversary` | adversary-INDUCED time pressure (no environmental stressor) | induced σ₃ | `P8_busy_requires_adv_urgency`, `P8_autoapprove_requires_adv` (3) |
+| `P9_population` | expert population (low compute demand) via the band | σ₁ (cannot fire) | `P9_no_load`, `P9_no_slip` (3) |
+| `P10_additive_load` | **§2c** two `'med'` steps sum past threshold (Sweller) | σ₁ + `additive_load` | `P10_no_solo_load`, `P10_additive_busy`, `P10_additive_slip` (4) |
+| `P11_inverted_u` | **§2b** `'med'`-arousal facilitating zone (Yerkes-Dodson) | SecurityAnxiety (cannot fire) | `P11_no_anxiety_at_moderate`, `P11_authorize_granted`, `P11_no_abort` (3) |
 
-All **40 lemmas** verify under Tamarin 1.12 / Maude 3.5.1; each profile proves in **≤4 s** (slowest:
-P4 ≈ 3.8 s).
+All lemmas verify under Tamarin 1.12 / Maude 3.5.1; every profile proves in **≤ 5 min** (slowest
+`P2_postkdf_recovery` ≈ 17 s).
 
 ## The four mechanisms behind the profiles
 
-**Phase bundles (extensibility / Stage C).** `bundles/` groups each ceremony phase into one include:
-its producer + every mask for it + every stressor targeting it. So **adding a stressor is one
-include line in a bundle** (every profile using that phase inherits it), and **a new profile is the
-spine + `human_common` + the phase bundles it wants + lemmas**. Post-KDF bundles need
-`protocol/session.spthy` and a CALC producer. The recovery warning and σ₉/σ₁₀ inference stay out of
-the basic bundles (special posers; `Inequality` would clash if the σ₈ and σ₉ bundles were combined).
+**One include per layer (readability / extensibility).** A profile reads top-to-bottom as its own
+summary: crypto → `protocol/*` → `interface/*` → `bundles/human_common` → the stressor detectors it
+arms → lemmas. **Adding a stressor to a profile is one include line**; adding a control is one
+`interface/` rule. The stressor layer reads the **interface's** `!Step`, never the protocol.
 
-**Per-participant targeting (Stage B).** Every `core/stressors` rule reads `!StressEnable(P)`, so a
-stressor fires only for an ENABLED party. `protocol/stress_alex.spthy` / `stress_blake.spthy` each
-seed `!StressEnable` for one party off the persistent `!Party(p,id)` (from `protocol/init.spthy`). A
-profile includes the enable for whoever it stresses; an un-enabled party cannot be stressed even
-when its trigger fact is present — proven in P1 by `P1_load_requires_enable` (a stressor onset
-implies the party was enabled first).
+**Per-participant targeting.** Every `core/stressors` rule reads `!StressEnable(P)`, so a stressor
+fires only for an ENABLED party. `protocol/stress_alex.spthy` / `stress_blake.spthy` seed
+`!StressEnable` off the persistent `!Party(p,id)` (from `protocol/kdf.spthy`). `human_common` enables
+Alex by default; a multi-party profile adds `stress_blake` (P1, P3). An un-enabled party cannot be
+stressed even when its trigger step is present — proven in P1 by `P1_load_requires_enable`.
 
-**Every participant is mask-capable (Stage A).** Blake no longer computes the key inline:
-`protocol/messages.spthy` leaves him at `BlakeWait`, and his CALC_SK is answered by a separate
-fragment. The spine default (`protocol/blake_calc.spthy`) answers Attentive and posts **no** `!Req`,
-so Blake is inert to the detectors unless a profile opts in. A profile that stresses Blake skips
-`ceremony.base.spthy` and pulls `protocol/blake_calc_stressable.spthy` (a `'Hard'` `!Req` the SHARED
-σ₁/σ₃/σ₂ + core masks degrade) — P1 and P3 do this. The human layer keys on the party `P`, so Blake
-reuses it with no Blake-specific files.
+**Every participant is mask-capable.** Both parties derive the key through the **interface**
+(`interface/sender.spthy` for Alex, `interface/recipient.spthy` for Blake), so both are subject to
+the mask machinery with no party-specific files — the KDF's old `blake_calc` special-case is gone.
+The human layer keys on the party `P`, so Blake reuses it verbatim.
 
 **Two failure pathways + mitigations.** Pathway A is mask-mediated (a stressor degrades the mask,
 P1–P4); Pathway B is task-mediated (`P5`: an Attentive user errs from misleading terminology, no

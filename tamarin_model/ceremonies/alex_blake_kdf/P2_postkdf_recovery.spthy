@@ -2,32 +2,53 @@ theory ToyCeremony_P2_PostKdfRecovery
 begin
 
 /*
-  PROFILE P2 · the post-KDF phases under stress, with recovery.
-  Profile = < C0 + APPROVE + VERIFY + AUTHORIZE + recovery,
-              {Attentive,Habituated,Naive,Fearful}, {sigma8, sigma6, SecurityAnxiety} >.
-  Consolidates old 02 / 05 / 06 / 07. Attentive inline KDF brings the session up; the three
-  post-KDF phase bundles each add their stressor; warning_ui adds the recovery edge.
+  PROFILE P2 -- the post-KDF phases under stress, with recovery (V3 layered template).
+  Protocol <-> interface <-> stressor layer <-> user. An UNSTRESSED KDF (compute answered Attentive)
+  brings up the !Session; then the three post-KDF controls are posed and their stressors read them:
+    APPROVE (confirm) -- sigma8 Habituation (two prompts, density)          -> Habituated auto-approve
+    VERIFY  (compare) -- sigma6 Abstraction (Effort-hi fingerprint check)   -> Naive accepts tampered
+    AUTHORIZE         -- SecurityAnxiety (Arousal-hi, inverted-U over-arousal) -> Fearful abort
+  plus warning_ui, the good-usability re-engagement that recovers the user to Attentive.
+  (sigma8/sigma6/anxiety are single detectors -- not v1/v2 split -- so they read the post-KDF prompts
+  as-is.) Consolidates old 02 / 05 / 06 / 07.
   Run: check.py --prove ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy
 */
 
-#include "ceremony.base.spthy"
+// -- crypto + framework --
+#include "../../core/types.spthy"
 
-// -- human-layer plumbing (gates + answer discipline + Alex enable) --
+// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
+#include "protocol/kdf.spthy"
+#include "protocol/finish.spthy"
+
+// -- f2994a ORANGE: interface layer -- the (unstressed) compute prompts bring up the session --
+#include "interface/sender.spthy"
+#include "interface/recipient.spthy"
+#include "protocol/compute_keyresult.spthy"
+
+// -- human plumbing: mask gates, one-answer, outcome matrix, lexicon, targeting --
 #include "bundles/human_common.spthy"
 
-// -- usability lexicon (Layer 2): the agnostic sigma6 reads !Demands from here --
-#include "../../core/lexicon_tlx.spthy"
-// -- outcome policy (the mask behaviour matrix): the agnostic compare masks read it --
-#include "../../core/masks/outcome_policy.spthy"
+// -- 27ae60 GREEN: compute behaviour (Attentive here -- no CALC stressor) --
+#include "../../core/masks/compute_behavior.spthy"
 
-// -- Attentive KDF (inline) brings up the session --
-#include "protocol/msg3_inline.spthy"
-#include "protocol/session.spthy"
+// == post-KDF phases (interface prompts read !Session; behaviours + their stressors) ==
 
-// -- the three post-KDF phases, each a one-line bundle (sigma8 / sigma6 / SecurityAnxiety) --
-#include "bundles/approve_phase.spthy"
-#include "bundles/verify_phase.spthy"
-#include "bundles/authorize_phase.spthy"
+// APPROVE_REQ (confirm) + sigma8 Habituation
+#include "protocol/approval_ui.spthy"
+#include "../../core/masks/confirm_behavior.spthy"
+#include "../../core/stressors/habituation.spthy"
+
+// VERIFY_KEY (compare) + sigma6 Abstraction
+#include "protocol/verify_ui.spthy"
+#include "../../core/masks/compare_behavior.spthy"
+#include "../../core/masks/compare_keychecked.spthy"
+#include "../../core/stressors/abstraction.spthy"
+
+// AUTHORIZE + SecurityAnxiety (Fearful)
+#include "protocol/authorize_ui.spthy"
+#include "../../core/masks/authorize_behavior.spthy"
+#include "../../core/stressors/security_anxiety.spthy"
 
 // -- recovery: the good-usability warning (SetMask Attentive) --
 #include "protocol/warning_ui.spthy"

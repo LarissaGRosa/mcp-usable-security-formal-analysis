@@ -33,16 +33,20 @@ rule Pose_verify_genuine:
       // Layer-1 objective step (agnostic interface): a verify is a 'compare' action -- sigma6 reads
       // !Step + the lexicon; the compare masks read !Step + !StepData.
       !Step('Alex', ~vid, 'compare'),
-      // !StepData = the ground truth for the compare masks (genuine here; Compare_attentive accepts it).
-      !StepData('Alex', ~vid, 'genuine') ]
+      // !StepData = OBSERVABLES <offered, reference>: the displayed fingerprint IS the true one.
+      // The verdict is derived in compare_behavior (Attentive matches offered = reference), not here.
+      !StepData('Alex', ~vid, <~vid, ~vid>) ]
 
-// verify operation, adversary-supplied (tampered) fingerprint
+// verify operation, adversary-substituted fingerprint: the offered artifact x comes from In (it is
+// genuinely the adversary's), the true fingerprint ~vid is fresh and never on the wire -- so
+// offered = reference is underivable and Compare_attentive can never fire on this step. Before the
+// observables refactor this rule posed a FRESH value whose only tamperedness was the label.
 rule Pose_verify_tampered:
-    [ OpToken(idA), Fr(~vid) ]
+    [ OpToken(idA), Fr(~vid), In(x) ]
   --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
     [ Pending(idA, ~vid),
       !Step('Alex', ~vid, 'compare'),
-      !StepData('Alex', ~vid, 'tampered') ]
+      !StepData('Alex', ~vid, <x, ~vid>) ]
 
 // UI decision (sigma9 inferred from decision DENSITY -- >=3 handled !Did)
 rule Pose_decision:

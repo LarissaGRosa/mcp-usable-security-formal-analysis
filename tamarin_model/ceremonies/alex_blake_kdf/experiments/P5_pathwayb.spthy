@@ -20,7 +20,8 @@ lemma P5_mistake_is_task_mediated_not_mask:
   all-traces
   "All p pid #i. Mistake(p,pid)@i ==> ( RespMask(p,'Attentive')@i & not (Ex m #s. SetMask(p,m)@s) )"
 
-// the mistake is caused by misleading terminology; clear terminology never causes it.
+// the mistake is caused by the MISLEADING control design being in scope; a clear design never
+// causes it (P7 proves the converse: clear seed only -> unsafe policy unreachable).
 lemma P5_mistake_requires_misleading:
   all-traces
-  "All p pid #i. Mistake(p,pid)@i ==> (Ex #j. MisleadingShown(pid)@j)"
+  "All p pid #i. Mistake(p,pid)@i ==> (Ex #j. SeedInterface('misleading_policy')@j & #j < #i)"

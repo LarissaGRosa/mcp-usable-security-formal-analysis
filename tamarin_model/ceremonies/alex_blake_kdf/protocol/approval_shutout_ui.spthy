@@ -9,14 +9,15 @@
 
 // !Step('Alex',_,'confirm'): Layer-1 objective step (agnostic interface) -- the migrated sigma8
 // counts these (>=2 distinct -> Habituated). Same as approval_ui; the injected one is also Shutout.
+// !StepData = OBSERVABLES <claimed, own> (verdict derived in confirm_behavior, lesson 14).
 rule UI_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
     [ !Step('Alex', ~pid, 'confirm'),
-      !StepData('Alex', ~pid, 'self') ]
+      !StepData('Alex', ~pid, <~pid, ~pid>) ]
 
 rule UI_inject_shutout:
-    [ !Session('Alex', idA, sk), In(pid) ]
+    [ !Session('Alex', idA, sk), In(pid), Fr(~own) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid), Shutout(pid) ]->
     [ !Step('Alex', pid, 'confirm'),
-      !StepData('Alex', pid, 'injected') ]
+      !StepData('Alex', pid, <pid, ~own>) ]

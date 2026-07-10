@@ -28,6 +28,21 @@ lemma P7_no_naive_verify:
 
 // ...and the tampered-key mistake is UNREACHABLE -- without any outcome-blocking mitigation,
 // purely because the better interface kept the user Attentive. (Contrast: P2_mistake_reachable.)
+// NB: this profile also poses a set-policy control (below), so P7_no_mistake additionally proves
+// no TASK-mediated mistake occurs under the clear control design.
 lemma P7_no_mistake:
   all-traces
   "not (Ex p vid #i. Mistake(p, vid)@i)"
+
+// ---- the SAME lever on Pathway B: a CLEAR set-policy control (interface_clear_policy) ----
+// the control still works: the safe policy is set (happy path).
+lemma P7_clear_policy_safe_reachable:
+  exists-trace
+  "Ex p pid #i. SetPolicy(p, pid, 'safe')@i"
+
+// ...and the unsafe policy is UNREACHABLE: under honest terminology the task-mediated mistake has
+// no cause. Proof pair with P5_misleading_attentive_mistake (misleading seed -> unsafe reachable):
+// "the control's options MUST state their effect in plain, unambiguous terms."
+lemma P7_no_unsafe_policy:
+  all-traces
+  "not (Ex p pid #i. SetPolicy(p, pid, 'unsafe')@i)"

@@ -10,22 +10,40 @@ begin
   Run: check.py --prove ceremonies/alex_blake_kdf/P7_interface.spthy
 */
 
-#include "ceremony.base.spthy"
+// -- crypto + framework --
+#include "../../core/types.spthy"
 
-// -- human-layer plumbing (gates + answer discipline + Alex enable) --
-#include "bundles/human_common.spthy"
+// -- 1f6fd0 BLUE: protocol layer (init + nonce wire; plain finish + session) --
+#include "protocol/kdf.spthy"
+#include "protocol/finish.spthy"
 
-// -- the INTERFACE under test: hardened verify (compare = low Effort). Swap for lexicon_tlx to get
-//    the baseline (high-Effort) interface and the mistake becomes reachable. --
-#include "../../core/interface_hardened_verify.spthy"
+// -- f2994a ORANGE: interface layer (Alex's compute prompt brings up the session) + adapter --
+#include "interface/sender.spthy"
+#include "protocol/compute_keyresult.spthy"
+
+// -- human plumbing, MANUAL (no lexicon_tlx: the demand profile is supplied by the interfaces
+//    under test). The INTERFACES: hardened verify (compare = low Effort; swap for lexicon_tlx to get
+//    the baseline high-Effort interface and the mistake becomes reachable) + the CLEAR set-policy
+//    control (swap for interface_misleading_policy and the unsafe policy becomes reachable, cf. P5). --
+#include "../../core/transitions/mask_state.spthy"
+#include "../../core/transitions/answered_once.spthy"
 #include "../../core/masks/outcome_policy.spthy"
+#include "protocol/stress_alex.spthy"
+#include "../../core/interface_hardened_verify.spthy"
+#include "../../core/interface_clear_policy.spthy"
 
-// -- Attentive inline KDF brings up the session --
-#include "protocol/msg3_inline.spthy"
-#include "protocol/session.spthy"
+// -- 27ae60 GREEN: compute behaviour (Attentive, brings up session) --
+#include "../../core/masks/compute_behavior.spthy"
 
-// -- the VERIFY_KEY phase (sigma6 detector + agnostic compare masks) --
-#include "bundles/verify_phase.spthy"
+// -- the SET_POLICY control under the clear interface (Pathway B, task-mediated) --
+#include "../../core/masks/policy_behavior.spthy"
+#include "protocol/policy_ui.spthy"
+
+// -- the VERIFY_KEY phase (sigma6 detector + agnostic compare masks) under the hardened interface --
+#include "protocol/verify_ui.spthy"
+#include "../../core/masks/compare_behavior.spthy"
+#include "../../core/masks/compare_keychecked.spthy"
+#include "../../core/stressors/abstraction.spthy"
 
 #include "experiments/P7_interface.spthy"
 
