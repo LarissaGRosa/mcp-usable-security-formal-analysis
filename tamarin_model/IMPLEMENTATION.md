@@ -1,5 +1,24 @@
 # `tamarin_model` — what is implemented and how
 
+> **V3 (2026-07-10): BOTH ceremonies now use one layered template.** `alex_blake_kdf` was migrated
+> off the old `ceremony.base` + `msg3_*` + `bundles/*_phase` spine onto the same five-layer shape as
+> `secure_email`: `protocol/` (🔵 crypto + wire + finish) → `interface/` (🟠 one rule per control,
+> emits `!Step`/`!StepData`) → stressor layer (🔴 detectors read the interface) → `masks/` (🟢
+> behaviours) → `bundles/human_common.spthy`. Triggering is now a graded **dose-response**: the
+> lexicon rates a step `'lo' < 'med' < 'hi'` and a detector fires on a *band* (`!AtLeast(lvl, thr)`
+> in `core/types.spthy`), not an exact `'hi'`. New realism: `core/stressors/additive_load.spthy`
+> (two `'med'` steps sum to overload; P10), the inverted-U facilitating zone (`'med'` arousal does
+> not freeze; P11), and population as a threshold-shift (P9 via the band). Profiles: alex_blake
+> P0–P11, secure_email S0–S4 — 17 total, all ≤ 5 min.
+>
+> **Sections §2, §3.2, §5, §7, §8 below describe the PRE-V3 alex_blake spine (`ceremony.base`,
+> `msg3_inline`/`msg3_request*`, `blake_calc*`, the phase bundles) and the v1 detectors
+> (`external_distraction`, `time_pressure`) — all DELETED in V3.** For the current architecture see
+> [`AUTHORING_GUIDE.md`](AUTHORING_GUIDE.md) (the start-here template) and
+> [`docs/V3_UNIFY_REALISM_PLAN.md`](docs/V3_UNIFY_REALISM_PLAN.md) (the migration record). The human
+> layer (`core/masks`, `core/transitions`, the outcome matrix, the mask-state model) is UNCHANGED
+> and is still described correctly below.
+
 This document describes the Tamarin model in this folder. It draws only on the
 files under `tamarin_model/`.
 
@@ -7,7 +26,7 @@ files under `tamarin_model/`.
 > `!Step(P,sid,action)` (the ceremony's objective interaction step) plus, for the lookup detectors, a row
 > of the `core/lexicon_tlx.spthy` usability lexicon — never a ceremony-specific task constant. This file
 > describes the model with that interface; [`STRESSORS.md`](STRESSORS.md) is the detailed stressor
-> reference and [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md) the design + rationale.
+> reference and [`AGNOSTIC_STRESSOR_INTERFACE.md`](docs/AGNOSTIC_STRESSOR_INTERFACE.md) the design + rationale.
 
 ## 1. What the model is
 
@@ -362,8 +381,12 @@ edge — it reads the `!Failed` outcome a σ₁ slip leaves (not a step), so a s
 
 **Pathway B (P5).** A task-mediated mistake with no mask change. An Attentive
 user sets a safe policy under clear terminology, and an unsafe policy under
-misleading terminology (the AWS S3 "Any Authenticated Users" case). The defining
-lemma:
+misleading terminology (the AWS S3 "Any Authenticated Users" case). The design
+quality is an **interface-level seed** (`core/interface_clear_policy.spthy` /
+`core/interface_misleading_policy.spthy` → a `!ControlDesign` row the behaviour
+reads, like the detectors read `!Demands`), not a per-step flag: P5 includes both
+seeds (quantifies over both designs); P7 includes only the clear one and proves
+the unsafe policy *unreachable* — the Pathway-B RFC pair. The defining lemma:
 
 ```
 lemma P5_mistake_is_task_mediated_not_mask:

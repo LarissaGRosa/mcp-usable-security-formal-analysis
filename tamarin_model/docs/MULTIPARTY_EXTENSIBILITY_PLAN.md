@@ -4,12 +4,12 @@
 > mask-capable, per-party `!StressEnable` targeting, phase `bundles/`, and the consolidated profiles.
 > Two things below are superseded by what was actually built:
 > - **Final profiles ≠ the §4 *proposed* table.** The shipped set is P0–P6 with different names/scopes;
->   the **as-built** table is in §4 (and the canonical index is [`ceremonies/alex_blake_kdf/README.md`](ceremonies/alex_blake_kdf/README.md)).
+>   the **as-built** table is in §4 (and the canonical index is [`ceremonies/alex_blake_kdf/README.md`](../ceremonies/alex_blake_kdf/README.md)).
 > - **The stressor interface was later made ceremony-agnostic** (a *separate* effort after this plan):
 >   detectors now read a generic `!Step(P,sid,action)` + the `core/lexicon_tlx.spthy` lexicon, not the
 >   `!Req`/`!Op` facts the Stage-A/B snippets below show; `*_inferred` detector files were renamed
 >   (suffix dropped). See [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md) and
->   [`STRESSORS.md`](STRESSORS.md). The Stage-A/B/C code blocks below are kept as the interface *at the
+>   [`STRESSORS.md`](../STRESSORS.md). The Stage-A/B/C code blocks below are kept as the interface *at the
 >   time of this plan* (the masks still read those `!Req`/`!Prompt` facts today — only the detectors moved).
 
 This plan added two capabilities to the `alex_blake_kdf` model:

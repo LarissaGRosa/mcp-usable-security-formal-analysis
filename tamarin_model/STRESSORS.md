@@ -1,13 +1,24 @@
 # Stressors — what they are and how each one fires
 
 This document describes the stressor layer of the Tamarin model, **as built** after the
-ceremony-agnostic migration (see [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md)
+ceremony-agnostic migration (see [`AGNOSTIC_STRESSOR_INTERFACE.md`](docs/AGNOSTIC_STRESSOR_INTERFACE.md)
 for the design and rationale). It draws only on the files under `tamarin_model/`.
 
 A stressor is the `f_U` transition function (machinery §6): it reads what the ceremony presents and
 shifts a participant from `Attentive` to a degraded mask. **No detector names a ceremony task.** A
 ceremony participates by emitting one generic fact per human step — `!Step(P, sid, action)` — in a
 fixed interaction taxonomy; the detectors read those, never a `'CALC_SK'`/`'kdf'`/`'verify'` constant.
+
+> **V3 (2026-07-10) — graded dose-response + additivity.** The lookup detectors (σ₁/σ₃/σ₆/anxiety)
+> no longer exact-match `'hi'`: they read `!Demands(action, dim, lvl) & !AtLeast(lvl, thr)`, firing on
+> a BAND (`'lo' < 'med' < 'hi'`, order seeded in `core/types.spthy`). A step rated below the threshold
+> (a hardened interface, an expert population) provably does not fire the detector. New/consolidated:
+> **σ₃ `time_pressure_deadline`** (situational — reads a `!UnderDeadline` context) and **σ₂
+> `distraction_concurrent`** (k=2 competing prompts, Wickens MRT) REPLACE the retired v1
+> `time_pressure` / `external_distraction`; **`additive_load`** fires when TWO distinct `'med'` steps
+> co-occur (Sweller's additive load — a case single-step σ₁ is blind to); and the inverted-U is
+> explicit — anxiety fires only at `'hi'` arousal, so `'med'` is the facilitating zone. Demonstrations:
+> `alex_blake_kdf/P10` (additive), `P11` (inverted-U).
 
 ## 1. The three-layer interface
 

@@ -3,7 +3,7 @@
 **Status:** ✅ **IMPLEMENTED** (2026-06-29). All seven collection detectors now read the agnostic
 `!Step` interface; all 9 profiles / 56 lemma checks prove green. See §6 for what landed and the
 commits. §1–§4 below are the original design rationale (the "today" they describe is the pre-migration
-state); §5–§7 record the realisation. **Companion:** [`STRESSORS.md`](STRESSORS.md) documents the
+state); §5–§7 record the realisation. **Companion:** [`STRESSORS.md`](../STRESSORS.md) documents the
 layer *as built*.
 
 This document changed the **trigger interface** — the seam where a `core/stressors/*` detector (the
@@ -14,14 +14,14 @@ request that prompted it:
    no detector names a task; a new ceremony participates by emitting `!Step` in the fixed taxonomy.)*
 2. **Reflect usability research** — the thing a detector reads should be a recognised usability /
    workload construct, with a citation, not an ad-hoc protocol flag. *(Met: NASA-TLX + cited
-   non-TLX constructs, in [`core/lexicon_tlx.spthy`](core/lexicon_tlx.spthy).)*
+   non-TLX constructs, in [`core/lexicon_tlx.spthy`](../core/lexicon_tlx.spthy).)*
 
 ---
 
 ## 1. The problem: the trigger interface leaks the ceremony
 
 Every detector today pattern-matches a **ceremony-specific fact shape with a domain constant baked
-into the premise** (the full catalogue is [`STRESSORS.md`](STRESSORS.md) §2):
+into the premise** (the full catalogue is [`STRESSORS.md`](../STRESSORS.md) §2):
 
 | Stressor | LHS premise | What is ceremony-specific |
 |---|---|---|
@@ -34,13 +34,13 @@ into the premise** (the full catalogue is [`STRESSORS.md`](STRESSORS.md) §2):
 
 Two concrete smells follow directly:
 
-**Smell 1 — the same stressor exists twice.** [`time_pressure_share.spthy`](core/stressors/time_pressure_share.spthy)
-is a verbatim clone of [`time_pressure.spthy`](core/stressors/time_pressure.spthy); the *only*
+**Smell 1 — the same stressor exists twice.** `time_pressure_share.spthy`
+is a verbatim clone of [`time_pressure.spthy`](../core/stressors/time_pressure.spthy); the *only*
 difference is `'SHARE_PW'` vs `'CALC_SK'` in the premise. One psychological construct, two files,
 because the trigger interface forced the task name into the rule.
 
 **Smell 2 — a second ceremony must speak the detectors' private vocabulary.** The email ceremony
-([`secure_email/protocol/compose_ui.spthy`](ceremonies/secure_email/protocol/compose_ui.spthy))
+([`secure_email/protocol/compose_ui.spthy`](../ceremonies/secure_email/protocol/compose_ui.spthy))
 reuses `core/` "verbatim", but only by emitting `!Req(...'SHARE_PW'...)` **and** `!Op(...'kdf'...)`
 **and** `!VerifyReq` **and** `!Decision` at once — shapes chosen to match what each detector happens
 to pattern-match, not shapes natural to *sending an email*. Agnosticism is currently achieved by
@@ -59,7 +59,7 @@ redesign replaces those five flavours with **one** agnostic interface.
 ## 2. Design principle: separate *measurement* from *interpretation* from *onset*
 
 The inferred tier already gestures at this — "the HCI knowledge *kdf is hard* lives in the detector"
-([`cognitive_load_inferred.spthy`](core/stressors/cognitive_load_inferred.spthy) header). The
+(`cognitive_load_inferred.spthy` header). The
 redesign makes it a hard, three-layer split so the detector ends up **ceremony-blind**:
 
 ```mermaid
@@ -87,7 +87,7 @@ flowchart LR
   dimensions, *with the citation in the file header*. This is the only place HCI knowledge lives.
 - **Layer 3 (detector):** reads `Demands(action, dimension, level)` and a threshold — **no task
   name, no operation name, no `'Hard'` flag.** Everything below `SetMask` (the persistent
-  current-mask gates in [`mask_state.spthy`](core/transitions/mask_state.spthy), the masks, the
+  current-mask gates in [`mask_state.spthy`](../core/transitions/mask_state.spthy), the masks, the
   outcomes) is **unchanged** — this redesign touches only the LHS of the `f_U` rules and what feeds
   it.
 
@@ -186,7 +186,7 @@ Demands('compute', 'TemporalDemand', 'hi')
 
 ## 5. Tamarin realisation notes (design risks to validate before building)
 
-The downstream half is safe — `SetMask`, [`mask_state.spthy`](core/transitions/mask_state.spthy),
+The downstream half is safe — `SetMask`, [`mask_state.spthy`](../core/transitions/mask_state.spthy),
 masks, outcomes are untouched. The risks are all on the new LHS:
 
 - **Ordered levels.** `'lo' < 'med' < 'hi'` has no built-in order in Tamarin. Either (a) match the

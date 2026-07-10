@@ -19,6 +19,68 @@
   PGP key-substitution model. Headline lemmas: `S0_attentive_keeps_secret` (no degrade ⇒ no leak) +
   `S0_message_secrecy_attribution` (adversary access ⇒ `Mistake` | `LeakPw` | `MisdeliveredPw`).
   Re-confirmed lesson 2: `/*` in a comment (`core/masks/*_share`) killed the parser.
+- **Compare-class observables refactor (2026-07-01, lesson 14):** `!StepData` for a `compare` step
+  now carries the OBSERVABLES `<offered, reference>` (displayed artifact vs trusted reference),
+  never a `'genuine'`/`'tampered'` oracle tag — `Compare_attentive` PERFORMS the comparison by
+  matching `<k,k>`; `Tampered(vid)` stays as the producer's provenance action for lemmas only.
+  Producers updated: verify_ui, infer_harness (tampered fp now genuinely from `In`), pgp_pathway,
+  compose_ui. Also: `set_passphrase`/`A_compose_pw` split into `'compute'` + `'share'` !Steps; all
+  composer/read steps now emit !Step (`send`/`attach_public_key`→'confirm', `set_hint`/`B_read_pw`
+  →'transcribe'); σ1 added to S0's pw bundle; S0+S1 carry stressor-ONSET exists-trace coverage
+  lemmas (a never-firing detector = FAIL). Sweep P0–P9+S0+S1 green.
+- **Secure_email lemma restructure (2026-07-02):** three sections per experiment file — (A) happy
+  paths, (B) SECURITY PROPERTIES under masks/stressors (all-traces; new:
+  `S0_pgp_leak_requires_degraded_verify`, `S0_pw_secrecy_rests_on_share_only`,
+  `S0_misdelivery_locks_out_recipient`), (C) FAILURE CHAINS (exists-trace) each naming the full
+  interface-step → stressor → mask → outcome → K(m) cascade in ONE formula. The chains subsume the
+  per-stressor onset canaries (kept per-ceremony coverage: σ3+σ2 chains in S0, σ1+σ9+σ3-recipient in
+  S1, σ8 in S2 — σ1/σ3 can't both fire for one party, OneSetMaskPerMask on 'Busy'). Now S0 13 (+2
+  UP), S1 9, S2 6 — 30 checks, all ≤4 s.
+- **Demo ceremonies RETIRED (2026-07-09):** `ceremonies/fido_auth/` (ROADMAP #7 attach-to-real-protocol
+  worked example, git 2c56573) and `ceremonies/phishing/` (ROADMAP #5 belief-state worked example, git
+  045d2e0) were DELETED per user decision — the repo now maintains exactly two ceremonies
+  (alex_blake_kdf P0–P9, secure_email S0–S2 = 13 theories). Their contributions that remain:
+  `confirm_behavior`'s `Confirmed` output+adapter pattern, `TERMINATION.md` (recipe from fido),
+  the belief-state design (ROADMAP #5 notes). rfc_requirements.json dropped
+  REQ-PUSH-MFA-NUMBER-MATCH + REQ-VERIFIED-IDENTITY (RFC_GUIDANCE now 6/6 proven); ROADMAP/INCIDENTS/
+  TERMINATION/AUTHORING_GUIDE annotated. NB: rfc_gen.py caught that the lemma restructure had renamed
+  `S0_leak_pw_inband_reachable` → manifest re-pointed to `S0_distraction_careless_silent_compromise`.
+- **C1 LAYERED v2 (2026-07-09, REPLACED all old S-profiles; plan in docs/LAYERED_V2_PLAN.md):**
+  five strict layers (protocol/ ↔ interface/ ↔ stressors ↔ user), one directory per layer.
+  Highlights: PK sub-ceremony modeled (keygen→publish: key on the PUBLIC channel, fingerprint on
+  OOB); tampering = DY's choice (ONE `P_fetch: In(k)` rule — no genuine/tampered producer branch,
+  no Tampered action; "tampered" derived via H_encto_shape); phishing EMERGES (open
+  `<'pwreq',to,replyTo>` mail channel + first-class malicious participant Eve with `!Corrupt` →
+  her OOB inbox leaks to DY; share class got triple observables `<recip, correspondent, pw>` —
+  Attentive matches recip=correspondent and DEFEATS the phish, proven `S2_attentive_defeats_phish`);
+  v2 detectors: σ3 = `!UnderDeadline(pid)` interface CONTEXT (time_pressure_deadline.spthy,
+  situational per Maule & Svenson), σ2 = k=2 prompt CONCURRENCY (distraction_concurrent.spthy,
+  Wickens MRT); new opt-in row `outcome_careless_skipcheck` (Careless+compare→credulous, Whitten
+  & Tygar). Profiles: S0_baseline (9s, `S0_secrecy_absolute`), trios S1_pgp{σ6,σ8,σ2} 130s /
+  S2_pw{σ1,σ3,σ9} 50s (incl. emergent-phish chain) / S3_mixed{σ6,σ3,anxiety} 13s, S4_worstcase
+  (all 7, 174s) — every experiment ≤5 min. New tricks recorded in lesson 15: per-lemma
+  `[heuristic=C]` attribute (fixed H_sk_secret 90s→8s) and DON'T prove both attribution AND
+  attentive-keeps-secret (exact contrapositives — one proof, ~100s saved per profile).
+- **C1 profile S3 `S3_mock_interface.spthy` (2026-07-09, 17 checks ~2.5 min):** the LAYERED
+  mock-interface profile matching `secure-email-mock.html`. Three strict layers, color-coded via
+  the `rule Name [color=#hex]:` attribute (works in Tamarin 1.12; whole core+secure_email now
+  colored): #1f6fd0 protocol (`mock_protocol.spthy`) ↔ #f2994a interface (`mock_iface.spthy`, one
+  rule per mock control; poses !Step up, PReq_* down) ↔ #27ae60 masks / #eb5757 stressors /
+  #9b51e0 seeds. ALL 6 masks + 7 detectors (σ8+σ9 coexist — habituation's restriction renamed
+  `InequalityHabituation`); send = 'authorize' (Fearful freezes; opt-in
+  `outcome_degraded_click.spthy` lets Busy/Habituated/Naive/Careless still click); compare checks
+  fetched key against the OOB-delivered fingerprint (`OobFp` from publish); `Authorize_grant` now
+  outputs `Granted(P,aid)` (gates the send). One exists-trace chain per stressor + secrecy pair
+  via 3 [reuse] helpers. See lessons 15-16.
+- **C1 profile S2 `S2_habituation.spthy` (2026-07-02, 7 lemmas ~2 s):** σ8 finally triggerable in
+  secure_email. `protocol/trustkey_ui.spthy` = Proton Trust-key BUTTON + CONFIRM MODAL as two
+  `'confirm'` steps (the σ8 k=2 density count); paired with the OPT-IN outcome row
+  `core/masks/outcome_habituated_clickthrough.spthy` (`Habituated+compare→credulous` — generalized
+  warning habituation, Anderson & Vance CHI 2015). Opt-in, NOT global: P2/P3 prove
+  `mistake_requires_abstraction` under the default calibration; a profile chooses the stronger
+  hypothesis by one include (same pattern as `interface_hardened_verify` for !Demands rows).
+  Headlines: `S2_habituated_clickthrough_leaks` (double modal → Habituate → click-through accepts
+  substituted key → K(m)) + `S2_mistake_requires_habituation` (no other cause in this profile).
 - **C1 profile S1 `S1_interface.spthy`** (7 lemmas, ~3 s): the sending INTERFACE generates the
   stressors (analyzer/inferred direction, lesson 12). `protocol/compose_ui.spthy` poses each
   composer step's OBJECTIVE op + the S0 trigger fact: choose_method→`!Decision`×3→σ9 (Careless),
@@ -111,3 +173,72 @@
     unsafe-success (Busy `slip` wrong key; Habituated/Busy `auto_approve`) vs safe-fail
     (Careless `timeout` / stall). Auto-approve requires a degraded mask, not specifically habituation
     (a persisted Busy user also auto-approves).
+
+14. **Verdicts live in the response layer; ceremonies emit observables.** A producer rule must not
+    pre-compute a security judgment as a constant the mask reads (`!StepData(...,'genuine')` was the
+    response-layer twin of the `'Hard'` designer flag the stressor migration removed — worst case
+    was P4's "tampered" fingerprint: a FRESH value whose only tamperedness was the label). Give the
+    mask the observables (`<offered, reference>`) and let the Attentive rule PERFORM the check by
+    matching `<k, k>` — matching a pair of equal variables on a fact LHS is safe (pairs are
+    transparent constructors; no lesson-11 derivation-check trip; the whole sweep stayed green first
+    try). Ground-truth actions (`Tampered`) stay on the producer as LEMMA vocabulary only. Bonus
+    honesty: an adversary re-offering the genuine artifact is now correctly *accepted* by Attentive
+    instead of stalling. **Confirm class migrated too (2026-07-02):** `!StepData(P,pid,<claimed,own>)`
+    — the prompt's claimed intent vs the user's own pending intent (fresh `~own` when they initiated
+    nothing); `Confirm_attentive_verify` matches `<k,k>`; `Injected` stays producer provenance.
+    Producers: approval_ui, approval_shutout_ui, fido_auth/protocol. All green first pass.
+    **set-policy migrated too (2026-07-02):** the `'clear'/'misleading'` !StepData tag is gone —
+    design quality is an INTERFACE-level `!ControlDesign('set-policy', q)` row seeded by
+    `core/interface_{clear,misleading}_policy.spthy` (same mechanism as !Demands rows), read by
+    policy_behavior; producers (policy_ui — now off `!Party`, one rule; expiry_ui — one rule) emit
+    a bare `!Step`. P5/S0/S1 include BOTH seeds (per-trace commitment via answered_once); P7
+    includes ONLY clear + proves `P7_no_unsafe_policy` (the Pathway-B RFC pair with
+    `P5_misleading_attentive_mistake`). NO !StepData anywhere carries a verdict/quality tag now —
+    payloads are values or observable pairs only.
+
+15. **Deep layered pipelines need [reuse] helpers + exposure/gate discipline (S3).** A protocol↔
+    interface↔human layering multiplies all-traces search: every human-GATED crossing adds a
+    RespMask interval gate, and with 7 once-bounded stressors the K(m) lemmas explode (S3's
+    attentive/attribution hung >8 min; heuristics C/I did not help). Three fixes, in order:
+    (a) gate ONLY the crossings that drive outcomes (compare/share/authorize); every other button
+    poses an EXPOSURE-ONLY !Step — density detectors count POSED steps, so σ8/σ9/σ2 still fire;
+    (b) do NOT include behavior files whose answers drive nothing (confirm/decide in S3) — each
+    optional answer is pure branching; (c) prove K-facts once as [reuse] helpers the big lemmas
+    consume: `PwCreated & K(pw) ⇒ leak-outcomes` (6 steps), `OwnSkGen & K(sk) ⇒ F`, and a
+    STRUCTURAL no-K shape lemma `EncTo(m,k) ⇒ k=pk(own-sk) | Mistake` — after which the 432-step
+    secrecy lemmas verify. Keep exists-trace chains K-free on the DEEP pathway (state the chain
+    to Mistake+Send; the attribution lemma carries the K story). Also: `rule Name [color=#hex]:`
+    renders layer colors in the interactive graphs — protocol #1f6fd0, interface #f2994a, masks
+    #27ae60, stressors #eb5757, seeds #9b51e0. Two more levers (v2): a PER-LEMMA
+    `lemma X [reuse, heuristic=C]:` attribute parses in 1.12 and can rescue one wandering lemma
+    without changing the global heuristic (H_sk_secret: timeout→8s); and never prove BOTH
+    `attribution` and `attentive_keeps_secret` — they are exact contrapositives, one proof
+    suffices (~100s saved per profile).
+
+16. **A detector that never fires is invisible unless a lemma demands it.** Lookup detectors fail
+    silently in three ways: the ceremony never emits the action (`UIStep` with no `!Step`), the
+    lexicon has no row for the action, or the profile never includes the detector (σ1 was absent
+    from S0 while its lexicon row sat unused). Pair every included stressor with a one-line
+    `exists-trace "Ex #i. <Onset>(p)@i"` coverage lemma — proof cost is ~5 steps and it turns all
+    three drift modes into a visible FAIL.
+
+17. **V3 layered template + graded dose-response (both ceremonies).** Every ceremony is now
+    `protocol/` (🔵 crypto+wire+finish; a `finish_confirmed.spthy` variant adds the key-confirmation
+    shutdown) → `interface/` (🟠 one rule per control, emits `!Step`+`!StepData`+context) →
+    stressor layer (🔴) → `masks/` (🟢) → `bundles/human_common.spthy`. The stressor layer reads the
+    INTERFACE's `!Step`, never the protocol. Triggering is a BAND, not exact-`'hi'`: a lookup
+    detector matches `!Demands(action,dim,lvl) & !AtLeast(lvl, thr)`. **Put the `!AtLeast` level
+    order (`'lo'<'med'<'hi'`) in `core/types.spthy`, NOT in `lexicon_tlx.spthy`** — profiles swap the
+    lexicon for an `interface_*`/`population_*` demand profile (P7/P9), and the order must survive the
+    swap; types is included exactly once by every profile. A swap-profile composes the human layer
+    MANUALLY (mask_state+answered_once+outcome_policy+stress_alex+the demand seed), NOT via
+    `human_common` (which bundles the lexicon → double-seed). Realism beyond single-step lookups:
+    `additive_load` (two `'med'` steps → Busy, Sweller's additive load, density-style so no
+    arithmetic; P10), inverted-U (`'med'` arousal facilitates, `'hi'` freezes; P11), population =
+    threshold-shift (expert `'lo'` < `'hi'` ⇒ σ1 can't fire; P9). To show a stressor doesn't fire,
+    an `all-traces "not (Ex … Onset)"` lemma is the proof (P9_no_load, P11_no_anxiety_at_moderate).
+    Migration kept the tree green by building layered files with parallel names, then deleting the
+    dead old spine (`ceremony.base`, `msg3_*`, `blake_calc*`, phase bundles, v1 `external_distraction`
+    /`time_pressure`) only after every profile was re-ported. Watch the lesson-3 comment trap: a
+    `*/` inside a `/* */` block (e.g. `interface_*/population_*`) closes it early and tamarin then
+    SILENTLY DROPS the file (facts-unseeded WF failure downstream) — write `interface_* / population_*`.

@@ -1,9 +1,21 @@
 # Lexicon calibration — levels, populations, sensitivity (ROADMAP #4)
 
-The lexicon ([`core/lexicon_tlx.spthy`](core/lexicon_tlx.spthy)) is where the HCI judgment lives: it
+The lexicon ([`core/lexicon_tlx.spthy`](../core/lexicon_tlx.spthy)) is where the HCI judgment lives: it
 maps an action to a usability dimension + **level**. For the analysis to be credible enough to back an
 RFC, the levels must be defensible, population-aware, and their influence on the conclusions must be
 checked. This document is the calibration methodology.
+
+> **V3 (2026-07-10).** Levels are now a live model input, not a fixed `'hi'`: detectors fire on a BAND
+> (`!Demands(...,lvl) & !AtLeast(lvl, thr)`, order in `core/types.spthy`). Two consequences here:
+> **(1) Population = threshold-shift.** An expert experiences a step at a lower level; the SAME
+> detector then can't cross its threshold. `alex_blake_kdf/P9` proves it — `population_expert` rates
+> compute `'lo'`, so σ₁ (threshold `'hi'`) never fires and the expert never slips (contrast P1). This
+> is the §2d lever: recalibrate the level, re-prove, read whether the outcome flips. **(2) Additivity.**
+> Two `'med'`-rated steps that are each individually safe can still sum to overload
+> (`core/stressors/additive_load.spthy`, P10) — so calibrating a step to `'med'` is NOT a proof of
+> safety under co-occurring moderate demands. **Out of symbolic scope (deferred):** a per-individual
+> PROBABILITY of degrading; the model bounds the *reachable* responses and the population lever scopes
+> *whose* threshold, but a genuine nondeterministic mask-SET per stressor is future work.
 
 ## 1. Levels are ordinal buckets of a measured construct
 

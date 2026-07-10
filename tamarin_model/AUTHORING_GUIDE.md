@@ -2,16 +2,37 @@
 
 This is the **start-here** guide: how to take a ceremony (your protocol + the human steps in it) and use
 the core elements and tools to get **machine-checked usability-security findings** and **RFC-ready
-requirements**. It ties together the deeper docs — [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md)
-(how stressors are collected), [`AGNOSTIC_MASKS.md`](AGNOSTIC_MASKS.md) (how the human responds),
-[`STRESSORS.md`](STRESSORS.md), [`CALIBRATION.md`](CALIBRATION.md), [`TERMINATION.md`](TERMINATION.md),
-[`INCIDENTS.md`](INCIDENTS.md).
+requirements**. It ties together the deeper docs — [`AGNOSTIC_STRESSOR_INTERFACE.md`](docs/AGNOSTIC_STRESSOR_INTERFACE.md)
+(how stressors are collected), [`AGNOSTIC_MASKS.md`](docs/AGNOSTIC_MASKS.md) (how the human responds),
+[`STRESSORS.md`](STRESSORS.md), [`CALIBRATION.md`](docs/CALIBRATION.md), [`TERMINATION.md`](TERMINATION.md),
+[`INCIDENTS.md`](docs/INCIDENTS.md).
 
 ## 1. The picture
 
 You write only the **protocol** and the **`!Step` annotations**. The reusable **human layer** (`core/`)
 degrades the human under usability problems; **levers** (interface / population / adversary / identity)
 shift the same demand profile; the **tools** turn the proofs into requirements.
+
+> **The layered template (V3).** Both shipped ceremonies use one directory shape — copy it for a new
+> ceremony and swap the protocol:
+> ```
+> <ceremony>/
+> ├── <X>0_baseline.spthy … <X>N.spthy    # profile entry points (includes only)
+> ├── protocol/    🔵 crypto + setup/exchange over real channels + finish (+ finish_confirmed for a shutdown)
+> ├── interface/   🟠 one rule per control: PROMPTS the user (!Step + !StepData + context like !UnderDeadline)
+> ├── bundles/human_common.spthy   # mask_state + answered_once + outcome_policy + lexicon + stress_alex
+> └── experiments/  # helpers (shared [reuse] lemmas) + one <profile>.spthy of lemmas each
+> ```
+> The stressor layer reads the **interface's** `!Step`, never the protocol. Triggering is a graded
+> **dose-response**: the lexicon rates a step `'lo' < 'med' < 'hi'` and a lookup detector fires on a
+> BAND — `!Demands(action,dim,lvl) & !AtLeast(lvl, thr)` (the order is seeded in `core/types.spthy`).
+> So a good interface / expert population that lowers a step to `'med'`/`'lo'` provably keeps the
+> detector from firing. Realism detectors beyond the single-step lookups: `additive_load` (two `'med'`
+> steps sum past the threshold — Sweller), the inverted-U (`'med'` arousal facilitates, `'hi'`
+> freezes — Yerkes-Dodson), and the density detectors (`habituation`, `alert_volume`,
+> `distraction_concurrent`). A profile that SWAPS the lexicon for an `interface_*`/`population_*`
+> demand profile composes the human layer manually (not via `human_common`, which would double-seed
+> the lexicon) — see `alex_blake_kdf/P7`, `P9`.
 
 ```mermaid
 flowchart TB
@@ -69,22 +90,23 @@ files for a standard interaction.
 
 ## 3. The action taxonomy + `!Step` cheat-sheet
 
-Every human step is **one** action. Tag it; add `!StepData` only when the response needs ground truth.
+Every human step is **one** action. Tag it; add `!StepData` only when the response needs the step's
+*observables* — what the UI shows, never a pre-computed verdict (verdicts are derived in the mask layer).
 
 | `action` | the human is… | `!StepData` carries | detectors that read it |
 |---|---|---|---|
 | `compute` | deriving a value they can't do in-head | the correct value (e.g. `kdf(a,b)`) | σ₁ (Mental), σ₃ (Temporal) |
-| `compare` | judging two artefacts equal/authentic | `'genuine'` / `'tampered'` | σ₆ (Effort) |
-| `confirm` | accepting/dismissing a prompt | `'self'` / `'injected'` | σ₈ (Habituation, density) |
+| `compare` | judging two artefacts equal/authentic | `<offered, reference>` — Attentive *performs* the comparison (matches `<k,k>`); tamperedness is never declared | σ₆ (Effort) |
+| `confirm` | accepting/dismissing a prompt | `<claimed, own>` — Attentive *performs* the self-check (matches `<k,k>`); injectedness is never declared | σ₈ (Habituation, density) |
 | `decide` | choosing among options | — | σ₉ (AlertVolume, density) |
 | `authorize` | granting a sensitive op | — | SecurityAnxiety (Arousal) |
 | `share` | disclosing a secret over a channel | `<recipient, secret>` | σ₁/σ₃ via lexicon |
-| `set-policy` | configuring access (task-mediated) | `'clear'` / `'misleading'` | σ₄ (Pathway B — task, not mask) |
+| `set-policy` | configuring access (task-mediated) | — (the control's design quality is a profile-level interface seed, `!ControlDesign` via `interface_clear_policy` / `interface_misleading_policy`, never step data) | σ₄ (Pathway B — task, not mask) |
 
 σ₂ ExternalDistraction reads **any** `!Step` (action-generic). The outcome a mask produces per action is in
 `outcome_policy.spthy`; if that outcome must drive the protocol (a wrong key, an approval that gates a
 signature), consume the behaviour's output fact (`Respond` / `Checked` / `Confirmed`) in a one-line
-**effect adapter** (see `compute_keyresult`, `compare_keychecked`, `fido_auth`).
+**effect adapter** (see `compute_keyresult`, `compare_keychecked`, `share_effects`).
 
 ## 4. Step-by-step: a new ceremony from scratch
 
@@ -188,12 +210,13 @@ Concretely, the model lets you find:
 - **Which lever fixes it** — a reachable/unreachable proof *pair* across interface or mitigation variants
   yields a normative `MUST`/`SHOULD` (the whole of `RFC_GUIDANCE.md`).
 - **Adversary-weaponisable stressors** — which degradations an attacker can *induce* (prompt-bombing,
-  injected urgency), hence must be defended (#6, `P8_adversary`, `FidoVuln`).
+  injected urgency), hence must be defended (#6, `P8_adversary`).
 - **Population scope** — is a ceremony safe only for experts? (#4, `P9_population`).
-- **Belief/phishing gaps** — can an Attentive user be made to act on a false belief? (#5, `PhishWeak`).
+- **Belief/phishing gaps** — can an Attentive user be made to act on a false belief? (#5; the belief-state
+  layer's worked example was retired 2026-07-09, design in git history — see ROADMAP #5).
 - **What the analysis assumed** — every requirement is traced to named lemmas in named profiles and to a
-  real incident ([`INCIDENTS.md`](INCIDENTS.md)); recalibrate a demand level and re-prove to test
-  sensitivity ([`CALIBRATION.md`](CALIBRATION.md)).
+  real incident ([`INCIDENTS.md`](docs/INCIDENTS.md)); recalibrate a demand level and re-prove to test
+  sensitivity ([`CALIBRATION.md`](docs/CALIBRATION.md)).
 
 ## 7. The toolchain
 

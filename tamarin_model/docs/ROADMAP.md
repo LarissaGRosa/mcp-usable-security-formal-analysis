@@ -9,8 +9,8 @@ deviates from the prescribed steps and what that does to the security goal — s
 engaged-user value", …).
 
 This document grades the current model against that goal and lays out what is missing, what can be
-improved, and what should change, in priority order. Companion docs: [`IMPLEMENTATION.md`](IMPLEMENTATION.md)
-(what exists), [`STRESSORS.md`](STRESSORS.md) (the stressor layer), [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md)
+improved, and what should change, in priority order. Companion docs: [`IMPLEMENTATION.md`](../IMPLEMENTATION.md)
+(what exists), [`STRESSORS.md`](../STRESSORS.md) (the stressor layer), [`AGNOSTIC_STRESSOR_INTERFACE.md`](AGNOSTIC_STRESSOR_INTERFACE.md)
 (the trigger seam).
 
 ## Where we are
@@ -122,15 +122,15 @@ Levels are binary `'hi'` and expert-asserted. For defensibility: tie levels to *
 TLX or SEQ data**, add **per-population profiles** (novice vs expert; the descoped "Elder" persona),
 and a **sensitivity pass** (does the conclusion survive a one-notch-lower level?).
 
-### 5. Mental-model / belief state  ·  *status: ✅ DONE (worked example)*
+### 5. Mental-model / belief state  ·  *status: ✅ done — worked example RETIRED 2026-07-09*
 
 > Masks model degraded EXECUTION; this adds a belief-state layer for wrong BELIEFS (phishing/spoofing) --
 > an ATTENTIVE human acting correctly on a false picture, a breach ORTHOGONAL to the mask layer.
-> `ceremonies/phishing/`: `Belief(P,id,ch)`; weak identity interface (belief from displayed claim →
-> spoofable) vs strong (belief requires a verified binding → anti-spoofing). `PhishWeak` proves the
-> Attentive user is phished + attribution to spoofing; `PhishStrong` proves the secret never leaks. The
-> pair = "MUST bind the displayed peer identity to a verified credential." Reuses the #2 interface idea
-> for authentication. Commit 045d2e0.
+> The worked example (`ceremonies/phishing/`: `Belief(P,id,ch)`; weak identity interface — belief from the
+> displayed claim, spoofable — vs strong — belief requires a verified binding; the PhishWeak/PhishStrong
+> pair = "MUST bind the displayed peer identity to a verified credential") was DELETED 2026-07-09 to focus
+> the repo on the two maintained ceremonies. Design + proofs in git history (commit 045d2e0); re-adding
+> the layer to a maintained ceremony follows the same recipe.
 
 Masks model degraded *execution*; they do not model **wrong beliefs** (the human thinks they reached
 the bank / that the key is verified). Most real usability-security failures — phishing, spoofed-origin
@@ -155,14 +155,15 @@ a research contribution is wanted.
 
 ## Tier 3 — scale and the RFC deliverable
 
-### 7. Attach-to-real-protocol + termination playbook  ·  *status: ✅ DONE*
+### 7. Attach-to-real-protocol + termination playbook  ·  *status: ✅ done — worked example RETIRED 2026-07-09*
 
-> `ceremonies/fido_auth/`: a signature-based push-MFA (`builtins: signing`) with the human layer attached
-> via `!Step` only. `FidoVuln` proves crypto soundness (auth requires the human's approval) + the MFA-fatigue
-> takeover (habituated → injected login authenticated); `FidoHardened` proves number matching makes it
-> unreachable — REQ-PUSH-MFA-NUMBER-MATCH on a real protocol. `confirm_behavior` gained a `Confirmed` output
-> (output+adapter pattern) so an approval can gate a downstream crypto step. `TERMINATION.md`: the attachment
-> recipe + termination levers + P3-narrowing + honest scaling limits. Commit 2c56573.
+> The worked example (`ceremonies/fido_auth/`: a signature-based push-MFA, `builtins: signing`, human layer
+> attached via `!Step` only; FidoVuln proved crypto soundness + the MFA-fatigue takeover, FidoHardened
+> proved number matching removes it on real crypto) was DELETED 2026-07-09 to focus the repo on the two
+> maintained ceremonies. What it contributed REMAINS in the repo: `confirm_behavior`'s `Confirmed` output
+> (output+adapter pattern, so an approval can gate a downstream crypto step) and `TERMINATION.md` (the
+> attachment recipe + termination levers + P3-narrowing + honest scaling limits). Design + proofs in git
+> history (commit 2c56573).
 
 Toy ceremonies don't make RFCs; FIDO2 / TLS / OAuth do. `!Step` makes attachment cheap in principle,
 but the §6a state-explosion at real scale needs a documented narrowing strategy (cap enabled stressors
@@ -172,7 +173,7 @@ per party; per-phase compositional proofs).
 
 > `tools/step_analyzer.py`: scans a `.spthy` protocol's rules and, from keyword signals, proposes the
 > agnostic annotation per human step (action tag + `!Step` fact + lexicon rows); cross-checks rules already
-> carrying `!Step`. Validated against the hand annotations (recovers compose_ui / verify_ui / fido logins);
+> carrying `!Step`. Validated against the hand annotations (recovers compose_ui / verify_ui);
 > recall-biased proposer (over-flags machine steps, designer rejects). Commit d3708c1.
 
 Fully realize the "analyzer direction": infer stressful steps from protocol structure (a step comparing
@@ -181,12 +182,13 @@ annotations the designer confirms.
 
 ### 9. Proof-results → RFC-text generator  ·  *status: ✅ DONE — the deliverable*
 
-> `tools/rfc_requirements.json` (manifest: 7 requirements, each = risk lemma + removed_by lemma + lever)
+> `tools/rfc_requirements.json` (manifest: one entry = risk lemma + removed_by lemma + lever)
 > + `tools/rfc_gen.py` (re-runs Tamarin, confirms each risk REACHABLE and each fix HOLDS, emits the
 > requirement backed by the verified lemmas; UNVERIFIED if proofs don't line up). Output: `RFC_GUIDANCE.md`,
-> 7/7 proven — low-effort fingerprint compare, number-matching MFA, key-confirmation, device-side compare,
-> out-of-band secret, verified identity binding, least-skilled population. Every MUST/SHOULD traces to named
-> lemmas in named profiles. Commit 68160ef.
+> currently 6/6 proven — low-effort fingerprint compare, number-matching MFA, key-confirmation, device-side
+> compare, out-of-band secret, least-skilled population. Every MUST/SHOULD traces to named lemmas in named
+> profiles. Commit 68160ef. (The push-MFA and verified-identity entries retired with their ceremonies,
+> 2026-07-09.)
 
 The end artifact: a report turning proven lemmas into normative language ("MUST display fingerprint
 diff", "SHOULD require number-matching"). This is what makes the tool *for RFC authors*.
@@ -194,10 +196,9 @@ diff", "SHOULD require number-matching"). This is what makes the tool *for RFC a
 ### 10. Validation against real incidents  ·  *status: ✅ DONE*
 
 > `INCIDENTS.md`: maps each modeled outcome to a documented real incident/study (MFA fatigue — Uber 2022 /
-> 0ktapus; credential phishing — DBIR; PGP key-verification — Why Johnny Can't Encrypt; TLS warning fatigue;
-> AWS S3 terminology; misdirected email), the lemma, and the proven mitigation. Establishes the failures are
-> real and the model independently derives the levers industry adopted (number matching, FIDO2 origin
-> binding). Commit 54fb4ce.
+> 0ktapus; PGP key-verification — Why Johnny Can't Encrypt; TLS warning fatigue; AWS S3 terminology;
+> misdirected email), the lemma, and the proven mitigation. Establishes the failures are real and the
+> model independently derives the levers industry adopted (number matching). Commit 54fb4ce.
 
 Map modeled outcomes to real CVEs / incidents (MFA-fatigue attacks, TLS warning click-through, PGP
 misuse) so the "usability problems arising from the ceremony" are grounded in reality.
@@ -209,7 +210,8 @@ misuse) so the "usability problems arising from the ceremony" are grounded in re
 **ALL THREE TIERS ARE COMPLETE (10/10 items).** Tier 1: ✅ #1 agnostic masks, ✅ #2 first-class interfaces,
 ✅ #3 property library (+ dead facts retired). Tier 2: ✅ #4 lexicon calibration, ✅ #5 belief state, ✅ #6
 adversary-induced stressors. Tier 3: ✅ #7 attach-to-real-protocol + termination, ✅ #8 static analyzer, ✅ #9
-proof→RFC-text generator, ✅ #10 incident validation. **16 profiles / 80 lemma checks green.** A unifying
+proof→RFC-text generator, ✅ #10 incident validation. **13 maintained profiles green (P0–P9, S0–S2; the
+#5/#7 worked-example ceremonies retired 2026-07-09, designs in git history).** A unifying
 through-line emerged — #2 (interface), #4 (population), #5 (identity interface), #6 (adversary) are all the
 SAME lever: a demand/belief profile a good interface lowers, an adversary raises, and a population shifts.
 The end-to-end loop is closed: ceremony + `!Step` annotations (proposable by #8) → masks/stressors degrade
@@ -237,9 +239,9 @@ Tier 3 to scale and produce the RFC deliverable.
 | 2 | First-class interfaces as demand-transformers | 1 | ✅ done — interface_hardened_verify + P7_interface |
 | 3 | Usability-security property library | 1 | ✅ done — core/usability_properties (2 generic + 4 templates) |
 | 4 | Calibrate the lexicon (empirical levels, populations) | 2 | ✅ done — core/population_expert + P9_population + CALIBRATION.md |
-| 5 | Mental-model / belief state | 2 | ✅ done — ceremonies/phishing (PhishWeak/PhishStrong) |
+| 5 | Mental-model / belief state | 2 | ✅ done — worked example retired 2026-07-09 (git 045d2e0) |
 | 6 | Adversary-induced stressors | 2 | ✅ done — core/adversary + time_pressure_induced + P8_adversary |
-| 7 | Attach-to-real-protocol + termination playbook | 3 | ✅ done — ceremonies/fido_auth (signature MFA) + TERMINATION.md |
+| 7 | Attach-to-real-protocol + termination playbook | 3 | ✅ done — TERMINATION.md (fido example retired 2026-07-09, git 2c56573) |
 | 8 | Static analyzer (propose `!Step` + lexicon) | 3 | ✅ done — tools/step_analyzer.py |
-| 9 | Proof-results → RFC-text generator | 3 | ✅ done — tools/rfc_gen.py + RFC_GUIDANCE.md (8/8 proven) |
+| 9 | Proof-results → RFC-text generator | 3 | ✅ done — tools/rfc_gen.py + RFC_GUIDANCE.md (6/6 proven) |
 | 10 | Validation against real incidents | 3 | ✅ done — INCIDENTS.md |
