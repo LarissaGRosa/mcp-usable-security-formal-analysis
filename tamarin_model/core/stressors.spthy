@@ -37,13 +37,16 @@ restriction OneStressPerParty:
 #endif
 
 #ifdef SIGMA2_CONCURRENCY
+// sigma2 CONCURRENCY reads a SINGLE per-screen marker !Copresent(P) (a screen/surface emits it once when
+// it shows >=2 co-present controls). Reading one marker -- instead of "any two of N !Demand" -- keeps the
+// source saturation O(1) rather than O(N^2): the two-!Demand form product-explodes precompute once a full
+// screen poses many co-present prompts. The marker is grounded in a real screen (secure_email composer /
+// kdf calc) or a dedicated concurrency surface (legacy senders), exactly as sigma8/sigma9 use dedicated
+// confirm/decide surfaces.
 rule Trigger_DistractionConcurrent [color=#eb5757]:
-    [ !Demand(P, p1, a1), !Demand(P, p2, a2), !StressEnable(P) ]
-  --[ Distract(P), NeqC(p1, p2), SetMask(P, 'Careless') ]->
+    [ !Copresent(P), !StressEnable(P) ]
+  --[ Distract(P), SetMask(P, 'Careless') ]->
     [ !EffectiveMask(P, 'Careless') ]
-
-restriction InequalityConcurrency:
-  "All x #i. NeqC(x,x)@i ==> F"
 
 restriction OneDistractPerParty:
   "All p #i #j. Distract(p)@i & Distract(p)@j ==> #i = #j"

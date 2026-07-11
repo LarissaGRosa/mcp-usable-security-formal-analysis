@@ -279,6 +279,16 @@ rule IF_calc_blake [color=#f2994a]:
       BlakeAwaitKey(idB, ~rid) ]
 #endif
 
+#ifdef SIGMA2_CONCURRENCY
+// concurrency surface: the calc + nonce-ack controls compete for attention -> the single sigma2 marker
+// (dedicated surface; keeps sigma2 O(1) instead of an N^2 !Demand product).
+rule IF_concurrency_surface [color=#f2994a]:
+    [ !StressEnable(P) ] --[ UIStep(P,'concurrent_controls'), SeedCopresent(P) ]-> [ !Copresent(P) ]
+
+restriction OnceCopresent:
+  "All p #i #j. SeedCopresent(p)@i & SeedCopresent(p)@j ==> #i = #j"
+#endif
+
 #ifdef IF_NONCE_ACK
 rule IF_nonce_ack_alex [color=#f2994a]:
     [ !NoncesSeen('Alex', idA, <Na, Nb>), Fr(~pid) ]

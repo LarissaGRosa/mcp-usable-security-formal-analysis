@@ -2,131 +2,114 @@
   sender_screens.spthy -- the FULL-INTERFACE Alex sender (RELAYER). Real co-present controls replace the
   ambient stubs + the legacy pick/verify/send rules. Included by protocol.spthy ONLY when IF_SCREENS is
   armed. See secure_email/INTERFACE_MAP.md. A profile that arms IF_SCREENS ALSO arms MASK_TRANSCRIBE /
-  MASK_COMPUTE / MASK_CONFIRM / MASK_DECIDE (MASK_COMPARE / MASK_COMPARE_KEYCHECKED / MASK_SHARE /
-  MASK_AUTHORIZE are constant in base.spthy).
+  MASK_COMPUTE / MASK_DECIDE (MASK_COMPARE / MASK_COMPARE_KEYCHECKED / MASK_SHARE / MASK_AUTHORIZE are
+  constant in base.spthy).
 
-  Step 4 = sender (Screen A). Blake's Screens B/C are added in step 5; for now the shared Blake receiver
-  rules in protocol.spthy deliver Read.
+  TRACTABILITY (prover budget <2min, no swap). Mirrors the legacy sender's shape so the sources stay as
+  shallow as legacy:
+    * ONE persistent shallow anchor !AlexScreen(P,idA,subjId,sendId) off AlexInit -- every pathway prompt
+      is posed off it (never off a deep linear chain), exactly as legacy poses verify/send off the
+      persistent !AlexSession. This keeps sigma2's source product a product of SHALLOW sources.
+    * the send EFFECT joins ONE free-valued !StepData (the recipient from the fingerprint compare, as
+      legacy) -- never a second To !StepData; the To transcribe is a real performed control (density +
+      Busy slip -> !Failed feeds sigma10) whose committed value drives nothing.
+    * message m leaks ONLY through routes that carry an EncTo(m,rcpt) shape (badkey) -- so the legacy
+      H_encto_shape [reuse] helper prunes K(m). SUBJECT_LEAK (an Out(m) with no EncTo shape) is a separate
+      opt-in gate, added with its own [reuse] helper in the step-7 spine.
 */
 
-// ---- Screen A: compose window (Alex). ONE rule poses ALL co-present controls off the shallow AlexInit
-// (one-rule-per-screen), once-bounded: To (A2) + subject (A5) transcribe, encryption selector (A6/A7)
-// decide, Send (A15) authorize. The A3 per-recipient lock cue is the decide's context (keyless 'Blake').
+// ---- Screen A: compose window (Alex). ONE rule poses all co-present controls off AlexInit, once-
+// bounded: To (A2) + subject (A5) transcribe, encryption selector (A6/A7) decide, Send (A15) authorize.
+// Emits the persistent shallow anchor + a linear MethodChoice the decide resolves.
 rule IF_screen_composer [color=#f2994a]:
     [ AlexInit(idA), Fr(~toId), Fr(~subjId), Fr(~methId), Fr(~sendId) ]
   --[ UIStep('Alex','compose'), UIStep('Alex','btn_send'), PoseComposer('Alex') ]->
     [ Prompt('Alex', ~toId,   'transcribe'), !Demand('Alex', ~toId,   'transcribe'), !Displayed('Alex', ~toId,   'Blake'),
       Prompt('Alex', ~subjId, 'transcribe'), !Demand('Alex', ~subjId, 'transcribe'), !Displayed('Alex', ~subjId, 'generic-subject'),
-      Prompt('Alex', ~methId, 'decide'), !Demand('Alex', ~methId, 'decide'),
-      Prompt('Alex', ~sendId, 'authorize'), !Demand('Alex', ~sendId, 'authorize'),
-      ComposerState(idA, ~toId, ~subjId, ~methId, ~sendId) ]
+      Prompt('Alex', ~methId, 'decide'),     !Demand('Alex', ~methId, 'decide'),
+      Prompt('Alex', ~sendId, 'authorize'),  !Demand('Alex', ~sendId, 'authorize'),
+      // the compose window shows >=2 co-present controls -> the single sigma2 concurrency marker
+      // (grounded here in a REAL screen; no N^2 !Demand product for the source saturation).
+      !Copresent('Alex'),
+      !AlexScreen('Alex', idA, ~subjId, ~sendId),
+      MethodChoice(idA, ~methId) ]
 
 restriction OncePoseComposer:
   "All p #i #j. PoseComposer(p)@i & PoseComposer(p)@j ==> #i = #j"
 
-// encryption-selector routing: a HANDLED decide keeps the message encrypted (secure pathway); a MISROUTE
-// (OUTCOME_CARELESS_MISROUTE) drops to 'Standard (TLS only)' -> the NAMED unsafe outcome
-// PlaintextAtProvider (NOT Out -- keeps breach<->mistake for S*_secrecy). The two adapters consume the
-// same linear ComposerState, so exactly one pathway proceeds; the secure adapter is guarded to not fire
-// when the same decide was misrouted.
-rule IF_compose_secure [color=#1f6fd0]:
-    [ ComposerState(idA, toId, subjId, methId, sendId), DecisionDone('Alex', methId) ]
+// method decide routing: HANDLED -> SecureFlag (the secure sends require it); MISROUTE
+// (OUTCOME_CARELESS_MISROUTE) -> 'Standard (TLS only)' -> the NAMED unsafe outcome PlaintextAtProvider
+// (NOT Out). Both consume the linear MethodChoice, so exactly one fires.
+rule IF_method_secure [color=#1f6fd0]:
+    [ MethodChoice(idA, methId), DecisionDone('Alex', methId) ]
   --[ ComposeSecure('Alex', methId) ]->
-    [ SecureCompose(idA, toId, subjId, sendId) ]
+    [ SecureFlag(idA) ]
 
 restriction SecureComposeNotMisrouted:
   "All p d #i. ComposeSecure(p, d)@i ==> not (Ex q #j. DecisionMisrouted(q, d)@j)"
 
 #ifdef OUTCOME_CARELESS_MISROUTE
-rule IF_compose_tls_misroute [color=#c0392b]:
-    [ ComposerState(idA, toId, subjId, methId, sendId), DecisionMisrouted('Alex', methId), Fr(~m) ]
+rule IF_method_tls_misroute [color=#c0392b]:
+    [ MethodChoice(idA, methId), DecisionMisrouted('Alex', methId), Fr(~m) ]
   --[ Send('Alex','TLS', ~m), Secret(~m), PlaintextAtProvider(~m), MisdirectedTo('Alex','provider') ]->
     [ ]
 #endif
 
-// ---- Screen A (PGP mode): fingerprint compare (verify) + Sign-attach-my-key confirm (A13). Off the
-// SecureCompose token; the PGP/PW branch is the nondeterministic method (both secure). ----
+// ---- Screen A (PGP mode): fingerprint compare (verify), posed off the SHALLOW persistent !AlexScreen
+// (as legacy IF_verify_fp is posed off !AlexSession). The recipient is the compare's committed key. ----
 rule IF_screen_pgp [color=#f2994a]:
-    [ SecureCompose(idA, toId, subjId, sendId), In(offered), Fr(~vid), Fr(~cfgId), Fr(~sk) ]
+    [ !AlexScreen('Alex', idA, subjId, sendId), In(offered), Fr(~vid), Fr(~sk) ]
   --[ UIStep('Alex','btn_verify_fp'), KeyGenerated('Alex'), OwnSkGen('Alex', ~sk), PosePgpScreen('Alex') ]->
-    [ Prompt('Alex', ~vid,   'compare'), !Demand('Alex', ~vid,   'compare'), !Displayed('Alex', ~vid,   <offered, 'Blake'>),
-      Prompt('Alex', ~cfgId, 'confirm'), !Demand('Alex', ~cfgId, 'confirm'), !Displayed('Alex', ~cfgId, <~sk, ~sk>),
-      PgpScreenState(idA, toId, subjId, sendId, ~vid, ~cfgId) ]
+    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
+      AlexVerifying(idA, ~vid) ]
 
 restriction OncePosePgpScreen:
   "All p #i #j. PosePgpScreen(p)@i & PosePgpScreen(p)@j ==> #i = #j"
 
-// good: verify done (KeyChecked) + accepted 'Blake' + To committed 'Blake' + Send granted -> private
-// Mailbox. The send EFFECT joins in ORDER (committed To + Granted + KeyChecked); it is not a !Prompt
-// producer, so its deep joins never enter sigma2's source product.
+// good: decide handled (SecureFlag) + verify done (KeyChecked) + accepted 'Blake' + Send granted.
 rule IF_send_pgp_screen_good [color=#1f6fd0]:
-    [ PgpScreenState(idA, toId, subjId, sendId, vid, cfgId),
-      Granted('Alex', sendId), !KeyChecked('Alex', vid),
-      !StepData('Alex', vid, 'Blake'), !StepData('Alex', toId, 'Blake'), Fr(~m) ]
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), AlexVerifying(idA, vid),
+      Granted('Alex', sendId), !KeyChecked('Alex', vid), !StepData('Alex', vid, 'Blake'), Fr(~m) ]
   --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
     [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId) ]
 
-// leak (bad key): a credulous fingerprint compare accepted a non-'Blake' key -> encrypted to the wrong
-// key -> Out. (Attribution: Mistake at the compare.)
+// leak (bad key): a credulous fingerprint compare accepted a non-'Blake' key -> Out. (Mistake at compare;
+// carries EncTo shape so H_encto_shape prunes K(m).)
 rule IF_send_pgp_screen_badkey [color=#c0392b]:
-    [ PgpScreenState(idA, toId, subjId, sendId, vid, cfgId),
-      Granted('Alex', sendId), !KeyChecked('Alex', vid),
-      !StepData('Alex', vid, rcpt), Fr(~m) ]
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), AlexVerifying(idA, vid),
+      Granted('Alex', sendId), !KeyChecked('Alex', vid), !StepData('Alex', vid, rcpt), Fr(~m) ]
   --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, rcpt), Neq(rcpt,'Blake'), MisdirectedTo('Alex', rcpt) ]->
     [ Out(~m), SentMsg(idA, ~m, subjId) ]
 
-// leak (bad address): verified key but the To field was slipped to a non-'Blake' address -> Out.
-// (Attribution: Slip at the To transcribe.)
-rule IF_send_pgp_screen_badaddr [color=#c0392b]:
-    [ PgpScreenState(idA, toId, subjId, sendId, vid, cfgId),
-      Granted('Alex', sendId), !KeyChecked('Alex', vid),
-      !StepData('Alex', vid, 'Blake'), !StepData('Alex', toId, rcpt), Fr(~m) ]
-  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, rcpt), Neq(rcpt,'Blake'), MisdirectedTo('Alex', rcpt) ]->
-    [ Out(~m), SentMsg(idA, ~m, subjId) ]
-
-// premature (OUTCOME_PREMATURE): Send granted BEFORE verify (consumes GrantedUnchecked, NO KeyChecked
-// join) -> the order was violated -> Out. This is the only consumer of GrantedUnchecked (core is blind
-// to what the grant was waiting for -- this ceremony rule gives "out of order" its meaning).
+// premature (OUTCOME_PREMATURE): Send granted BEFORE verify (GrantedUnchecked, NO KeyChecked join).
 #ifdef OUTCOME_PREMATURE
 rule IF_send_pgp_screen_premature [color=#c0392b]:
-    [ PgpScreenState(idA, toId, subjId, sendId, vid, cfgId),
-      GrantedUnchecked('Alex', sendId), Fr(~m) ]
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), GrantedUnchecked('Alex', sendId), Fr(~m) ]
   --[ Send('Alex','PGP', ~m), Secret(~m), SendPremature('Alex'), MisdirectedTo('Alex','unverified') ]->
     [ Out(~m), SentMsg(idA, ~m, subjId) ]
 #endif
 
-// ---- Screen A (password mode): passphrase compute (A8) + hint transcribe (A10) + expiration decide
-// (A11 exposure) + pw share (out-of-band delivery). ----
+// ---- Screen A (password mode): passphrase compute (A8) + pw share, off the shallow !AlexScreen. ----
 rule IF_screen_pw [color=#f2994a]:
-    [ SecureCompose(idA, toId, subjId, sendId), Fr(~pwId), Fr(~hintId), Fr(~expId), Fr(~shId), Fr(~pw) ]
+    [ !AlexScreen('Alex', idA, subjId, sendId), Fr(~pwId), Fr(~shId), Fr(~pw) ]
   --[ PosePwScreen('Alex'), PwCreated(~pw) ]->
-    [ Prompt('Alex', ~pwId,   'compute'), !Demand('Alex', ~pwId,   'compute'),    !Displayed('Alex', ~pwId, ~pw), !UnderDeadline(~pwId),
-      Prompt('Alex', ~hintId, 'transcribe'), !Demand('Alex', ~hintId, 'transcribe'), !Displayed('Alex', ~hintId, 'vague-hint'),
-      Prompt('Alex', ~expId,  'decide'), !Demand('Alex', ~expId,  'decide'),
-      Prompt('Alex', ~shId,   'share'), !Demand('Alex', ~shId,   'share'),      !Displayed('Alex', ~shId, <'Blake','Blake', ~pw>),
-      !PwCopy(idA, ~hintId, ~pw),
-      PwScreenState(idA, toId, subjId, sendId, ~pwId, ~hintId, ~shId, ~pw) ]
+    [ Prompt('Alex', ~pwId, 'compute'), !Demand('Alex', ~pwId, 'compute'), !Displayed('Alex', ~pwId, ~pw), !UnderDeadline(~pwId),
+      Prompt('Alex', ~shId,  'share'),   !Demand('Alex', ~shId,  'share'),   !Displayed('Alex', ~shId, <'Blake','Blake', ~pw>),
+      PwPending(idA, ~shId, ~pw) ]
 
 restriction OncePosePwScreen:
   "All p #i #j. PosePwScreen(p)@i & PosePwScreen(p)@j ==> #i = #j"
 
-// send: Send granted + To committed 'Blake' -> deliver the ENCRYPTED message to Blake's private mailbox;
-// the pw travels separately via the share (below). The committed passphrase pwc protects the message.
+// send: decide handled + Send granted -> deliver the ENCRYPTED message to Blake's private mailbox
+// (recipient fixed); the pw travels separately via the share (below), the PW pathway's leak channel.
 rule IF_send_pw_screen_good [color=#1f6fd0]:
-    [ PwScreenState(idA, toId, subjId, sendId, pwId, hintId, shId, pw),
-      Granted('Alex', sendId), !StepData('Alex', toId, 'Blake'), !StepData('Alex', pwId, pwc), Fr(~m) ]
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), PwPending(idA, shId, pw),
+      Granted('Alex', sendId), !StepData('Alex', pwId, pwc), Fr(~m) ]
   --[ Send('Alex','PW', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
-    [ Mailbox('Blake', ~m), MsgPw('Blake', ~m, pwc), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw) ]
+    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw) ]
 
-// send (bad address): To slipped -> the message is misaddressed -> Out.
-rule IF_send_pw_screen_badaddr [color=#c0392b]:
-    [ PwScreenState(idA, toId, subjId, sendId, pwId, hintId, shId, pw),
-      Granted('Alex', sendId), !StepData('Alex', toId, rcpt), !StepData('Alex', pwId, pwc), Fr(~m) ]
-  --[ Send('Alex','PW', ~m), Secret(~m), EncTo(~m, rcpt), Neq(rcpt,'Blake'), MisdirectedTo('Alex', rcpt) ]->
-    [ Out(~m), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw) ]
-
-// pw share routing (mirrors the legacy PW_deliver_*, but only the pw travels here; the message went via
-// the Send authorize). oob -> private OobPw; misdeliver -> Out(pw); inband-leak -> OobPw + Out(pw).
+// pw share routing (mirrors legacy PW_deliver_*; only the pw travels here). oob -> private OobPw;
+// misdeliver -> Out(pw); inband-leak -> OobPw + Out(pw).
 rule IF_pw_share_oob [color=#1f6fd0]:
     [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'oob') ]
   --[ ShareRoute('Alex','oob') ]->
@@ -142,17 +125,10 @@ rule IF_pw_share_inband [color=#c0392b]:
   --[ ShareRoute('Alex','inband-leak') ]->
     [ OobPw('Blake', pw), Out(pw) ]
 
-// subject leak (both pathways): a Careless subject transcribe exported the subject -> the message's
-// cleartext metadata leaks at send -> Out(m). Consumes the generic TranscribeLeaked token from core.
+// subject leak: a Careless subject transcribe exported the subject -> the message's cleartext metadata
+// leaks -> Out(m). This Out(m) has NO EncTo shape, but with the single-marker sigma2 the source graph
+// stays tractable and the secrecy lemma's SubjectLeak disjunct covers it directly (no extra helper).
 rule IF_subject_leak [color=#c0392b]:
     [ SentMsg(idA, m, subjId), TranscribeLeaked('Alex', subjId, leaked) ]
   --[ SubjectLeak('Alex'), MisdirectedTo('Alex','subject') ]->
     [ Out(m) ]
-
-// hint leak (PW): a Careless hint transcribe put the pw in the (cleartext) hint -> pw travels in-band
-// -> Out(pw). Emits LeakPw so H_pw_stays_oob's disjunction covers it. Reads the persistent !PwCopy so it
-// does not race the share routing for the linear PwEnvelope.
-rule IF_hint_leak [color=#c0392b]:
-    [ !PwCopy(idA, hintId, pw), TranscribeLeaked('Alex', hintId, leaked) ]
-  --[ HintLeak('Alex'), LeakPw('Alex') ]->
-    [ Out(pw) ]

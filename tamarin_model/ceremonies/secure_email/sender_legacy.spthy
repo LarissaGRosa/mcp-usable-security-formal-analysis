@@ -23,6 +23,16 @@ rule IF_pick_pw [color=#f2994a]:
 // once per party (lesson 5); posed off the shallow !StressEnable. Never PERFORMED -- only the
 // compare / authorize / share steps below are.
 
+#ifdef SIGMA2_CONCURRENCY
+// concurrency surface: the legacy compose/verify/send controls compete for attention -> the single
+// sigma2 marker (dedicated surface, like the confirm/decide surfaces below; keeps sigma2 O(1)).
+rule IF_concurrency_surface [color=#f2994a]:
+    [ !StressEnable(P) ] --[ UIStep(P,'concurrent_controls'), SeedCopresent(P) ]-> [ !Copresent(P) ]
+
+restriction OnceCopresent:
+  "All p #i #j. SeedCopresent(p)@i & SeedCopresent(p)@j ==> #i = #j"
+#endif
+
 #ifdef SIGMA8_HABITUATION
 rule IF_confirm_surface [color=#f2994a]:
     [ !StressEnable(P), Fr(~a), Fr(~b) ]
