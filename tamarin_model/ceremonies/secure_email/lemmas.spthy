@@ -1,23 +1,54 @@
 /*
-  lemmas.spthy -- the shared [reuse] lemma trio (was experiments/helpers.spthy; repo MEMORY.md
-  lesson 15): the key-derivation facts proven once so every profile's secrecy pair terminates over
-  the layered state space. Included by base.spthy BEFORE any profile's own lemmas.
+  lemmas.spthy -- the shared [reuse] lemma spine (repo MEMORY.md lesson 15): the boundary facts proven
+  ONCE per profile so every profile's secrecy pair terminates over the layered state space. Included by
+  base.spthy BEFORE any profile's own lemmas.
+
+  H_leak_routes is the T6 (S) BOUNDARY LIST: the single enumerated set of human mistakes through which a
+  Secret can reach the adversary. It is the union over BOTH variants -- the legacy sender/receiver and the
+  full-interface screens -- so it holds for either. A disjunct whose action fact the compiled variant
+  never emits is simply unsatisfiable, which costs nothing.
+
+    legacy      : credulous fingerprint compare (Mistake) | PW misdeliver (MisdeliveredPw)
+                  | PW in-band (LeakPw)
+    screens A   : badkey compare (Mistake) | subject transcribe leak (SubjectLeak)
+                  | out-of-order send (SendPremature)
+    screens B/C : Forward to a keyless third party (ForwardedOutside)
+                  | pw entered at the phishing page (PwEnteredAtImpostor)
+
+  NOT a leak route: PlaintextAtProvider (the TLS misroute) emits NO Out, so it never yields K(m) -- it is
+  a NAMED unsafe outcome an RFC lemma forbids, which is what keeps breach <-> mistake honest.
 */
 
-// the passphrase reaches the adversary only through a degraded share outcome.
+// (S) BOUNDARY LIST -- every way the MESSAGE crosses the boundary. Profiles' secrecy lemmas consume this.
+lemma H_leak_routes [reuse]:
+  all-traces
+  "All m #s #k.
+     Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d)
+     | (Ex p #d. SendPremature(p)@d)
+     | (Ex p #d. ForwardedOutside(p)@d)"
+
+// the passphrase reaches the adversary only through a degraded share outcome, or by being entered at the
+// impostor (phishing) page on Blake's Screen B.
 lemma H_pw_stays_oob [reuse]:
   all-traces
   "All pw #c #k.
      PwCreated(pw)@c & K(pw)@k
-   ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)"
+   ==> (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. PwEnteredAtImpostor(p)@d)"
 
 // a generated private key never reaches the adversary (it never leaves !OwnSk).
 lemma H_sk_secret [reuse, heuristic=C]:
   all-traces
   "All p sk #g #k. OwnSkGen(p, sk)@g & K(sk)@k ==> F"
 
-// STRUCTURAL: a message is sent to the correspondent ('Blake') only, unless the fingerprint compare
-// was answered credulously (a Mistake) and it went to a non-correspondent.
+// STRUCTURAL: a message is encrypted to the correspondent ('Blake') only, unless the fingerprint compare
+// was answered credulously (a Mistake) and it went to a non-correspondent. K-free, so it is cheap and
+// prunes the K(m) search for every profile that consumes it.
 lemma H_encto_shape [reuse]:
   all-traces
   "All m rcpt #e.

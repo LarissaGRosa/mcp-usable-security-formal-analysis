@@ -58,4 +58,25 @@ lemma UP_premature_requires_degrade:
         unreachable under hardened.
         baseline:  exists-trace "Ex p x #o. <BadOutcome>(p,x)@o"
         hardened:  all-traces  "not (Ex p x #o. <BadOutcome>(p,x)@o)"
+
+  ===== the (C) / (S) PAIR proven per stressor for the full-interface ceremonies =====
+
+  T5 -- (C) COMPLETION UNDER ONSET: the ceremony still completes end to end while the stressor is in
+        force. Exists-trace. Keep the chain K-FREE on a deep pathway (lesson 15); if the negated-unsafe
+        conjunct makes the search wander, DROP it and derive cleanliness from T6 instead (record which
+        form the profile uses).
+        exists-trace
+        "Ex p <finish-vars> #o #f.
+             <Onset>(p)@o & <Finish>(...)@f & #o < #f
+           & not (Ex q x #u. <Unsafe>(q,x)@u)"          // optional conjunct -- drop if it wanders
+
+  T6 -- (S) ONLY-CORRESPONDENTS-KNOW: the secret reaches the adversary ONLY through one of the ENUMERATED
+        human mistakes -- the single boundary list the ceremony maintains (secure_email: H_leak_routes;
+        alex_blake_kdf: the both-nonces-leaked pair). Prove the boundary list ONCE as a [reuse] helper
+        and let every profile's secrecy lemma consume it (lesson 15c). NEVER also prove the
+        "attentive keeps the secret" contrapositive -- it is the same proof (lesson 15, v2).
+        all-traces
+        "All x #s #k. <Secret>(x)@s & K(x)@k ==> <enumerated mistake disjunction>"
+
+        Companion (reader/holder restriction): "All p x #r. <Read>(p,x)@r ==> p = <correspondent>".
 */

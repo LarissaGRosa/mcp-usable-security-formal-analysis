@@ -1,0 +1,32 @@
+/*
+  k_lemmas.spthy -- the shared [reuse] lemma spine for the K-profiles (the invented PRIVATE messenger,
+  KDF_MESSENGER). Included by each K-profile BEFORE its own lemmas, exactly as secure_email/lemmas.spthy
+  is. The P-profiles (public KDF_WIRE) do NOT include this -- their secret is not statable.
+
+  The (S) boundary for this ceremony is the NONCE channel: with the private messenger the DY adversary
+  learns a nonce ONLY through a degraded share (misdeliver -> wrong chat; inband-leak -> pasted into a
+  public channel). Since sk = kdf(Na,Nb) and kdf/2 is a FREE symbol, the adversary must know BOTH nonces
+  to know sk -- so leaking ONE is provably insufficient. That is the compositional payoff the private
+  wire buys, and the reason (S) is non-vacuous here at all.
+
+  NOTE on the formulation: the plan's literal "K(kdf(Na,Nb)) => K(Na) & K(Nb)" does NOT hold as written --
+  tamarin's K() ACTION does not fire on the subterms of a term the adversary DERIVES (only the !KU facts
+  do), so that form is falsifiable. The equivalent, provable statement ties the two nonces to the human
+  MISTAKES that could have exported them, which is also what the attribution story wants.
+*/
+
+// a nonce reaches the adversary ONLY through a degraded share outcome.
+lemma H_nonce_leak_routes [reuse]:
+  all-traces
+  "All p n #o #k.
+     OwnNonce(p, n)@o & K(n)@k
+   ==> (Ex q #d. MisdeliveredNonce(q)@d) | (Ex q #d. NonceLeaked(q)@d)"
+
+// (S) BOUNDARY LIST / compositional payoff: the session key reaches the adversary only if BOTH parties
+// exported a nonce. Leaking ONE is insufficient (kdf/2 free). Profiles' secrecy lemmas consume this.
+lemma H_sk_requires_both_leaks [reuse]:
+  all-traces
+  "All na nb #s #k.
+     Secret(kdf(na, nb))@s & K(kdf(na, nb))@k
+   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
