@@ -289,6 +289,16 @@ restriction OnceCopresent:
   "All p #i #j. SeedCopresent(p)@i & SeedCopresent(p)@j ==> #i = #j"
 #endif
 
+#ifdef SIGMA9_ALERTVOLUME
+// alert-volume surface: the harness poses a stream of decisions -> the single sigma9 marker (dedicated
+// surface; keeps sigma9 O(1) instead of an N^3 !Demand product).
+rule IF_alertvolume_surface [color=#f2994a]:
+    [ !StressEnable(P) ] --[ UIStep(P,'decision_stream'), SeedCopresentDecide(P) ]-> [ !CopresentDecide(P) ]
+
+restriction OnceCopresentDecide:
+  "All p #i #j. SeedCopresentDecide(p)@i & SeedCopresentDecide(p)@j ==> #i = #j"
+#endif
+
 #ifdef IF_NONCE_ACK
 rule IF_nonce_ack_alex [color=#f2994a]:
     [ !NoncesSeen('Alex', idA, <Na, Nb>), Fr(~pid) ]

@@ -112,9 +112,14 @@ restriction OnceHabituate:
 #endif
 
 #ifdef SIGMA9_ALERTVOLUME
+// sigma9 ALERT-VOLUME reads a SINGLE marker !CopresentDecide(P), emitted once by a screen/surface that
+// shows >=3 co-present DECIDE controls. Same reason as sigma2's marker: the "any THREE of N !Demand" form
+// is an O(N^3) lookup that blows the source saturation up on a full screen. Emitters: the legacy
+// IF_decide_surface, secure_email's Blake Screen C (Reply + Forward + overflow), and the kdf sigma9
+// surface. Restriction Inequality is kept (other detectors still use Neq).
 rule Detect_AlertVolume [color=#eb5757]:
-    [ !Demand(P, r1, 'decide'), !Demand(P, r2, 'decide'), !Demand(P, r3, 'decide'), !StressEnable(P) ]
-  --[ AlertVolume(P), Neq(r1,r2), Neq(r1,r3), Neq(r2,r3), SetMask(P, 'Careless') ]->
+    [ !CopresentDecide(P), !StressEnable(P) ]
+  --[ AlertVolume(P), SetMask(P, 'Careless') ]->
     [ !EffectiveMask(P, 'Careless') ]
 
 restriction Inequality:

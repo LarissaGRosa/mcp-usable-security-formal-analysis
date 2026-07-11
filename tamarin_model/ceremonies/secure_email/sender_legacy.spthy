@@ -47,7 +47,8 @@ restriction OnceConfirmSurface:
 rule IF_decide_surface [color=#f2994a]:
     [ !StressEnable(P), Fr(~a), Fr(~b), Fr(~c) ]
   --[ UIStep(P,'method_toggle'), SeedDecide(P) ]->
-    [ Prompt(P, ~a, 'decide'), !Demand(P, ~a, 'decide'), Prompt(P, ~b, 'decide'), !Demand(P, ~b, 'decide'), Prompt(P, ~c, 'decide'), !Demand(P, ~c, 'decide') ]
+    [ Prompt(P, ~a, 'decide'), !Demand(P, ~a, 'decide'), Prompt(P, ~b, 'decide'), !Demand(P, ~b, 'decide'), Prompt(P, ~c, 'decide'), !Demand(P, ~c, 'decide'),
+      !CopresentDecide(P) ]
 
 restriction OnceDecideSurface:
   "All p #i #j. SeedDecide(p)@i & SeedDecide(p)@j ==> #i = #j"

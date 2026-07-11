@@ -141,15 +141,25 @@ rule IF_subject_leak [color=#c0392b]:
 // A screens profile that stresses Blake ALSO arms MASK_CONFIRM (Blake's link-confirm / trusted-key).
 // ============================================================================================
 
-// ---- Screen C: recipient end-to-end inbox (Blake, PGP). Trusted-key compare (C3) + decrypt authorize
-// + Reply/Forward decide (C6/C7). Blake publishes his key here. ----
+// ---- Screen C: recipient end-to-end inbox (Blake, PGP). Encryption/signature badges (C1/C2, exposure
+// confirms -- they feed sigma8's two-confirm density), trusted-key compare (C3), decrypt authorize,
+// Reply (C6) + Forward (C7) decides. Blake publishes his key here. ----
 rule IF_screen_blake_pgp [color=#f2994a]:
-    [ BlakeInit(idB), Fr(~vid), Fr(~decId), Fr(~fwdId), Fr(~sk) ]
+    [ BlakeInit(idB), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
   --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
-    [ Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <'AliceKey', 'AliceKey'>),
+    [ // PERFORMED (a mask answers these -- they drive outcomes): trusted-key compare, decrypt, Forward.
+      Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <'AliceKey', 'AliceKey'>),
       Prompt('Blake', ~decId, 'authorize'), !Demand('Blake', ~decId, 'authorize'),
       Prompt('Blake', ~fwdId, 'decide'),    !Demand('Blake', ~fwdId, 'decide'),
-      !Copresent('Blake'),
+      // EXPOSURE-ONLY (lesson 15a/15b): C1/C2 badges + C6 Reply + C8 overflow are COUNTED by the density
+      // detectors but never PERFORMED -- they emit !Demand WITHOUT a Prompt, so no mask answers them and
+      // they add ZERO branching. Two confirms feed sigma8; Reply+Forward+overflow feed sigma9.
+      !Demand('Blake', ~b1,    'confirm'),
+      !Demand('Blake', ~b2,    'confirm'),
+      !Demand('Blake', ~rplId, 'decide'),
+      !Demand('Blake', ~ovfId, 'decide'),
+      // >=2 co-present controls (sigma2) and >=3 co-present DECIDES (sigma9) -- single markers, O(1).
+      !Copresent('Blake'), !CopresentDecide('Blake'),
       !BlakePgpScreen(idB, ~decId, ~fwdId) ]
 
 restriction OncePoseBlakePgp:
@@ -176,9 +186,11 @@ rule IF_blake_forward_misroute [color=#c0392b]:
 // (<claimed-origin, expected-origin> -- the guide's "can resemble phishing") guards entry. pw-entry
 // (transcribe) + Unlock (authorize). ----
 rule IF_screen_blake_pw [color=#f2994a]:
-    [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId) ]
+    [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId) ]
   --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake') ]->
-    [ Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <'GenuinePage', 'GenuinePage'>),
+    [ // B6/B7 reply-route decide -- EXPOSURE-ONLY (counted, never performed: !Demand, no Prompt)
+      !Demand('Blake', ~rrId,  'decide'),
+      Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <'GenuinePage', 'GenuinePage'>),
       Prompt('Blake', ~entId, 'transcribe'), !Demand('Blake', ~entId, 'transcribe'), !Displayed('Blake', ~entId, 'oob-pw'),
       Prompt('Blake', ~unlId, 'authorize'),  !Demand('Blake', ~unlId, 'authorize'),
       !Copresent('Blake'),
