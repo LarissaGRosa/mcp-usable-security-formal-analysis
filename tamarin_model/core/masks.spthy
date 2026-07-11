@@ -38,6 +38,7 @@
   MASK_CONFIRM                 masks/confirm_behavior.spthy      confirm (verify-self/autoapprove/dismiss)
   MASK_DECIDE                  masks/decide_behavior.spthy       decide (handle/fatigue)
   MASK_POLICY                  masks/policy_behavior.spthy       set-policy (clear/misleading)
+  MASK_TRANSCRIBE              (new -- RELAYER full-interface)   transcribe (correct/slip/inband-leak)
   OUTCOME_DEGRADED_CLICK       masks/outcome_degraded_click.spthy         degraded-but-engaged still grants
   OUTCOME_HABITUATED_CLICKTHROUGH masks/outcome_habituated_clickthrough.spthy Habituated+compare credulous
   OUTCOME_CARELESS_SKIPCHECK   masks/outcome_careless_skipcheck.spthy     Careless+compare credulous
@@ -165,6 +166,30 @@ rule Policy_misleading [color=#27ae60]:
     [ !Prompt(P, pid, 'set-policy'), !EffectiveMask(P, 'Attentive'), !ControlDesign('set-policy', 'misleading') ]
   --[ SetPolicy(P, pid, 'unsafe'), Mistake(P, pid), RespMask(P,'Attentive'), Answered(pid) ]->
     [ PolicyDone(P, pid) ]
+#endif
+
+#ifdef MASK_TRANSCRIBE
+// ===== f_H TRANSCRIBE -- field entry (To / subject / hint / pw / nonce / key). Attentive types the
+// intended (displayed) value; Busy slips a fresh WRONG value (-> !Failed, feeds sigma10); Careless
+// leaks IN-BAND: types the right value but ALSO exports it (pastes into a public channel / the wrong
+// field). Core stays ceremony-BLIND: the leak emits a generic TranscribeLeaked(P,tid,val) FACT + a
+// TranscribeLeak(P,tid) label, and the CEREMONY's effect rule decides what leaks WHERE (secret into the
+// subject / pw into the hint / key into the chat) -- core never emits Out. One field is a 'med' step
+// (core/demands.spthy) so a single field cannot fire sigma1, but two co-present fields feed SIGMA_ADDITIVE.
+rule Transcribe_correct [color=#27ae60]:
+    [ !Prompt(P, tid, 'transcribe'), !Displayed(P, tid, intended), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'transcribe', 'correct') ]
+  --[ Transcribe(P, tid, mask), RespMask(P, mask), Typed(P, tid, intended), Answered(tid) ]->
+    [ !StepData(P, tid, intended) ]
+
+rule Transcribe_slip [color=#27ae60]:
+    [ !Prompt(P, tid, 'transcribe'), Fr(~wrong), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'transcribe', 'slip') ]
+  --[ Transcribe(P, tid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Slip(P), Typed(P, tid, ~wrong), Answered(tid) ]->
+    [ !Failed(P), !StepData(P, tid, ~wrong) ]
+
+rule Transcribe_leak [color=#27ae60]:
+    [ !Prompt(P, tid, 'transcribe'), !Displayed(P, tid, intended), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'transcribe', 'inband-leak') ]
+  --[ Transcribe(P, tid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), TranscribeLeak(P, tid), Typed(P, tid, intended), Answered(tid) ]->
+    [ !StepData(P, tid, intended), TranscribeLeaked(P, tid, intended) ]
 #endif
 
 #ifdef OUTCOME_DEGRADED_CLICK

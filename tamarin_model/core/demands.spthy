@@ -24,7 +24,11 @@ rule Seed_lexicon_tlx [color=#9b51e0]:
       !Demands('compare',   'Effort',         'hi'),
       !Demands('authorize', 'Arousal',        'hi'),
       !Demands('share',     'MentalDemand',   'hi'),
-      !Demands('share',     'TemporalDemand', 'hi') ]
+      !Demands('share',     'TemporalDemand', 'hi'),
+      // field entry is a 'med' step: one field can't fire sigma1/sigma3 (need 'hi'), but two
+      // co-present fields feed SIGMA_ADDITIVE (two 'med' prompts -> Busy).
+      !Demands('transcribe','MentalDemand',   'med'),
+      !Demands('transcribe','TemporalDemand', 'med') ]
 
 restriction OnceLexicon:
   "All #i #j. SeedLexicon()@i & SeedLexicon()@j ==> #i = #j"

@@ -117,7 +117,10 @@ rule Seed_outcome_policy [color=#9b51e0]:
       !OutcomePolicy('Fearful',   'authorize', 'abort'),
       !OutcomePolicy('Attentive', 'share', 'oob'),
       !OutcomePolicy('Careless',  'share', 'inband-leak'),
-      !OutcomePolicy('Busy',      'share', 'misdeliver') ]
+      !OutcomePolicy('Busy',      'share', 'misdeliver'),
+      !OutcomePolicy('Attentive', 'transcribe', 'correct'),
+      !OutcomePolicy('Busy',      'transcribe', 'slip'),
+      !OutcomePolicy('Careless',  'transcribe', 'inband-leak') ]
 
 restriction OnceOutcomePolicy:
   "All #i #j. SeedOutcomePolicy()@i & SeedOutcomePolicy()@j ==> #i = #j"

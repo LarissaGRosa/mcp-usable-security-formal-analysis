@@ -101,6 +101,7 @@ never a pre-computed verdict (verdicts are derived in the mask layer, which then
 | `authorize` | granting a sensitive op | — | SecurityAnxiety (Arousal) |
 | `share` | disclosing a secret over a channel | `<recipient, secret>` | σ₁/σ₃ via lexicon |
 | `set-policy` | configuring access (task-mediated) | — (the control's design quality is a profile-level interface seed, `!ControlDesign` via `interface_clear_policy` / `interface_misleading_policy`, never step data) | σ₄ (Pathway B — task, not mask) |
+| `transcribe` | typing a value into a field (To / subject / hint / pw / nonce / key) | `<intended>` — Attentive types it; Busy slips a fresh wrong value (`!Failed`→σ₁₀); Careless leaks it in-band (`TranscribeLeaked` fact — the *ceremony* effect rule routes the `Out`) | SIGMA_ADDITIVE (two co-present `'med'` fields); σ₁₀ via the slip's `!Failed` |
 
 σ₂ Concurrency reads **any two** distinct `!Prompt` (competing demands). The outcome a mask produces per
 action is in the `outcome_policy` matrix (`core/framework.spthy`); if that outcome must drive the
