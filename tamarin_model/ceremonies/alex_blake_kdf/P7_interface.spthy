@@ -3,24 +3,56 @@ begin
 
 /*
   P7 -- the INTERFACE lever. The VERIFY_KEY compare runs under the HARDENED interface (Effort 'lo'),
-  so sigma6 Abstraction cannot fire (the band) -> no Naive -> no tampered-key mistake; and the
-  SET_POLICY control is CLEAR, so no task-mediated unsafe policy. The reachable/unreachable pair with
-  the baseline (P2) / misleading (P5) is the RFC argument.
+  so sigma6 Abstraction cannot fire -> no Naive -> no tampered-key mistake; and the SET_POLICY control
+  is CLEAR, so no task-mediated unsafe policy. The reachable/unreachable pair with the baseline (P2) /
+  misleading (P5) is the RFC argument. Uses the manual demand layer (no default lexicon) -- the
+  interfaces below ARE the demand profile.
+  Arms: FINISH_PLAIN, IF_HARDENED, IF_CLEAR, UI_VERIFY+MASK_COMPARE(+KEYCHECKED) (sigma6),
+        UI_POLICY+MASK_POLICY.
   Run: check.py --prove ceremonies/alex_blake_kdf/P7_interface.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive)
-#include "protocol/finish.spthy"
-#include "bundles/human_manual.spthy"     // manual layer -- the interfaces below ARE the demand profile
+#define FINISH_PLAIN
+#define IF_HARDENED
+#define IF_CLEAR
+#define UI_VERIFY
+#define MASK_COMPARE
+#define MASK_COMPARE_KEYCHECKED
+#define SIGMA6_ABSTRACTION
+#define UI_POLICY
+#define MASK_POLICY
 
-// -- the interfaces under test (swap for lexicon_tlx / interface_misleading_policy to flip outcomes) --
-#include "../../core/interface_hardened_verify.spthy"   // compare = Effort 'lo'
-#include "../../core/interface_clear_policy.spthy"       // set-policy = clear terminology
+#include "base.spthy"
 
-#include "phases/verify.spthy"
-#include "../../core/stressors/abstraction.spthy"        // sigma6 -- cannot fire under 'lo'
-#include "phases/policy.spthy"
+// the ceremony still works: a genuine key is accepted (happy path).
+lemma P7_genuine_verify_ok:
+  exists-trace
+  "Ex p vid #i. Accept(p, vid)@i"
 
-#include "experiments/P7_interface.spthy"
+// the hardened interface fires the stressor's PRECONDITION away: sigma6 never onsets.
+lemma P7_no_abstraction:
+  all-traces
+  "not (Ex p #i. Abstraction(p)@i)"
+
+// consequently the Naive mask never arises...
+lemma P7_no_naive_verify:
+  all-traces
+  "not (Ex p vid #i. Verify(p, vid, 'Naive')@i)"
+
+// ...and the tampered-key mistake is UNREACHABLE -- purely because the better interface kept the
+// user Attentive. (Contrast: P2_mistake_reachable.)
+lemma P7_no_mistake:
+  all-traces
+  "not (Ex p vid #i. Mistake(p, vid)@i)"
+
+// ---- the SAME lever on Pathway B: a CLEAR set-policy control ----
+lemma P7_clear_policy_safe_reachable:
+  exists-trace
+  "Ex p pid #i. SetPolicy(p, pid, 'safe')@i"
+
+// ...and the unsafe policy is UNREACHABLE under honest terminology (proof pair with P5).
+lemma P7_no_unsafe_policy:
+  all-traces
+  "not (Ex p pid #i. SetPolicy(p, pid, 'unsafe')@i)"
 
 end

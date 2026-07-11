@@ -1,4 +1,0 @@
-/* phases/approve.spthy -- APPROVE_REQ kit: the prompt producer + the confirm behaviour.
-   Pair with a stressor (habituation) + protocol/finish + a session. */
-#include "../protocol/approval_ui.spthy"
-#include "../../../core/masks/confirm_behavior.spthy"

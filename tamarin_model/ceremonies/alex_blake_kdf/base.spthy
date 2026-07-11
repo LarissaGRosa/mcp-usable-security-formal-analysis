@@ -1,0 +1,28 @@
+/*
+  base.spthy -- the shared alex_blake_kdf theory body (was spine.spthy + the common human layer). It
+  #defines the flags CONSTANT across the wire profiles (P0-P3, P6-P11): participant init, the nonce
+  wire, the compute pipeline (behaviour + KeyResult adapter + Alex's calc prompt), and Alex stress
+  targeting. A profile #defines its VARIABLE flags (finish variant, demand profile, extra phases,
+  stressors, Blake compute/stress, mitigations, PROPERTIES) BEFORE `#include "base.spthy"`.
+
+  The custom profiles P4 (inferred harness) and P5 (Pathway B) do NOT use base -- they assemble the
+  merged layer files directly (see their files).
+
+  Layer order: framework -> protocol -> demands -> masks -> stressors -> knobs -> properties.
+*/
+
+// -- flags constant across the wire profiles --
+#define KDF_INIT
+#define KDF_WIRE
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define IF_CALC_ALEX
+#define STRESS_ALEX
+
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"

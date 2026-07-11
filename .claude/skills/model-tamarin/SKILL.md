@@ -343,3 +343,40 @@ Other knobs: `-c/--open-chains` (default 10), `-s/--saturation` (default 5),
 | `WARNING: … wellformedness checks failed!` | read the named section (arity/case/unbound var); check.py prints it and exits 1 |
 | proof hangs / `check.py` TIMEOUT | partial deconstructions → add `[sources]` lemma or `--auto-sources`; or try `--heuristic C`/an oracle |
 | `falsified - found trace` | the property is genuinely violated; open `tamarin-prover interactive FILE` to read the attack trace |
+
+---
+
+## Ceremony-Mask model (this repo)
+
+The `tamarin_model/` tree implements a **human-factors layer** on top of security ceremonies. When
+authoring or debugging here, read [`tamarin_model/AUTHORING_GUIDE.md`](../../tamarin_model/AUTHORING_GUIDE.md)
+first.
+
+**Semantic model (prompt/perform).** The interface **poses** `!Prompt(P,pid,action)` and
+`!Displayed(P,pid,observables)`. Stressor detectors read `!Prompt`. Masks read `!Prompt`+`!Displayed`,
+perform the step, and commit `!StepData` where an advance rule needs the value. Never pre-compute
+verdicts in the interface.
+
+**Layout.** One file per layer with `#ifdef` selection:
+
+```
+tamarin_model/core/          framework · masks · stressors · demands · knobs · properties
+tamarin_model/ceremonies/<X>/   base.spthy + protocol.spthy + interface.spthy + profiles
+```
+
+A **profile** = `theory … begin` + `#define FLAG` list + `#include "base.spthy"` + lemmas + `end`.
+
+**Prove a profile:**
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+python3 .claude/skills/model-tamarin/check.py --prove tamarin_model/ceremonies/alex_blake_kdf/P1_calc_pressure.spthy
+```
+
+**Interactive GUI** (run from the ceremony directory so `#include`s resolve; bind on host network):
+
+```bash
+cd tamarin_model/ceremonies/secure_email && tamarin-prover interactive . --port=3001
+```
+
+Layer colors in trace graphs: 🔵 protocol · 🟠 interface · 🔴 stressor · 🟢 mask.

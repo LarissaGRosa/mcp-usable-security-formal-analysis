@@ -45,7 +45,7 @@
   REQ-PUSH-MFA-NUMBER-MATCH + REQ-VERIFIED-IDENTITY (RFC_GUIDANCE now 6/6 proven); ROADMAP/INCIDENTS/
   TERMINATION/AUTHORING_GUIDE annotated. NB: rfc_gen.py caught that the lemma restructure had renamed
   `S0_leak_pw_inband_reachable` → manifest re-pointed to `S0_distraction_careless_silent_compromise`.
-- **C1 LAYERED v2 (2026-07-09, REPLACED all old S-profiles; plan in docs/LAYERED_V2_PLAN.md):**
+- **C1 LAYERED v2 (2026-07-09, REPLACED all old S-profiles):**
   five strict layers (protocol/ ↔ interface/ ↔ stressors ↔ user), one directory per layer.
   Highlights: PK sub-ceremony modeled (keygen→publish: key on the PUBLIC channel, fingerprint on
   OOB); tampering = DY's choice (ONE `P_fetch: In(k)` rule — no genuine/tampered producer branch,
@@ -224,9 +224,10 @@
 
 17. **V3 layered template + graded dose-response (both ceremonies).** Every ceremony is now
     `protocol/` (🔵 crypto+wire+finish; a `finish_confirmed.spthy` variant adds the key-confirmation
-    shutdown) → `interface/` (🟠 one rule per control, emits `!Step`+`!StepData`+context) →
+    shutdown) → `interface/` (🟠 one rule per control, emits `!Step`+`!StepData`+context — SUPERSEDED by
+    lesson 19: the interface now poses `!Prompt`+`!Displayed` and the mask commits `!StepData`) →
     stressor layer (🔴) → `masks/` (🟢) → `bundles/human_common.spthy`. The stressor layer reads the
-    INTERFACE's `!Step`, never the protocol. Triggering is a BAND, not exact-`'hi'`: a lookup
+    INTERFACE's prompt (lesson 19: `!Prompt`), never the protocol. Triggering is a BAND, not exact-`'hi'`: a lookup
     detector matches `!Demands(action,dim,lvl) & !AtLeast(lvl, thr)`. **Put the `!AtLeast` level
     order (`'lo'<'med'<'hi'`) in `core/types.spthy`, NOT in `lexicon_tlx.spthy`** — profiles swap the
     lexicon for an `interface_*`/`population_*` demand profile (P7/P9), and the order must survive the
@@ -242,3 +243,36 @@
     /`time_pressure`) only after every profile was re-ported. Watch the lesson-3 comment trap: a
     `*/` inside a `/* */` block (e.g. `interface_*/population_*`) closes it early and tamarin then
     SILENTLY DROPS the file (facts-unseeded WF failure downstream) — write `interface_* / population_*`.
+
+18. **Flat one-file-per-layer with `#ifdef` selection (V3.1, 2026-07-10).** The ~105 tiny fragment
+    files were consolidated to ONE file per model layer: `core/` → 6 (`framework`/`masks`/`stressors`/
+    `demands`/`knobs`/`properties`), each ceremony → `base`+`protocol`+`interface`(+`lemmas`) + one
+    self-contained file per profile. **Selective *inclusion* was load-bearing** — a profile used to arm
+    a rule by including its file (in secure_email `!StressEnable` is always on, so "which σ fire" ==
+    "which stressor files were included"; likewise the opt-in outcome rows and the mask behaviours the
+    ceremony deliberately omits). So a blanket merge would arm everything and break `S0_secrecy_absolute`.
+    Fix: merge to one file but wrap each selectable rule-block in `#ifdef FLAG … #endif`; a profile
+    `#define`s exactly what it arms BEFORE `#include "base.spthy"`. Tamarin 1.12.0's preprocessor makes
+    the result byte-identical to the old selective-include theory (defined flag ⇒ rule present; undefined
+    ⇒ absent), so proofs/timings are unchanged. Keep include order stable (framework → protocol →
+    interface → demands → masks → stressors → knobs → properties) to avoid "fact used before defined".
+    To review a profile now, read its `#define` list — that IS the story.
+
+19. **Prompt/perform seam — the interface prompts, the user performs (RELAYER, 2026-07-10).** The old
+    seam had the INTERFACE emit `!Step`+`!StepData` — i.e. the UI *declared the human's objective step*,
+    conflating two agents. The re-layer splits them: the interface only POSES `!Prompt(P,pid,action)` +
+    DISPLAYS `!Displayed(P,pid,shown)`; the stressor detectors read `!Prompt` (fatigue is from being
+    *shown* prompts, not from what the user commits; σ₁₀ alone still reads the human `!Failed`); the
+    mask (`core/masks.spthy`) reads `!Prompt`+`!Displayed`, PERFORMS the step, and commits
+    `!StepData(P,pid,committed)` — the mask-dependent value the human stands behind (Attentive commits
+    the reference-checked key at `compare`, the correspondent at `share`; a degraded mask commits the
+    displayed/attacker value). The interface's *advance* rules + the share→channel effect adapters
+    consume that committed `!StepData`. **The one trap:** a key-confirmation shutdown must compare the
+    human's produced key against the interface's `!Displayed` correct value (`kdf(N_A,N_B)`), NOT the
+    human's own committed `!StepData` — reading the commit makes `KeyEq(sk,sk)` trivially true and the
+    shutdown can never catch a slip (kdf `P_confirm_ok`/`P_confirm_abort`). Build order that stays
+    green: (1) core read-rename only — nothing proves yet; (2) rewire one ceremony's interface, prove;
+    (3) the other; (4) sweep + docs. **State-explosion note (§5c):** the mask's committed `!Step` fact
+    turned out vestigial (stressors read `!Prompt`, adapters read `!StepData`/outcomes, lemmas read
+    action labels like `Verify`/`Slip`) — dropping it took S4 solo 340s → 204s with no proof change.
+    Keep only the committed `!StepData` where a consumer actually reads it.

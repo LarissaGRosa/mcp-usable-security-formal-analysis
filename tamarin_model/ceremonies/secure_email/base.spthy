@@ -1,0 +1,27 @@
+/*
+  base.spthy -- the shared secure_email theory body (was spine.spthy). It #defines the flags that are
+  CONSTANT across every S-profile (the compare/share/authorize behaviours, the degraded-click row, and
+  the novice lexicon), then assembles the layers. A profile #defines its own variable flags (the
+  stressors it arms, opt-in outcome rows, PROPERTIES) BEFORE `#include "base.spthy"`, so those blocks
+  are in scope when the merged core files are pulled in here.
+
+  Layer order (kept stable to avoid "fact used before defined"): framework -> protocol ->
+  demands -> masks -> stressors -> knobs -> properties -> shared [reuse] lemmas.
+*/
+
+// -- flags constant across all S-profiles --
+#define MASK_COMPARE
+#define MASK_COMPARE_KEYCHECKED
+#define MASK_SHARE
+#define MASK_AUTHORIZE
+#define OUTCOME_DEGRADED_CLICK
+#define LEXICON_DEFAULT
+
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "lemmas.spthy"

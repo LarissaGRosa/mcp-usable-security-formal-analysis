@@ -2,28 +2,42 @@ theory ToyCeremony_P5_PathwayB
 begin
 
 /*
-  PROFILE P5 · Pathway B (sigma4 MisleadingTerminology, AWS-S3 mistake).
-  Profile = < C0 + SET_POLICY, {Attentive}, {} (no stressor), BOTH control designs >. The
-  task-mediated pathway: the mistake follows from the CONTROL'S design quality -- an interface-level
-  !ControlDesign row (both seeds included here, so the theory quantifies over clear AND misleading
-  designs) -- with NO mask change. Kept distinct from the mask-mediated profiles (it is the second
-  pathway, not a third stressor). Contrast P7: clear seed ONLY -> unsafe policy unreachable.
+  P5 -- Pathway B, task-mediated mistake (the SECOND failure pathway: no stressor, no mask change). An
+  Attentive user sets a SAFE policy under clear terminology but an UNSAFE one under misleading
+  terminology (the AWS S3 "Any Authenticated Users" case). Both control designs are in scope (IF_CLEAR
+  + IF_MISLEADING), so the theory quantifies over both. Self-contained: no KDF wire / stressors.
   Run: check.py --prove ceremonies/alex_blake_kdf/P5_pathwayb.spthy
 */
 
-#include "../../core/types.spthy"
+#define KDF_INIT
+#define UI_POLICY
+#define MASK_POLICY
+#define IF_CLEAR
+#define IF_MISLEADING
 
-// -- human layer: task-mediated SET_POLICY f_H (Pathway B) + BOTH control-design interfaces --
-#include "../../core/masks/policy_behavior.spthy"
-#include "../../core/interface_clear_policy.spthy"
-#include "../../core/interface_misleading_policy.spthy"
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
 
-// -- protocol: init + the SET_POLICY step --
-#include "protocol/init.spthy"
-#include "protocol/policy_ui.spthy"
+// good design: clear terminology -> an Attentive user sets the safe policy.
+lemma P5_clear_ok:
+  exists-trace
+  "Ex p pid #i. SetPolicy(p, pid, 'safe')@i"
 
-#include "experiments/P5_pathwayb.spthy"
+// PATHWAY B reachable: misleading terminology -> an ATTENTIVE user makes a mistake.
+lemma P5_misleading_attentive_mistake:
+  exists-trace
+  "Ex p pid #i. Mistake(p,pid)@i & RespMask(p,'Attentive')@i & SetPolicy(p,pid,'unsafe')@i"
+
+// the defining property: the mistake is made by an Attentive user with NO mask change.
+lemma P5_mistake_is_task_mediated_not_mask:
+  all-traces
+  "All p pid #i. Mistake(p,pid)@i ==> ( RespMask(p,'Attentive')@i & not (Ex m #s. SetMask(p,m)@s) )"
+
+// the mistake is caused by the MISLEADING control design being in scope; a clear design never causes it.
+lemma P5_mistake_requires_misleading:
+  all-traces
+  "All p pid #i. Mistake(p,pid)@i ==> (Ex #j. SeedInterface('misleading_policy')@j & #j < #i)"
 
 end

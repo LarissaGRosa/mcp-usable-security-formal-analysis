@@ -1,0 +1,37 @@
+theory SecureEmail_S7_RecoveryCareless
+begin
+
+/*
+  S7 -- MATCHED recovery, careless case. Concurrency-driven Careless (sigma2, competing demand) is
+  recovered by a re-engagement WARNING (a salience interrupt that breaks the distraction) but NOT by a
+  mode-break (there is no reason a forcing-function restores a distracted user's attention). Both
+  interventions are AVAILABLE; the theorems show Careless recovers ONLY via the warning -- the mirror of
+  S6. Together S6 + S7 prove the recovery-must-match-the-driver matrix.
+  Run: check.py --prove ceremonies/secure_email/S7_recovery_careless.spthy
+*/
+
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_CARELESS_SKIPCHECK
+#define MASK_RECOVERY
+#define RECOVERY_WARNING
+#define RECOVERY_MODEBREAK
+
+#include "base.spthy"
+
+// the warning restores Attentive after concurrency-driven Careless -> the human then verifies
+// attentively (reachable).
+lemma S7_warning_recovers_careless:
+  exists-trace
+  "Ex vid #c #r #v.
+     Distract('Alex')@c & RecoverVia('Alex','warning')@r
+   & Verify('Alex', vid, 'Attentive')@v & #c < #r & #r < #v"
+
+// MATCHING (all-traces): an Attentive verify after a distraction REQUIRES a warning between -- an
+// available mode-break is NOT what recovers Careless.
+lemma S7_careless_needs_warning_not_modebreak:
+  all-traces
+  "All vid #v #c.
+     Verify('Alex', vid, 'Attentive')@v & Distract('Alex')@c & #c < #v
+   ==> (Ex #r. RecoverVia('Alex','warning')@r & #c < #r & #r < #v)"
+
+end

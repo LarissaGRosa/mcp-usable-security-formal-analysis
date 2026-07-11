@@ -2,46 +2,63 @@ theory ToyCeremony_P4_Inferred
 begin
 
 /*
-  PROFILE P4 · the fully-inferred stressor tier.
-  Profile = < C0 (op/decision harness), {Attentive,Busy,Careless,Naive},
-              inferred {sigma1, sigma6, sigma10, sigma9} >.
-  Consolidates old 10 / 11 / 12 / 15. Self-contained (does not use ceremony.base / the KDF message
-  flow): a token-bounded harness poses compute, verify and decision operations; the core detectors
-  infer each stressor from the objective operation / trace, with no declared flags.
+  P4 -- the fully-inferred stressor tier (the usability-analyzer direction): every stressor is inferred
+  from the ceremony itself, no declared flags. A token-bounded harness poses compute, verify and
+  decision operations; the core detectors infer sigma1 (from a 'kdf' compute), sigma6 (from a 'verify'
+  compare), sigma10 (chained off a slip's !Failed) and sigma9 (from decision density). Self-contained:
+  does NOT use base.spthy (no KDF wire / finish) -- the infer harness is the poser.
   Run: check.py --prove ceremonies/alex_blake_kdf/P4_inferred.spthy
 */
 
-#include "../../core/types.spthy"
-#include "protocol/init.spthy"
+#define KDF_INIT
+#define STRESS_ALEX
+#define INFER_HARNESS
+#define COMPUTE_OPRESULT
+#define LEXICON_DEFAULT
+#define MASK_COMPUTE
+#define MASK_COMPARE
+#define MASK_COMPARE_VERIFYDONE
+#define MASK_DECIDE
+#define SIGMA1_LOAD
+#define SIGMA6_ABSTRACTION
+#define SIGMA10_REPEATFAIL
+#define SIGMA9_ALERTVOLUME
 
-// -- usability lexicon (Layer 2): the agnostic sigma1 reads !Demands from here --
-#include "../../core/lexicon_tlx.spthy"
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
 
-// -- inferred stressors (operation-inference + trace-inference) --
-#include "../../core/stressors/cognitive_load.spthy"
-#include "../../core/stressors/abstraction.spthy"
-#include "../../core/stressors/repeated_failure.spthy"
-#include "../../core/stressors/alert_volume.spthy"
+// sigma1 inferred -> Busy slip.
+lemma P4_inferred_slip:
+  exists-trace
+  "Ex #l #o. Load('Alex')@l & Slip('Alex')@o & #l < #o"
 
-// -- masks: agnostic compute behaviour + OpResult adapter (replaces attentive_op/busy_op/careless_op),
-//    plus verify op and decision (confirm) --
-#include "../../core/masks/outcome_policy.spthy"
-#include "../../core/masks/compute_behavior.spthy"
-#include "protocol/compute_opresult.spthy"
-// agnostic compare behaviour + VerifyDone adapter (replaces attentive_verify_op / naive_verify_op)
-#include "../../core/masks/compare_behavior.spthy"
-#include "../../core/masks/compare_verifydone.spthy"
-// agnostic decide behaviour (replaces attentive_confirm / careless_confirm)
-#include "../../core/masks/decide_behavior.spthy"
+// sigma6 inferred -> Naive mistake (on a tampered fingerprint).
+lemma P4_inferred_mistake:
+  exists-trace
+  "Ex vid #a #o #t. Abstraction('Alex')@a & Mistake('Alex',vid)@o & TamperedFp('Alex',vid)@t"
 
-// -- transitions + Alex stress-enable --
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
-#include "protocol/stress_alex.spthy"
+// CHAINING: a slip (failure) -> inferred sigma10 -> Careless timeout.
+lemma P4_chaining_escalation:
+  exists-trace
+  "Ex #f #r #t. Slip('Alex')@f & RepeatedFailure('Alex')@r & Timeout('Alex')@t
+                & #f < #r & #r < #t"
 
-// -- the merged op/verify/decision harness --
-#include "protocol/infer_harness.spthy"
+// DECISION DENSITY: >=3 handled decisions -> inferred sigma9 fatigue.
+lemma P4_inferred_fatigue:
+  exists-trace
+  "Ex #v. AlertVolume('Alex')@v"
 
-#include "experiments/P4_inferred.spthy"
+// inference soundness: the sigma10 escalation arises only after a prior failure.
+lemma P4_escalation_requires_failure:
+  all-traces
+  "All p #i. RepeatedFailure(p)@i ==> (Ex #f. Slip(p)@f & #f < #i)"
+
+// every inferred onset is for an ENABLED party (the Stage B gate holds in the inferred tier too).
+lemma P4_load_requires_enable:
+  all-traces
+  "All p #l. Load(p)@l ==> (Ex #s. StressOn(p)@s & #s < #l)"
 
 end

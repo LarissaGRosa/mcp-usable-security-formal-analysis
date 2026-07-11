@@ -2,19 +2,33 @@ theory ToyCeremony_P9_Population
 begin
 
 /*
-  P9 -- per-population calibration. The CALC phase for the EXPERT population (population_expert rates
-  compute demand 'lo'): 'lo' < the 'hi' threshold (!AtLeast band), so sigma1 cannot fire and the
-  expert never slips. Contrast P1 (novice/baseline lexicon): slip reachable. The pair is the RFC
-  population argument. Run: check.py --prove ceremonies/alex_blake_kdf/P9_population.spthy
+  P9 -- per-population calibration. The SAME CALC_SK phase + sigma1 workload detector as the baseline,
+  but analysed for the EXPERT population (compute = low Mental + Temporal demand), so the workload
+  stressor cannot fire and the expert never slips. Uses the manual demand layer (POP_EXPERT swaps the
+  lexicon). Proof pair with P1_slip_reachable (novice) is the RFC "cover the least-skilled population".
+  Arms: FINISH_PLAIN, POP_EXPERT, SIGMA1_LOAD.
+  Run: check.py --prove ceremonies/alex_blake_kdf/P9_population.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
-#include "protocol/finish.spthy"
-#include "bundles/human_manual.spthy"     // manual layer -- population below is the demand profile
-#include "../../core/population_expert.spthy"   // compute = low Mental+Temporal demand
+#define FINISH_PLAIN
+#define POP_EXPERT
+#define SIGMA1_LOAD
 
-#include "../../core/stressors/cognitive_load.spthy"   // sigma1 -- cannot fire at 'lo'
+#include "base.spthy"
 
-#include "experiments/P9_population.spthy"
+// the expert completes the ceremony correctly.
+lemma P9_completes:
+  exists-trace
+  "Ex #f. Finish('Alex')@f"
+
+// the workload stressor never onsets for the expert...
+lemma P9_no_load:
+  all-traces
+  "not (Ex p #i. Load(p)@i)"
+
+// ...so the expert never slips (contrast: P1_slip_reachable under the novice/baseline profile).
+lemma P9_no_slip:
+  all-traces
+  "not (Ex p #i. Slip(p)@i)"
 
 end

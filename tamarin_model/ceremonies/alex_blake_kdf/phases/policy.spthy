@@ -1,4 +1,0 @@
-/* phases/policy.spthy -- SET_POLICY kit (Pathway B): the policy producer + the task-mediated policy
-   behaviour. Pair with an interface_{clear,misleading}_policy design seed. */
-#include "../protocol/policy_ui.spthy"
-#include "../../../core/masks/policy_behavior.spthy"

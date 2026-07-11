@@ -1,0 +1,144 @@
+/*
+  core/stressors.spthy -- ALL stress detectors (sigma), one file. Each detector compiles in ONLY when
+  the profile #defines its flag.
+
+  Approach A (PUSHED mask): a detector's onset PUSHES its mask -- it produces !EffectiveMask(P, <its
+  mask>) DIRECTLY, without reading the current !EffectiveMask and without composing. No !Compose lookup,
+  no `_keep` twin, no InequalityMask. Because no producer of !EffectiveMask reads !EffectiveMask, the
+  source graph for it is acyclic and the density detectors (sigma2/sigma8/sigma9) no longer blow up
+  refined-sources. Each detector is once-per-party bounded, so SetMask events stay finite; SetMask(P,m)
+  is the onset action the UP properties read. Behaviours (core/masks.spthy) read !EffectiveMask(P,mask)
+  and act on the prompt -- UNCHANGED. Multiple mask facts may coexist (worst-mask-wins is dropped in
+  favour of a safe over-approximation: a stressed human may act as any active mask).
+*/
+
+#ifdef SIGMA1_LOAD
+rule Trigger_HighCognitiveLoad [color=#eb5757]:
+    [ !Prompt(P, sid, action), !Demands(action, 'MentalDemand', lvl), !AtLeast(lvl, 'hi'),
+      !StressEnable(P) ]
+  --[ Load(P), SetMask(P, 'Busy') ]->
+    [ !EffectiveMask(P, 'Busy') ]
+
+restriction OneStressPerParty:
+  "All p #i #j. Load(p)@i & Load(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA2_CONCURRENCY
+rule Trigger_DistractionConcurrent [color=#eb5757]:
+    [ !Prompt(P, p1, a1), !Prompt(P, p2, a2), !StressEnable(P) ]
+  --[ Distract(P), NeqC(p1, p2), SetMask(P, 'Careless') ]->
+    [ !EffectiveMask(P, 'Careless') ]
+
+restriction InequalityConcurrency:
+  "All x #i. NeqC(x,x)@i ==> F"
+
+restriction OneDistractPerParty:
+  "All p #i #j. Distract(p)@i & Distract(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA3_DEADLINE
+rule Trigger_TimePressureDeadline [color=#eb5757]:
+    [ !Prompt(P, pid, action), !UnderDeadline(pid), !StressEnable(P) ]
+  --[ TimePressure(P), SetMask(P, 'Busy') ]->
+    [ !EffectiveMask(P, 'Busy') ]
+
+restriction OneTimePressure:
+  "All p #i #j. TimePressure(p)@i & TimePressure(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA_ADDITIVE
+rule Trigger_AdditiveLoad [color=#eb5757]:
+    [ !Prompt(P, s1, a1), !Demands(a1, dim1, 'med'), !Prompt(P, s2, a2), !Demands(a2, dim2, 'med'),
+      !StressEnable(P) ]
+  --[ AdditiveLoad(P), NeqAdd(s1, s2), SetMask(P, 'Busy') ]->
+    [ !EffectiveMask(P, 'Busy') ]
+
+restriction InequalityAdditive:
+  "All x #i. NeqAdd(x,x)@i ==> F"
+
+restriction OnceAdditiveLoad:
+  "All p #i #j. AdditiveLoad(p)@i & AdditiveLoad(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA6_ABSTRACTION
+rule Trigger_Abstraction [color=#eb5757]:
+    [ !Prompt(P, sid, action), !Demands(action, 'Effort', lvl), !AtLeast(lvl, 'hi'),
+      !StressEnable(P) ]
+  --[ Abstraction(P), SetMask(P, 'Naive') ]->
+    [ !EffectiveMask(P, 'Naive') ]
+
+restriction OnceAbstraction:
+  "All p #i #j. Abstraction(p)@i & Abstraction(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA_ANXIETY
+rule Trigger_SecurityAnxiety [color=#eb5757]:
+    [ !Prompt(P, sid, action), !Demands(action, 'Arousal', lvl), !AtLeast(lvl, 'hi'),
+      !StressEnable(P) ]
+  --[ SecurityAnxiety(P), SetMask(P, 'Fearful') ]->
+    [ !EffectiveMask(P, 'Fearful') ]
+
+restriction OnceSecurityAnxiety:
+  "All p #i #j. SecurityAnxiety(p)@i & SecurityAnxiety(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA8_HABITUATION
+rule Trigger_Habituation [color=#eb5757]:
+    [ !Prompt(P, pid1, 'confirm'), !Prompt(P, pid2, 'confirm'), !StressEnable(P) ]
+  --[ Habituate(P), Neq(pid1, pid2), SetMask(P, 'Habituated') ]->
+    [ !EffectiveMask(P, 'Habituated') ]
+
+restriction InequalityHabituation:
+  "All x #i. Neq(x,x)@i ==> F"
+
+restriction OnceHabituate:
+  "All p #i #j. Habituate(p)@i & Habituate(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA9_ALERTVOLUME
+rule Detect_AlertVolume [color=#eb5757]:
+    [ !Prompt(P, r1, 'decide'), !Prompt(P, r2, 'decide'), !Prompt(P, r3, 'decide'), !StressEnable(P) ]
+  --[ AlertVolume(P), Neq(r1,r2), Neq(r1,r3), Neq(r2,r3), SetMask(P, 'Careless') ]->
+    [ !EffectiveMask(P, 'Careless') ]
+
+restriction Inequality:
+  "All x #i. Neq(x,x)@i ==> F"
+
+restriction OneAlertVolume:
+  "All p #i #j. AlertVolume(p)@i & AlertVolume(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA10_REPEATFAIL
+rule Detect_RepeatedFailure [color=#eb5757]:
+    [ !Failed(P), !StressEnable(P) ]
+  --[ RepeatedFailure(P), SetMask(P, 'Careless') ]->
+    [ !EffectiveMask(P, 'Careless') ]
+
+restriction OneRepeatedFailure:
+  "All p #i #j. RepeatedFailure(p)@i & RepeatedFailure(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA_INDUCED_TIME
+rule Trigger_TimePressure_induced [color=#eb5757]:
+    [ !Prompt(P, sid, action), !Urgent(sid), !StressEnable(P) ]
+  --[ TimePressure(P), AdvInducedOnset(P,'TimePressure'), SetMask(P, 'Busy') ]->
+    [ !EffectiveMask(P, 'Busy') ]
+
+restriction OneInducedTimePressure:
+  "All p #i #j. AdvInducedOnset(p,'TimePressure')@i & AdvInducedOnset(p,'TimePressure')@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA_CUE
+// CUE / PERSUASION lookup (the social-engineering axis) -- same dose-response SHAPE as the workload
+// lookups (sigma1/3/6/anxiety), but the dimension is a PERSUASION principle (authority / urgency /
+// familiarity / scarcity; Cialdini) carried by the step as !Cue(action, principle, level). A high cue
+// -> over-trust -> Naive (credulous acceptance). The adversary's only power here is psychological: the
+// cue degrades the mask, but the human MISTAKE is still the sole leak route. Pushed-mask (Approach A).
+rule Trigger_Persuasion [color=#eb5757]:
+    [ !Prompt(P, pid, action), !Cue(action, principle, lvl), !AtLeast(lvl, 'hi'), !StressEnable(P) ]
+  --[ Persuaded(P, principle), SetMask(P, 'Naive') ]->
+    [ !EffectiveMask(P, 'Naive') ]
+
+restriction OncePersuaded:
+  "All p x y #i #j. Persuaded(p,x)@i & Persuaded(p,y)@j ==> #i = #j"
+#endif

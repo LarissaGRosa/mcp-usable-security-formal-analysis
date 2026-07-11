@@ -1,0 +1,52 @@
+/*
+  core/properties.spthy -- the ceremony-AGNOSTIC usability-security property library (was
+  core/usability_properties.spthy). Guarded by #ifdef PROPERTIES: a profile that wants the two
+  free cross-ceremony lemmas #defines PROPERTIES (today: P3 worst-case + S4 secure_email). The
+  TEMPLATES below are comments, so they cost nothing and are always visible for authoring.
+
+  Outcome vocabulary (uniform): unsafe = Slip / Mistake / AutoApprove / LeakPw / MisdeliveredPw ;
+  safe-fail = Timeout / Abort ; onsets = Load / TimePressure / Abstraction / Habituate / AlertVolume
+  / SecurityAnxiety / Distract / RepeatedFailure ; degradation = SetMask/RespMask(p,m), m!='Attentive'.
+*/
+
+#ifdef PROPERTIES
+// ===== generic, includable (hold for any profile that #defines PROPERTIES) =====
+
+// Attribution backbone: a degraded RESPONSE only occurs after a stressor SET that mask for that party.
+// (Reference the SetMask ACTION fact -- the mask-setting event -- not the persistent !EffectiveMask
+// state fact; a trace formula ranges over action facts.)
+lemma UP_degradation_is_attributable:
+  all-traces
+  "All p m #i. RespMask(p, m)@i & not(m = 'Attentive')
+     ==> (Ex #j. SetMask(p, m)@j & #j < #i)"
+
+// Targeting soundness: a degrading SetMask only fires for a party that was stress-enabled (StressOn).
+lemma UP_degradation_requires_targeting:
+  all-traces
+  "All p m #i. SetMask(p, m)@i & not(m = 'Attentive')
+     ==> (Ex #s. StressOn(p)@s & #s < #i)"
+#endif
+
+/*
+  ===== TEMPLATES (copy into your profile and fill <...>) =====
+
+  T1 -- USABILITY-ROBUSTNESS (headline): the security goal holds on every trace with no unsafe outcome.
+        all-traces
+        "All <g-vars> #g. <SecurityGoal>(...)@g
+           & not (Ex ... Mistake(...)) & not (Ex ... LeakPw(...)) & not (Ex ... <other unsafe>)
+         ==> not (<Breach>(...))"
+
+  T2 -- OUTCOME-REQUIRES-STRESSOR: a bad outcome implies its driving stressor fired first.
+        all-traces
+        "All p x #o. <BadOutcome>(p, x)@o ==> (Ex #s. <Onset>(p)@s & #s < #o)"
+
+  T3 -- BREACH ATTRIBUTION: any adversary win traces to ONE named unsafe human outcome.
+        all-traces
+        "All m #s #k. <Secret>(m)@s & <AdvWins>(m)@k
+           ==> (Ex ... Mistake(...)) | (Ex ... LeakPw(...)) | (Ex ... <other unsafe>)"
+
+  T4 -- INTERFACE / MITIGATION LEVER (RFC requirement, a PAIR): bad outcome reachable under baseline,
+        unreachable under hardened.
+        baseline:  exists-trace "Ex p x #o. <BadOutcome>(p,x)@o"
+        hardened:  all-traces  "not (Ex p x #o. <BadOutcome>(p,x)@o)"
+*/

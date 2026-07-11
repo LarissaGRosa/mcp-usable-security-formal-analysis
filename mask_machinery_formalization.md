@@ -1,5 +1,11 @@
 # Mathematical Formalization of the Ceremony Mask Machinery
 
+> **⚠️ Conceptual reference.** The mathematics below (§1–§6) remains the design vocabulary. The
+> **implemented** Tamarin model lives in `tamarin_model/` — 17 profiles, flat `#ifdef` layout, and the
+> **prompt/perform seam** (interface poses `!Prompt`+`!Displayed`; mask performs and commits
+> `!StepData`; detectors read `!Prompt`). See `tamarin_model/IMPLEMENTATION.md` and `MEMORY.md`
+> lessons 18–19 for the current mapping from this formalism to `.spthy` files.
+
 This document defines the **Mask and Usability Machinery** as a formal system of interacting state machines, separating the protocol logic from human cognitive states.
 
 ## 1. System Definition

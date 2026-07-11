@@ -3,15 +3,25 @@ begin
 
 /*
   P0 -- BASELINE: the layered pipeline, no stressor. Both parties derive SK = kdf(N_A,N_B)
-  Attentively; the ceremony finishes and the keys agree. Run:
-  check.py --prove ceremonies/alex_blake_kdf/P0_baseline.spthy
+  Attentively; the ceremony finishes and the keys agree.
+  Arms: FINISH_PLAIN, LEXICON_DEFAULT, IF_CALC_BLAKE (Blake computes too).
+  Run: check.py --prove ceremonies/alex_blake_kdf/P0_baseline.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
-#include "protocol/finish.spthy"          // plain finish + session
-#include "interface/recipient.spthy"      // Blake computes too (P0_agreement checks both keys)
-#include "bundles/human_common.spthy"
+#define FINISH_PLAIN
+#define LEXICON_DEFAULT
+#define IF_CALC_BLAKE
 
-#include "experiments/P0_baseline.spthy"
+#include "base.spthy"
+
+// sanity: the ceremony can finish.
+lemma P0_completes:
+  exists-trace
+  "Ex #i. Finish('Alex') @ i"
+
+// honest run => same SK (shared variable k forces equality on both Key facts).
+lemma P0_agreement:
+  exists-trace
+  "Ex k #i #j. Key('Alex',k)@i & Key('Blake',k)@j"
 
 end

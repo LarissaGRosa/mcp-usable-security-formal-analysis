@@ -1,28 +1,51 @@
-theory SecureEmail_S4_WorstCase
+theory SecureEmail_S4_Worstcase
 begin
 
 /*
-  S4 -- the §6a canary: all 7 stressors on both parties, both pathways, plus the generic
-  usability-security invariants. If this stops terminating, that is the blow-up; narrow the set.
+  S4 -- the worst-case canary: a broad five-stressor set (sigma1 Load, sigma3 Deadline, sigma6
+  Abstraction, Anxiety, and sigma2 Concurrency as its ONE density detector), both parties. Its job is
+  the ANALYZER GUARANTEE (PROPERTIES) + the secrecy pair over several interleaving stressors -- NOT
+  per-stressor chains (those live in the trios). Only ONE density detector (sigma2/sigma8/sigma9) may be
+  armed per profile: with the PUSHED-mask framework (Approach A) one density detector + the single-prompt
+  detectors proves fine (~2 min), but stacking all three density detectors still overruns the all-traces
+  proof search. sigma8 and sigma9 are exercised in S3 and S2.
   Run: check.py --prove ceremonies/secure_email/S4_worstcase.spthy
 */
 
-#include "spine.spthy"
+// -- five detectors (sigma2 the one density detector) + skip-check row + the property library --
+#define SIGMA6_ABSTRACTION
+#define SIGMA2_CONCURRENCY
+#define SIGMA1_LOAD
+#define SIGMA3_DEADLINE
+#define SIGMA_ANXIETY
+#define OUTCOME_CARELESS_SKIPCHECK
+#define PROPERTIES
 
-// -- all seven detectors --
-#include "../../core/stressors/abstraction.spthy"
-#include "../../core/stressors/habituation.spthy"
-#include "../../core/stressors/distraction_concurrent.spthy"
-#include "../../core/stressors/cognitive_load.spthy"
-#include "../../core/stressors/time_pressure_deadline.spthy"
-#include "../../core/stressors/alert_volume.spthy"
-#include "../../core/stressors/security_anxiety.spthy"
-// -- opt-in outcome rows --
-#include "../../core/masks/outcome_habituated_clickthrough.spthy"
-#include "../../core/masks/outcome_careless_skipcheck.spthy"
-// -- generic invariants (proven here in the worst case) --
-#include "../../core/usability_properties.spthy"
+#include "base.spthy"
 
-#include "experiments/S4_worstcase.spthy"
+lemma S4_happy_pgp:
+  exists-trace
+  "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+
+lemma S4_happy_pw:
+  exists-trace
+  "Ex m link #s #u #r.
+     Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
+
+// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
+// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
+lemma S4_message_secrecy_attribution:
+  all-traces
+  "All m #s #k.
+     Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)"
+
+lemma S4_degrade_from_interface_step:
+  all-traces
+  "All p m #s.
+     SetMask(p, m)@s & not(m = 'Attentive')
+   ==> (Ex step #u. UIStep(p, step)@u & #u < #s)"
 
 end

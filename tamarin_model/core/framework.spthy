@@ -1,0 +1,123 @@
+/*
+  core/framework.spthy -- the always-on human-layer plumbing, shared verbatim by every profile.
+  Merges the former core/types.spthy + core/transitions/mask_state.spthy +
+  core/transitions/answered_once.spthy + core/masks/outcome_policy.spthy. No selection: every
+  profile needs all of it (crypto symbol, the demand-level order, the persistent current-mask
+  discipline, the single-answer discipline, and the outcome matrix the behaviour rules read).
+
+  Sections:
+    [types]         crypto symbol + OneInstancePerHuman + the 'lo'<'med'<'hi' band seed
+    [mask-state]    resolved !EffectiveMask(P,m) + stressor !MaskRequest composition (replaces trace-only SetMask gates)
+    [answered-once] each prompt/request answered at most once
+    [outcome]       the (mask, action-class) -> outcome matrix (agnostic masks)
+*/
+
+// ===================== types (was core/types.spthy) =====================
+functions: kdf/2     // free 2-ary symbol: kdf(a,b)=kdf(a',b') iff a=a' & b=b'
+
+// A human participant is ONE person: at most one instance of each identity per trace.
+restriction OneInstancePerHuman:
+  "All p #i #j. Start(p)@i & Start(p)@j ==> #i = #j"
+
+// The demand-LEVEL order 'lo' < 'med' < 'hi' as a reflexive partial order (dose-response). A lookup
+// detector fires on !Demands(action,dim,lvl) & !AtLeast(lvl,thr) -- a BAND, not one exact constant.
+rule Seed_levels:
+    [ ]
+  --[ SeedLevels() ]->
+    [ !AtLeast('hi','hi'), !AtLeast('hi','med'), !AtLeast('hi','lo'),
+      !AtLeast('med','med'), !AtLeast('med','lo'),
+      !AtLeast('lo','lo') ]
+
+restriction OnceLevels:
+  "All #i #j. SeedLevels()@i & SeedLevels()@j ==> #i = #j"
+
+// ===================== mask-state (PUSHED effective mask -- Approach A) =====================
+// Each stressor onset PUSHES its mask: it produces !EffectiveMask(P, <its mask>) DIRECTLY, without
+// reading the current mask and without composing (no !Compose, no _keep twin). Behaviours read
+// !EffectiveMask(P,mask) and act on the prompt (unchanged). Because no producer of !EffectiveMask reads
+// !EffectiveMask, the source graph for it is acyclic -- refined sources terminate in one step, so the
+// density detectors (sigma2/sigma8/sigma9) no longer blow up. The baseline !EffectiveMask(P,'Attentive')
+// and any pushed degrades COEXIST (persistent facts are never removed), so a stressed human may act as
+// any active mask -- a safe over-approximation of worst-mask-wins: the worst-case breach stays reachable
+// (exists-trace) and K(m) => Mistake attribution still holds (all-traces). SetMask(P,m) is the onset
+// action the UP properties read; each detector is once-bounded, so SetMask events are finite.
+
+rule Init_effective_mask:
+    [ !Party(P, id) ]
+  --[ MaskInit(P) ]->
+    [ !Party(P, id), !EffectiveMask(P, 'Attentive') ]
+
+restriction OnceMaskInit:
+  "All p #i #j. MaskInit(p)@i & MaskInit(p)@j ==> #i = #j"
+
+restriction OneSetMaskPerMask:
+  "All p m #i #j. SetMask(p,m)@i & SetMask(p,m)@j ==> #i = #j"
+
+// The mask lattice, kept ONLY for ceremony-level RECOVERY rules (e.g. alex_blake_kdf's UI_WARNING
+// re-engagement, which reads !Compose(m,'Attentive',m) to recover from any degrade m). The stressor
+// DETECTORS no longer read it -- they push their mask directly (Approach A). Inert where unused.
+rule Seed_compose [color=#9b51e0]:
+    [ ]
+  --[ SeedCompose() ]->
+    [ !Compose('Attentive', 'Attentive', 'Attentive'),
+      !Compose('Habituated', 'Attentive', 'Habituated'),
+      !Compose('Naive', 'Attentive', 'Naive'),
+      !Compose('Busy', 'Attentive', 'Busy'),
+      !Compose('Careless', 'Attentive', 'Careless'),
+      !Compose('Fearful', 'Attentive', 'Fearful') ]
+
+restriction OnceCompose:
+  "All #i #j. SeedCompose()@i & SeedCompose()@j ==> #i = #j"
+
+restriction InequalityMaskHolds:
+  "All cur winner #i. InequalityMask(cur, winner)@i ==> not(cur = winner)"
+
+#ifdef MASK_RECOVERY
+// OPT-IN recovery discipline. In the pushed-mask model the baseline !EffectiveMask(P,'Attentive') and
+// every degrade coexist, so a behaviour could respond Attentive even while degraded. A ceremony with a
+// RECOVERY edge (a SetMask(p,'Attentive') event, e.g. a UI re-engagement warning) #defines MASK_RECOVERY
+// to add the "active-until-recovery" reading (memory lesson 7/8 -- the TRACTABLE variant): a degraded
+// response requires its degrade active (no recovery since); an Attentive response requires no active
+// degrade. Opt-in because these nested-negation gates cost, and are pointless where nothing recovers.
+restriction RespondDegradedRequiresActive:
+  "All p m #i. RespMask(p,m)@i & not(m = 'Attentive') ==>
+     (Ex #s. SetMask(p,m)@s & #s < #i
+             & not (Ex #r. SetMask(p,'Attentive')@r & #s < #r & #r < #i))"
+
+restriction AttentiveRequiresNoActiveDegrade:
+  "All p #i. RespMask(p,'Attentive')@i ==>
+     not (Ex m #s. SetMask(p,m)@s & not(m = 'Attentive') & #s < #i
+                   & not (Ex #r. SetMask(p,'Attentive')@r & #s < #r & #r < #i))"
+#endif
+
+// ===================== answered-once (was core/transitions/answered_once.spthy) =====================
+// Every f_H rule emits Answered(id) when it consumes a persistent prompt/request; this keeps each id
+// answered AT MOST ONCE, so the same !Prompt cannot be answered by two masks.
+restriction AnsweredOnce:
+  "All x #i #j. Answered(x)@i & Answered(x)@j ==> #i = #j"
+
+// ===================== outcome matrix (was core/masks/outcome_policy.spthy) =====================
+// Maps (mask, action-class) -> outcome. The generic behaviour rules (core/masks.spthy) read this and
+// bind the mask + outcome. Seeded unconditionally so any theory using a behaviour rule stays CLOSED.
+rule Seed_outcome_policy [color=#9b51e0]:
+    [ ]
+  --[ SeedOutcomePolicy() ]->
+    [ !OutcomePolicy('Attentive', 'compute', 'correct'),
+      !OutcomePolicy('Busy',      'compute', 'slip'),
+      !OutcomePolicy('Careless',  'compute', 'timeout'),
+      !OutcomePolicy('Attentive', 'compare', 'discerning'),
+      !OutcomePolicy('Naive',     'compare', 'credulous'),
+      !OutcomePolicy('Attentive', 'confirm', 'verify-self'),
+      !OutcomePolicy('Busy',      'confirm', 'autoapprove'),
+      !OutcomePolicy('Habituated','confirm', 'autoapprove'),
+      !OutcomePolicy('Careless',  'confirm', 'dismiss'),
+      !OutcomePolicy('Attentive', 'decide',  'handle'),
+      !OutcomePolicy('Careless',  'decide',  'fatigue'),
+      !OutcomePolicy('Attentive', 'authorize', 'grant'),
+      !OutcomePolicy('Fearful',   'authorize', 'abort'),
+      !OutcomePolicy('Attentive', 'share', 'oob'),
+      !OutcomePolicy('Careless',  'share', 'inband-leak'),
+      !OutcomePolicy('Busy',      'share', 'misdeliver') ]
+
+restriction OnceOutcomePolicy:
+  "All #i #j. SeedOutcomePolicy()@i & SeedOutcomePolicy()@j ==> #i = #j"

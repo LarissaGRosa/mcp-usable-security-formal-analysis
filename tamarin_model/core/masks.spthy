@@ -1,0 +1,204 @@
+/*
+  core/masks.spthy -- the f_H behaviour rules (per action class) + the opt-in outcome rows, one file
+  (was the 13 files under core/masks/, minus outcome_policy which is always-on in core/framework.spthy).
+  Each behaviour is ceremony-agnostic and, after RELAYER step 1, follows the prompt/perform contract:
+
+    READ   !Prompt(P, pid, action)       -- the interface POSED this step to P
+           !Displayed(P, pid, observ)    -- what the interface SHOWED (offered key, claim, recipient...)
+           !EffectiveMask(P, mask)       -- the RESOLVED current mask (from framework mask-state)
+           !EffectiveMask(P, mask), !OutcomePolicy(mask, action, outcome) / !ControlDesign(...)   -- the behaviour matrix
+    EMIT   !StepData(P, pid, committed)  -- the human's COMMITTED value (only where a consumer reads it)
+           + the usual action/outcome facts (RespMask + Verify / Slip / Share / ... , and the linear
+             Respond / Checked / ShareOutcome / Granted / ... the interface's advance rule consumes)
+
+  So the interface no longer decides the step -- it only prompts; the mask performs it and commits.
+  The fact that the human PERFORMED action X is recorded by the action-fact labels (Verify/Slip/Share/
+  Authorize/Approve/Handled/SetPolicy...), so no separate committed `!Step` fact is emitted (dropped per
+  RELAYER-PLAN §5c: nothing reads it -- stressors read !Prompt, adapters read !StepData/outcomes -- and
+  the extra persistent fact only inflated the state space; e.g. S4 solo 340s -> 204s, back in budget).
+  Committed !StepData is the value the *human* stands behind, not what the UI offered:
+    compute  -> committed key (genuine when Attentive; fresh-wrong on a slip)
+    compare  -> the accepted key k (Attentive fires only when offered==reference; Naive accepts any)
+    share    -> <recipient, pw> the human actually sent to (Attentive->correspondent; degraded->claimed)
+    confirm  -> the approved claim k (verify-self only)
+  decide / authorize / set-policy carry no committed value (their verdict is the outcome fact).
+  Safe-fail behaviours (timeout / abort / dismiss) commit nothing. Downstream adapters + interface
+  advance rules read the COMMITTED !StepData (steps 2-3).
+
+  A profile (or its base.spthy) #defines exactly the action classes it performs, so an exposure-only
+  prompt (never #defined) is counted by density (via !Prompt in stressors) but never performed.
+
+  flag                         old file                          action class
+  MASK_COMPUTE                 masks/compute_behavior.spthy      compute (correct/slip/timeout)
+  MASK_COMPARE                 masks/compare_behavior.spthy      compare (discerning/credulous)
+  MASK_COMPARE_KEYCHECKED      masks/compare_keychecked.spthy    compare adapter -> !KeyChecked
+  MASK_COMPARE_VERIFYDONE      masks/compare_verifydone.spthy    compare adapter -> VerifyDone  (EITHER/OR)
+  MASK_SHARE                   masks/share_behavior.spthy        share (oob/leak/misdeliver)
+  MASK_AUTHORIZE               masks/authorize_behavior.spthy    authorize (grant/abort)
+  MASK_CONFIRM                 masks/confirm_behavior.spthy      confirm (verify-self/autoapprove/dismiss)
+  MASK_DECIDE                  masks/decide_behavior.spthy       decide (handle/fatigue)
+  MASK_POLICY                  masks/policy_behavior.spthy       set-policy (clear/misleading)
+  OUTCOME_DEGRADED_CLICK       masks/outcome_degraded_click.spthy         degraded-but-engaged still grants
+  OUTCOME_HABITUATED_CLICKTHROUGH masks/outcome_habituated_clickthrough.spthy Habituated+compare credulous
+  OUTCOME_CARELESS_SKIPCHECK   masks/outcome_careless_skipcheck.spthy     Careless+compare credulous
+*/
+
+#ifdef MASK_COMPUTE
+// ===== f_H COMPUTE -- Attentive correct; Busy slip (fresh wrong); Careless timeout (stall). =====
+rule Compute_correct [color=#27ae60]:
+    [ !Prompt(P, rid, 'compute'), !Displayed(P, rid, genuine), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'compute', 'correct') ]
+  --[ Calc(P, mask), RespMask(P, mask), Key(P, genuine), Answered(rid) ]->
+    [ Respond(P, rid, genuine), !StepData(P, rid, genuine) ]
+
+rule Compute_slip [color=#27ae60]:
+    [ !Prompt(P, rid, 'compute'), Fr(~wrong), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'compute', 'slip') ]
+  --[ Calc(P, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Slip(P), Key(P, ~wrong), Answered(rid) ]->
+    [ Respond(P, rid, ~wrong), !Failed(P), !StepData(P, rid, ~wrong) ]
+
+rule Compute_timeout [color=#27ae60]:
+    [ !Prompt(P, rid, 'compute'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'compute', 'timeout') ]
+  --[ Calc(P, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Timeout(P), Answered(rid) ]->
+    [ ]
+#endif
+
+#ifdef MASK_COMPARE
+// ===== f_H COMPARE -- Attentive PERFORMS the check (fires only on <k,k>); Naive accepts ANY -> Mistake. =====
+rule Compare_attentive [color=#27ae60]:
+    [ !Prompt(P, vid, 'compare'), !Displayed(P, vid, <k, k>), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'compare', 'discerning') ]
+  --[ Verify(P, vid, mask), RespMask(P, mask), Accept(P, vid), Answered(vid) ]->
+    [ Checked(P, vid), !StepData(P, vid, k) ]
+
+rule Compare_naive [color=#27ae60]:
+    [ !Prompt(P, vid, 'compare'), !Displayed(P, vid, <k, ref>), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'compare', 'credulous') ]
+  --[ Verify(P, vid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Mistake(P, vid), Accept(P, vid), Answered(vid) ]->
+    [ Checked(P, vid), !StepData(P, vid, k) ]
+#endif
+
+#ifdef MASK_COMPARE_KEYCHECKED
+// ===== compare adapter: Checked -> !KeyChecked (the PGP send / finish consume this). =====
+rule Checked_to_KeyChecked [color=#f2994a]:
+    [ Checked(P, vid) ]
+  -->
+    [ !KeyChecked(P, vid) ]
+#endif
+
+#ifdef MASK_COMPARE_VERIFYDONE
+// ===== compare adapter: Checked -> VerifyDone (the P4 infer_harness output). EITHER this or keychecked. =====
+rule Checked_to_VerifyDone [color=#f2994a]:
+    [ Checked(P, vid) ]
+  -->
+    [ VerifyDone(P, vid) ]
+#endif
+
+#ifdef MASK_SHARE
+// ===== f_H SHARE -- Attentive oob; Careless inband-leak (LeakPw); Busy misdeliver (MisdeliveredPw). =====
+// Attentive only ships out-of-band when the shown recipient IS the correspondent (<r,r,pw>); it commits
+// that recipient. Degraded shares commit the CLAIMED recipient r (whoever the mail/UI named).
+rule Share_oob [color=#27ae60]:
+    [ !Prompt(P, rid, 'share'), !Displayed(P, rid, <r, r, pw>), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'share', 'oob') ]
+  --[ Share(P, mask), RespMask(P, mask), Answered(rid), ShareOOB(P, rid) ]->
+    [ ShareOutcome(P, rid, 'oob'), !StepData(P, rid, <r, pw>) ]
+
+rule Share_inband_leak [color=#27ae60]:
+    [ !Prompt(P, rid, 'share'), !Displayed(P, rid, <r, c, pw>), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'share', 'inband-leak') ]
+  --[ Share(P, mask), RespMask(P, mask), Answered(rid), LeakPw(P), Mask(P,'Attentive',mask) ]->
+    [ ShareOutcome(P, rid, 'inband-leak'), !StepData(P, rid, <r, pw>) ]
+
+rule Share_misdeliver [color=#27ae60]:
+    [ !Prompt(P, rid, 'share'), !Displayed(P, rid, <r, c, pw>), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'share', 'misdeliver') ]
+  --[ Share(P, mask), RespMask(P, mask), Answered(rid), MisdeliveredPw(P), Mask(P,'Attentive',mask) ]->
+    [ ShareOutcome(P, rid, 'misdeliver'), !StepData(P, rid, <r, pw>) ]
+#endif
+
+#ifdef MASK_AUTHORIZE
+// ===== f_H AUTHORIZE -- Attentive grant (Authorized); Fearful abort (active refusal). =====
+rule Authorize_grant [color=#27ae60]:
+    [ !Prompt(P, aid, 'authorize'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'authorize', 'grant') ]
+  --[ Authorize(P, aid, mask), RespMask(P, mask), Authorized(P, aid), Answered(aid) ]->
+    [ Granted(P, aid) ]
+
+rule Authorize_abort [color=#27ae60]:
+    [ !Prompt(P, aid, 'authorize'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'authorize', 'abort') ]
+  --[ Authorize(P, aid, mask), RespMask(P, mask), Abort(P, aid), Answered(aid) ]->
+    [ ]
+#endif
+
+#ifdef MASK_CONFIRM
+// ===== f_H CONFIRM -- Attentive verify-self (<k,k>); Busy/Habituated autoapprove ANY; Careless dismiss. =====
+rule Confirm_attentive_verify [color=#27ae60]:
+    [ !Prompt(P, pid, 'confirm'), !Displayed(P, pid, <k, k>), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'confirm', 'verify-self') ]
+  --[ Approve(P, pid, mask), RespMask(P, mask), Verified(P, pid), Answered(pid) ]->
+    [ Confirmed(P, pid, mask), !StepData(P, pid, k) ]
+
+rule Confirm_autoapprove [color=#27ae60]:
+    [ !Prompt(P, pid, 'confirm'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'confirm', 'autoapprove') ]
+  --[ Approve(P, pid, mask), RespMask(P, mask), AutoApprove(P, pid), Mask(P,'Attentive',mask), Answered(pid) ]->
+    [ Confirmed(P, pid, mask) ]
+
+rule Confirm_dismiss [color=#27ae60]:
+    [ !Prompt(P, pid, 'confirm'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'confirm', 'dismiss') ]
+  --[ Approve(P, pid, mask), RespMask(P, mask), Timeout(P), Answered(pid) ]->
+    [ ]
+#endif
+
+#ifdef MASK_DECIDE
+// ===== f_H DECIDE -- Attentive handle; Careless fatigue (timeout). No genuineness. =====
+rule Decide_handle [color=#27ae60]:
+    [ !Prompt(P, did, 'decide'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'decide', 'handle') ]
+  --[ Confirm(P, did, mask), RespMask(P, mask), Handled(P, did), Answered(did) ]->
+    [ DecisionDone(P, did) ]
+
+rule Decide_timeout [color=#27ae60]:
+    [ !Prompt(P, did, 'decide'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'decide', 'fatigue') ]
+  --[ Confirm(P, did, mask), RespMask(P, mask), Timeout(P), Handled(P, did), Answered(did) ]->
+    [ DecisionDone(P, did) ]
+#endif
+
+#ifdef MASK_POLICY
+// ===== f_H SET-POLICY -- Attentive sets safe under 'clear', unsafe under 'misleading' (task-mediated). =====
+rule Policy_clear [color=#27ae60]:
+    [ !Prompt(P, pid, 'set-policy'), !EffectiveMask(P, 'Attentive'), !ControlDesign('set-policy', 'clear') ]
+  --[ SetPolicy(P, pid, 'safe'), RespMask(P,'Attentive'), Answered(pid) ]->
+    [ PolicyDone(P, pid) ]
+
+rule Policy_misleading [color=#27ae60]:
+    [ !Prompt(P, pid, 'set-policy'), !EffectiveMask(P, 'Attentive'), !ControlDesign('set-policy', 'misleading') ]
+  --[ SetPolicy(P, pid, 'unsafe'), Mistake(P, pid), RespMask(P,'Attentive'), Answered(pid) ]->
+    [ PolicyDone(P, pid) ]
+#endif
+
+#ifdef OUTCOME_DEGRADED_CLICK
+// ===== opt-in: a degraded-but-engaged mask still clicks the final authorize (only Fearful refuses). =====
+rule Seed_degraded_click [color=#9b51e0]:
+    [ ]
+  --[ SeedDegradedClick() ]->
+    [ !OutcomePolicy('Busy',      'authorize', 'grant'),
+      !OutcomePolicy('Habituated','authorize', 'grant'),
+      !OutcomePolicy('Naive',     'authorize', 'grant'),
+      !OutcomePolicy('Careless',  'authorize', 'grant') ]
+
+restriction OnceDegradedClick:
+  "All #i #j. SeedDegradedClick()@i & SeedDegradedClick()@j ==> #i = #j"
+#endif
+
+#ifdef OUTCOME_HABITUATED_CLICKTHROUGH
+// ===== opt-in: Habituated + compare -> credulous (warning click-through; Anderson & Vance 2015). =====
+rule Seed_habituated_clickthrough [color=#9b51e0]:
+    [ ]
+  --[ SeedHabClickthrough() ]->
+    [ !OutcomePolicy('Habituated', 'compare', 'credulous') ]
+
+restriction OnceHabClickthrough:
+  "All #i #j. SeedHabClickthrough()@i & SeedHabClickthrough()@j ==> #i = #j"
+#endif
+
+#ifdef OUTCOME_CARELESS_SKIPCHECK
+// ===== opt-in: Careless + compare -> credulous (skips the fingerprint check; Whitten & Tygar 1999). =====
+rule Seed_careless_skipcheck [color=#9b51e0]:
+    [ ]
+  --[ SeedCarelessSkipcheck() ]->
+    [ !OutcomePolicy('Careless', 'compare', 'credulous') ]
+
+restriction OnceCarelessSkipcheck:
+  "All #i #j. SeedCarelessSkipcheck()@i & SeedCarelessSkipcheck()@j ==> #i = #j"
+#endif

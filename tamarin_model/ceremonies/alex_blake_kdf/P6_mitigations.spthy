@@ -2,23 +2,51 @@ theory ToyCeremony_P6_Mitigations
 begin
 
 /*
-  P6 -- three Poka-Yoke mitigations in one ceremony. The stressors still degrade the user, but each
-  fix neutralizes the consequence: shutdown (key-confirmation finish) catches the sigma1 slip;
-  shutout (number-matching MFA) blocks the sigma8 auto-approve; verify-shutout blocks the sigma6
-  tampered acceptance. Run: check.py --prove ceremonies/alex_blake_kdf/P6_mitigations.spthy
+  P6 -- three mitigations, one ceremony. The degradations still arise (Busy slip, Habituated, Naive),
+  but each Poka-Yoke neutralizes its consequence: shutdown (key-confirmation finish) catches a slip;
+  shutout (number-matching MFA) blocks an injected approval; verify-shutout blocks tampered acceptance.
+  Arms: FINISH_CONFIRMED, LEXICON_DEFAULT, MITIGATIONS, sigma1, UI_APPROVE_SHUTOUT+MASK_CONFIRM (sigma8),
+        UI_VERIFY+MASK_COMPARE(+KEYCHECKED) (sigma6).
+  Run: check.py --prove ceremonies/alex_blake_kdf/P6_mitigations.spthy
 */
 
-#include "spine.spthy"                        // crypto + KDF wire + Alex compute pipeline
-#include "protocol/finish_confirmed.spthy"    // SHUTDOWN: key-confirmation finish
-#include "bundles/human_common.spthy"
-#include "../../core/mitigations.spthy"       // shutout + verify-shutout restrictions
+#define FINISH_CONFIRMED
+#define LEXICON_DEFAULT
+#define MITIGATIONS
+#define SIGMA1_LOAD
+#define UI_APPROVE_SHUTOUT
+#define MASK_CONFIRM
+#define SIGMA8_HABITUATION
+#define UI_VERIFY
+#define MASK_COMPARE
+#define MASK_COMPARE_KEYCHECKED
+#define SIGMA6_ABSTRACTION
 
-#include "../../core/stressors/cognitive_load.spthy"   // sigma1 -> slip (caught by shutdown)
-#include "phases/approve_shutout.spthy"
-#include "../../core/stressors/habituation.spthy"      // sigma8 -> auto-approve (blocked by shutout)
-#include "phases/verify.spthy"
-#include "../../core/stressors/abstraction.spthy"      // sigma6 -> mistake (blocked by verify-shutout)
+#include "base.spthy"
 
-#include "experiments/P6_mitigations.spthy"
+// the degradations still arise:
+lemma P6_shutdown_catches_slip:
+  exists-trace "Ex #s #a. Slip('Alex')@s & ShutdownAbort('Alex')@a"
+
+lemma P6_habituation_still_happens:
+  exists-trace "Ex #h. Habituate('Alex')@h"
+
+lemma P6_naive_still_arises:
+  exists-trace "Ex p vid #i. Verify(p, vid, 'Naive')@i"
+
+// FIX 1 (shutdown): a slip can never complete the ceremony.
+lemma P6_no_slip_completion:
+  all-traces
+  "not (Ex #s #f. Slip('Alex')@s & Finish('Alex')@f)"
+
+// FIX 2 (shutout): no adversary-injected prompt is ever approved.
+lemma P6_shutout_blocks_injected:
+  all-traces
+  "All p pid m #i. Approve(p,pid,m)@i ==> not (Ex #j. Injected(pid)@j)"
+
+// FIX 3 (verify-shutout): a mistake can never land on a tampered fingerprint.
+lemma P6_no_tampered_mistake:
+  all-traces
+  "All p vid #o. Mistake(p,vid)@o ==> not (Ex #j. Tampered(vid)@j)"
 
 end

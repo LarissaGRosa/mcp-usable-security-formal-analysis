@@ -1,9 +1,0 @@
-/*
-  Effect adapter: Checked(P,vid) -> !KeyChecked (the verify output the PGP send / finish consume).
-  A theory includes EITHER this or compare_verifydone, never both.
-*/
-
-rule Checked_to_KeyChecked [color=#f2994a]:
-    [ Checked(P, vid) ]
-  -->
-    [ !KeyChecked(P, vid) ]

@@ -1,0 +1,66 @@
+/*
+  core/knobs.spthy -- the two attacker/defender levers that a profile opts into. Was
+  core/adversary.spthy + core/mitigations.spthy.
+
+  flag        was                 effect
+  ADVERSARY   adversary.spthy     Adv_inject_urgency: mark an attacker-known step !Urgent (feeds SIGMA_INDUCED_TIME)
+  MITIGATIONS mitigations.spthy   Poka-Yoke restrictions: shutout blocks auto-approve; verify-shutout blocks accept-tampered
+*/
+
+#ifdef ADVERSARY
+// ===== adversary-induced stressor capability: INJECT URGENCY on a step the attacker knows. =====
+rule Adv_inject_urgency [color=#922b21]:
+    [ In(pid) ]
+  --[ InjectUrgency(pid), AdvInduced('TimePressure') ]->
+    [ !Urgent(pid) ]
+#endif
+
+#ifdef MITIGATIONS
+// ===== first-class mitigations (Poka-Yoke / Yee): constrain what a degraded mask can emit. =====
+// shutout: number-matching MFA -- a reflexive Habituated user cannot auto-approve a protected prompt.
+restriction ShutoutBlocksAutoApprove:
+  "All p pid #i. AutoApprove(p,pid)@i ==> not (Ex #j. Shutout(pid)@j)"
+
+// verify-shutout: the device refuses acceptance of a tampered fingerprint -- even a Naive user cannot.
+restriction VerifyShutout:
+  "All p vid #i. Accept(p,vid)@i ==> not (Ex #j. Tampered(vid)@j)"
+#endif
+
+// ===================== MATCHED per-mask recovery =====================
+// Recovery must match the degrade's DRIVER, so each rule recovers ONE mask via its fitting intervention
+// and NO other. All require MASK_RECOVERY (framework's active-until-recovery restrictions), whose
+// SetMask(P,'Attentive') event is what deactivates the degrade. Each recovery rule READS the specific
+// degrade mask (a constant) and PRODUCES 'Attentive' -- it never reads 'Attentive', so it adds no
+// source cycle (Approach A stays intact). A mask with no matching recovery armed simply never returns.
+
+#ifdef RECOVERY_WARNING
+// A re-engagement WARNING (salience interrupt) recovers CARELESS (inattention) -- and only Careless.
+rule IF_show_warning [color=#f2994a]:
+    [ !StressEnable(P) ] --[ WarningShown(P) ]-> [ !Warning(P) ]
+
+restriction OnceWarningShown:
+  "All p #i #j. WarningShown(p)@i & WarningShown(p)@j ==> #i = #j"
+
+rule Recover_careless_by_warning [color=#f2994a]:
+    [ !EffectiveMask(P, 'Careless'), !Warning(P) ]
+  --[ InequalityMask('Careless','Attentive'), SetMask(P, 'Attentive'),
+      Recover(P, 'Careless'), RecoverVia(P, 'warning') ]->
+    [ !EffectiveMask(P, 'Attentive') ]
+#endif
+
+#ifdef RECOVERY_MODEBREAK
+// A forcing-function / MODE-BREAK (a challenge that cannot be reflex-clicked -- number-match, retype)
+// recovers HABITUATED by resetting automaticity. A warning would NOT (warnings habituate too, Anderson
+// & Vance 2015) -- there is deliberately no warning-recovery rule for Habituated.
+rule IF_modebreak [color=#f2994a]:
+    [ !StressEnable(P) ] --[ ModeBreakShown(P) ]-> [ !ModeBreak(P) ]
+
+restriction OnceModeBreakShown:
+  "All p #i #j. ModeBreakShown(p)@i & ModeBreakShown(p)@j ==> #i = #j"
+
+rule Recover_habituated_by_modebreak [color=#f2994a]:
+    [ !EffectiveMask(P, 'Habituated'), !ModeBreak(P) ]
+  --[ InequalityMask('Habituated','Attentive'), SetMask(P, 'Attentive'),
+      Recover(P, 'Habituated'), RecoverVia(P, 'modebreak') ]->
+    [ !EffectiveMask(P, 'Attentive') ]
+#endif

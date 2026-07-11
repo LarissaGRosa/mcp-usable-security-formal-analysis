@@ -2,47 +2,51 @@
 
 Mutual-nonce KDF ceremony (`SK = kdf(N_A, N_B)`) that hosts the Ceremony-Mask usability
 analysis. Each **profile** is a self-contained Tamarin theory (a *profile* in the machinery §6.1
-sense) that composes the shared spine plus the phase bundles / stressors it exercises. See
-`../../../usability_extension_plan.md` (status in §0), `../../../mask_machinery_formalization.md`
-(§6), and `../../../tamarin_model/MULTIPARTY_EXTENSIBILITY_PLAN.md` (the A–D consolidation) for design.
+sense): a `#define FLAG` list (exactly what it arms) + `#include "base.spthy"` + its lemmas. See `../../MEMORY.md` for the build lessons (lessons 18–19 cover consolidation and prompt/perform).
 
-## Layout (V3 layered template — same as `secure_email`)
+## Layout (flat — one file per layer, `#ifdef`-gated)
 
-A profile entry reads as a short manifest — one `spine` line + one line per phase-kit + one line per
-stressor. **To review an experiment, read its `P<N>_*.spthy`**: the includes ARE the story.
+**To review a profile, read its `#define` list**: the flags ARE the story. `base.spthy` `#define`s
+the wire-profile constants (init + nonce wire + compute pipeline + Alex targeting) and assembles the
+layers; every selectable rule is wrapped in `#ifdef FLAG` in a merged file, so a profile compiles in
+exactly what it names. Preprocessed output is byte-identical to hand-including the old fragments.
+
+**Prompt/perform seam.** The interface (`interface.spthy` + the `UI_*`/`INFER_HARNESS` producers in
+`protocol.spthy`) only POSES prompts — `!Prompt(P,pid,action)` + `!Displayed(P,pid,shown)`. The
+detectors read `!Prompt`; the user's mask (`core/masks.spthy`) reads `!Prompt`+`!Displayed`, PERFORMS
+the step, and commits `!StepData` only where a rule needs the value. The `FINISH_CONFIRMED` shutdown
+compares the human's produced key against the interface's `!Displayed` correct key `kdf(N_A,N_B)`.
 
 | Path | Role |
 |---|---|
-| `P<N>_<name>.spthy` | **Profile entry-point theories** (what you run). Each = `spine` + finish variant + human layer + phase kits + the stressors it arms + its lemmas. |
-| `spine.spthy` | the universal "Alex derives the key" pipeline in ONE include: framework + `kdf` (nonce wire) + Alex's compute prompt + adapter + compute behaviour. |
-| `phases/` | one **kit** per post-KDF control = its producer + behaviour + adapter (the parts that always co-occur): `approve`, `approve_shutout`, `verify`, `authorize`, `policy`. A profile adds the *stressor* separately (it's the experiment's variable). |
-| `protocol/` | 🔵 `kdf`, `finish` / `finish_confirmed`, the prompt producers (`approval_ui`, `verify_ui`, …, `warning_ui`), `infer_harness` (P4), the compute adapters, `stress_alex` / `stress_blake`. |
-| `interface/` | 🟠 one rule per control (`!Step`+`!StepData`+context): `sender` / `recipient` (compute), `nonce_ack` (σ2's second prompt). |
-| `bundles/` | `human_manual` (mask_state + answered_once + outcome_policy + Alex enable) and `human_common` (= human_manual + `lexicon_tlx`). Swap-profiles (P7/P9/P10/P11) use `human_manual` + their own demand seed. |
-| `experiments/` | Lemma-only files, one per profile. |
-| `../../core/` | Reusable human layer: `masks/`, `stressors/`, `transitions/`, `mitigations`, `lexicon_tlx` / `interface_` / `population_` demand profiles. |
+| `P<N>_<name>.spthy` | **Profile theories** (what you run). Each = `#define` flags + `#include "base.spthy"` + its lemmas. (P4/P5 are custom: they assemble the merged files directly, no `base`.) |
+| `base.spthy` | the "Alex derives the key" pipeline as `#define`s (`KDF_INIT`, `KDF_WIRE`, `COMPUTE_KEYRESULT`, `MASK_COMPUTE`, `IF_CALC_ALEX`, `STRESS_ALEX`) + the layer `#include`s. |
+| `protocol.spthy` | 🔵 all protocol/UI producers, each `#ifdef`-gated: `KDF_INIT`, `KDF_WIRE`, `FINISH_PLAIN`/`FINISH_CONFIRMED`, `UI_APPROVE`/`UI_APPROVE_SHUTOUT`/`UI_VERIFY`/`UI_AUTHORIZE`/`UI_POLICY`/`UI_WARNING`, `STRESS_ALEX`/`STRESS_BLAKE`, `INFER_HARNESS`, the compute adapters. |
+| `interface.spthy` | 🟠 `IF_CALC_ALEX` / `IF_CALC_BLAKE` (compute prompts) + `IF_NONCE_ACK` (σ2's second prompt). |
+| `../../core/` | `framework.spthy` (types+transitions+outcome matrix, always on), `masks.spthy` (`#ifdef MASK_*`), `stressors.spthy` (`#ifdef SIGMA*`), `demands.spthy` (`#ifdef LEXICON_DEFAULT`/`IF_HARDENED`/`IF_CLEAR`/`IF_MISLEADING`/`POP_EXPERT`), `knobs.spthy` (`#ifdef ADVERSARY`/`MITIGATIONS`), `properties.spthy` (`#ifdef PROPERTIES`). |
 
-Each profile must be **closed** (every LHS fact has a producer) or Tamarin rejects it. Triggering is a
-graded **dose-response**: the lexicon rates a step `'lo' < 'med' < 'hi'` and a detector fires on a BAND
-(`!AtLeast(lvl, thr)`, order seeded in `core/types.spthy`). See
-[`../../docs/V3_UNIFY_REALISM_PLAN.md`](../../docs/V3_UNIFY_REALISM_PLAN.md).
+A "phase" (a post-KDF control) is now two flags a profile names together: e.g. VERIFY = `UI_VERIFY`
+(the producer in `protocol.spthy`) + `MASK_COMPARE` + `MASK_COMPARE_KEYCHECKED` (the behaviour in
+`masks.spthy`). Each profile must be **closed** or Tamarin rejects it. Triggering is a graded
+**dose-response**: the demand profile rates a step `'lo' < 'med' < 'hi'` and a detector fires on a BAND
+(`!AtLeast(lvl, thr)`, order seeded in `core/framework.spthy`).
 
-### Review map — what each profile composes
+### Review map — what each profile arms (its `#define`s)
 
-| Profile | finish | human | phases (+ stressor) | extra |
+| Profile | finish | demand | phase flags (+ stressor) | extra |
 |---|---|---|---|---|
-| P0 | plain | common | — | + recipient (Blake computes) |
-| P1 | plain | common+blake | — (CALC: σ1+σ3+σ2) | + recipient + nonce_ack |
-| P2 | plain | common | approve+σ8, verify+σ6, authorize+anxiety | + warning |
-| P3 | plain | common+blake | CALC σ1σ3σ2 + approve+σ8 + verify+σ6 + authorize+anx | + recipient + nonce_ack + usability_properties |
-| P4 | — | manual* | *(analyzer harness — bespoke, no spine)* | infer_harness |
-| P5 | — | manual* | *(policy-only — bespoke, no spine)* | policy + both design seeds |
-| P6 | **confirmed** | common | approve_shutout+σ8, verify+σ6 (σ1 on CALC) | + mitigations |
-| P7 | plain | **manual** | verify+σ6, policy | + hardened_verify + clear_policy |
-| P8 | plain | common | approve (+ induced σ3) | + adversary |
-| P9 | plain | **manual** | — (CALC: σ1) | + population_expert |
-| P10 | plain | **manual** | — (CALC: σ1 + additive) | + nonce_ack + moderate-demand seed |
-| P11 | plain | **manual** | authorize (+ anxiety) | + moderate-arousal seed |
+| P0 | `FINISH_PLAIN` | `LEXICON_DEFAULT` | — | `IF_CALC_BLAKE` (Blake computes) |
+| P1 | `FINISH_PLAIN` | `LEXICON_DEFAULT` | — (CALC: σ1+σ3+σ2) | `IF_CALC_BLAKE`, `IF_NONCE_ACK`, `STRESS_BLAKE` |
+| P2 | `FINISH_PLAIN` | `LEXICON_DEFAULT` | `UI_APPROVE`+`MASK_CONFIRM`+σ8, `UI_VERIFY`+`MASK_COMPARE`+σ6, `UI_AUTHORIZE`+`MASK_AUTHORIZE`+anx | `UI_WARNING` |
+| P3 | `FINISH_PLAIN` | `LEXICON_DEFAULT` | CALC σ1σ3σ2 + approve+σ8 + verify+σ6 + authorize+anx | `IF_CALC_BLAKE`, `IF_NONCE_ACK`, `STRESS_BLAKE`, `PROPERTIES` |
+| P4 | *(custom)* | `LEXICON_DEFAULT` | *(analyzer harness — no base)* | `INFER_HARNESS`, `COMPUTE_OPRESULT`, σ1/σ6/σ10/σ9 |
+| P5 | *(custom)* | `IF_CLEAR`+`IF_MISLEADING` | *(policy-only — no base)* | `UI_POLICY`, `MASK_POLICY` |
+| P6 | `FINISH_CONFIRMED` | `LEXICON_DEFAULT` | `UI_APPROVE_SHUTOUT`+`MASK_CONFIRM`+σ8, verify+σ6 (σ1 on CALC) | `MITIGATIONS` |
+| P7 | `FINISH_PLAIN` | `IF_HARDENED`+`IF_CLEAR` | verify+σ6, `UI_POLICY`+`MASK_POLICY` | — |
+| P8 | `FINISH_PLAIN` | `LEXICON_DEFAULT` | `UI_APPROVE`+`MASK_CONFIRM` (+ induced σ3) | `ADVERSARY`, `SIGMA_INDUCED_TIME` |
+| P9 | `FINISH_PLAIN` | `POP_EXPERT` | — (CALC: σ1) | — |
+| P10 | `FINISH_PLAIN` | *(inline moderate seed)* | — (CALC: σ1 + additive) | `IF_NONCE_ACK` |
+| P11 | `FINISH_PLAIN` | *(inline moderate seed)* | `UI_AUTHORIZE`+`MASK_AUTHORIZE` (+ anxiety) | — |
 
 ## Profile index
 
@@ -65,25 +69,27 @@ focused single-mechanism realism demonstrations.
 | `P11_inverted_u` | **§2b** `'med'`-arousal facilitating zone (Yerkes-Dodson) | SecurityAnxiety (cannot fire) | `P11_no_anxiety_at_moderate`, `P11_authorize_granted`, `P11_no_abort` (3) |
 
 All lemmas verify under Tamarin 1.12 / Maude 3.5.1; every profile proves in **≤ 5 min** (slowest
-`P2_postkdf_recovery` ≈ 17 s).
+`P2_postkdf_recovery` ≈ 6 s; the whole 12-profile sweep ≈ 30 s).
 
 ## The four mechanisms behind the profiles
 
-**One include per layer (readability / extensibility).** A profile reads top-to-bottom as its own
-summary: crypto → `protocol/*` → `interface/*` → `bundles/human_common` → the stressor detectors it
-arms → lemmas. **Adding a stressor to a profile is one include line**; adding a control is one
-`interface/` rule. The stressor layer reads the **interface's** `!Step`, never the protocol.
+**One flag per selectable rule (readability / extensibility).** A profile reads top-to-bottom as its
+own summary: its `#define` list names the finish variant, demand profile, phases and stressors it
+arms; `#include "base.spthy"` pulls in every layer, and the `#ifdef` guards compile in exactly the
+named rules. **Adding a stressor to a profile is one `#define` line**; adding a control is one
+`#ifdef`-guarded rule in `protocol.spthy`/`interface.spthy`. The stressor layer reads the
+**interface's** `!Prompt`, never the protocol.
 
-**Per-participant targeting.** Every `core/stressors` rule reads `!StressEnable(P)`, so a stressor
-fires only for an ENABLED party. `protocol/stress_alex.spthy` / `stress_blake.spthy` seed
-`!StressEnable` off the persistent `!Party(p,id)` (from `protocol/kdf.spthy`). `human_common` enables
-Alex by default; a multi-party profile adds `stress_blake` (P1, P3). An un-enabled party cannot be
-stressed even when its trigger step is present — proven in P1 by `P1_load_requires_enable`.
+**Per-participant targeting.** Every stressor rule (`core/stressors.spthy`) reads `!StressEnable(P)`,
+so a stressor fires only for an ENABLED party. `protocol.spthy`'s `STRESS_ALEX` / `STRESS_BLAKE`
+blocks seed `!StressEnable` off the persistent `!Party(p,id)`. `base.spthy` enables Alex by default;
+a multi-party profile adds `#define STRESS_BLAKE` (P1, P3). An un-enabled party cannot be stressed
+even when its trigger step is present — proven in P1 by `P1_load_requires_enable`.
 
 **Every participant is mask-capable.** Both parties derive the key through the **interface**
-(`interface/sender.spthy` for Alex, `interface/recipient.spthy` for Blake), so both are subject to
-the mask machinery with no party-specific files — the KDF's old `blake_calc` special-case is gone.
-The human layer keys on the party `P`, so Blake reuses it verbatim.
+(`IF_CALC_ALEX` for Alex, `IF_CALC_BLAKE` for Blake, both in `interface.spthy`), so both are subject
+to the mask machinery with no party-specific files. The human layer keys on the party `P`, so Blake
+reuses it verbatim.
 
 **Two failure pathways + mitigations.** Pathway A is mask-mediated (a stressor degrades the mask,
 P1–P4); Pathway B is task-mediated (`P5`: an Attentive user errs from misleading terminology, no
@@ -96,7 +102,7 @@ the degradation still arises.
 
 **Persistent current mask (across action types).** The mask is not re-derived per action: each
 stressor emits `SetMask(p,m)` at onset and the UI warning emits `SetMask(p,'Attentive')`; the gates
-in `core/transitions/mask_state.spthy` make every f_H respond as the current mask, which carries
+in `core/framework.spthy` (the mask-state section) make every f_H respond as the current mask, which carries
 CALC_SK → APPROVE_REQ until a recovery (so a Busy user stays degraded at the approval prompt).
 Encoded as "degrade active until recovery" — the tractable choice; strict latest-wins blows up once
 several stressors interleave. `SetMask`-latching events are bounded once per party so the interval
@@ -126,22 +132,22 @@ D=tamarin_model/ceremonies/alex_blake_kdf
 python3 $S/check.py --prove $D/P1_calc_pressure.spthy
 
 # all profiles
-for e in $D/P[0-9]_*.spthy; do python3 $S/check.py --prove "$e"; done
+for e in $D/P*.spthy; do python3 $S/check.py --prove "$e"; done
 
-# interactive GUI — lists exactly the seven ToyCeremony_P* theories
+# interactive GUI — lists exactly the twelve ToyCeremony_P* theories
 tamarin-prover interactive $D/ --interface=127.0.0.1 --port=3001
 ```
 
 ## Adding a profile (or a stressor)
 
-- **New stressor on an existing phase** → add `core/stressors/<sigma>.spthy` (read its trigger fact
-  + `!StressEnable(P)`), then add one `#include` line to the relevant `bundles/<phase>_phase.spthy`.
-  Every profile using that phase inherits it.
-- **New mask f_H** → add `core/masks/<mask>_<action>.spthy` and include it in the phase bundle.
-- **New profile** → write `experiments/P<N>_<name>.spthy` (lemmas only) and a `P<N>_<name>.spthy`
-  entry = `ceremony.base.spthy` + `bundles/human_common.spthy` + the phase bundles it wants
-  (+ `protocol/session.spthy` for any post-KDF phase) + the experiment. To stress Blake, skip
-  `ceremony.base.spthy` and assemble `types` + `init` + `messages` +
-  `protocol/blake_calc_stressable.spthy` + `stress_blake.spthy` directly (see P1 / P3).
-- Keep the entry **closed**; re-run all profiles after touching any shared file (`ceremony.base`,
-  a `bundles/*`, a `protocol/*`, or a reused `core/` fragment).
+- **New stressor** → add one `#ifdef SIGMA_NEW … #endif` block to `core/stressors.spthy` (read its
+  trigger fact + `!StressEnable(P)`); a profile arms it with `#define SIGMA_NEW`. Shared across both
+  ceremonies automatically.
+- **New mask f_H** → add an `#ifdef MASK_NEW`-guarded rule to `core/masks.spthy`; arm with `#define MASK_NEW`.
+- **New control (phase)** → add its producer as an `#ifdef UI_NEW` block in `protocol.spthy` (or
+  `interface.spthy`); a profile arms `UI_NEW` alongside the `MASK_*` its behaviour needs.
+- **New profile** → write `P<N>_<name>.spthy` = `theory … begin`, a `#define` list, `#include "base.spthy"`,
+  the lemmas, `end`. To stress Blake add `#define STRESS_BLAKE` (+ `IF_CALC_BLAKE` if he computes).
+  For a demand-profile swap (expert / hardened / inline seed), name the demand flag instead of `LEXICON_DEFAULT`.
+- Keep the theory **closed**; re-run all profiles after touching any shared file (`base.spthy`,
+  `protocol.spthy`, `interface.spthy`, or a `core/*.spthy`).

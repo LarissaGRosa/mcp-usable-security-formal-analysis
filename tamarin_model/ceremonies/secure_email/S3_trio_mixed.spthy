@@ -2,19 +2,58 @@ theory SecureEmail_S3_TrioMixed
 begin
 
 /*
-  S3 -- MIXED trio spanning both pathways + the safe-fail: sigma6 Abstraction (PGP compare),
-  sigma3 Deadline (password pane), SecurityAnxiety (send authorize). One failure family per pathway
-  plus the one degradation that HELPS -- the Fearful sender freezes and the message never leaves.
+  S3 -- the MIXED trio {sigma6 Abstraction, sigma8 Habituation, Anxiety} on the PGP surface: two ways a
+  degraded compare accepts a substituted key (Naive; click-through) plus the Fearful freeze (the
+  degradation that HELPS secrecy). sigma8 is the profile's one DENSITY detector (see S1's note: two
+  density detectors cannot share a profile).
   Run: check.py --prove ceremonies/secure_email/S3_trio_mixed.spthy
 */
 
-#include "spine.spthy"
+// -- the mixed trio + the opt-in row the habituation story needs --
+#define SIGMA6_ABSTRACTION
+#define SIGMA8_HABITUATION
+#define SIGMA_ANXIETY
+#define OUTCOME_HABITUATED_CLICKTHROUGH
 
-// -- the trio --
-#include "../../core/stressors/abstraction.spthy"
-#include "../../core/stressors/time_pressure_deadline.spthy"
-#include "../../core/stressors/security_anxiety.spthy"
+#include "base.spthy"
 
-#include "experiments/S3_trio_mixed.spthy"
+// ---- security properties under this trio ----
+
+// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
+// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
+lemma S3_message_secrecy_attribution:
+  all-traces
+  "All m #s #k.
+     Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)"
+
+// ---- one chain per stressor ----
+
+// sigma6 on the PGP pathway.
+lemma S3_abstraction_naive_substitution:
+  exists-trace
+  "Ex m vid #u #o #v #d #s.
+     UIStep('Alex','btn_verify_fp')@u & Abstraction('Alex')@o
+   & Verify('Alex', vid, 'Naive')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"
+
+// sigma8: the two button confirms habituate -> click-through accepts the substituted key. (K-free
+// chain per lesson 15; the attribution lemma carries the K(m) story.)
+lemma S3_habituation_clickthrough:
+  exists-trace
+  "Ex m vid #u1 #u2 #h #v #d #s.
+     UIStep('Alex','btn_generate_keypair')@u1 & UIStep('Alex','btn_fetch_key')@u2
+   & Habituate('Alex')@h
+   & Verify('Alex', vid, 'Habituated')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"
+
+// Anxiety on the send authorize: the Fearful sender freezes -- NO message ever leaves.
+lemma S3_anxiety_fearful_freeze:
+  exists-trace
+  "Ex aid #u #o #a.
+     UIStep('Alex','btn_send')@u & SecurityAnxiety('Alex')@o & Abort('Alex', aid)@a
+   & not (Ex method m #s. Send('Alex', method, m)@s)"
 
 end

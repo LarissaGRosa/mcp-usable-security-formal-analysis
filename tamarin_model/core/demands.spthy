@@ -1,0 +1,90 @@
+/*
+  core/demands.spthy -- the DEMAND-PROFILE layer: how much workload each action imposes. A profile
+  picks exactly one baseline (the novice lexicon) OR a population/interface variant that shifts a
+  level, so the lookup detectors (sigma1/3/6) fire or not accordingly. Was:
+    core/lexicon_tlx.spthy, core/population_expert.spthy,
+    core/interface_hardened_verify.spthy, core/interface_clear_policy.spthy,
+    core/interface_misleading_policy.spthy
+
+  flag            was                              effect
+  LEXICON_DEFAULT lexicon_tlx.spthy                novice baseline: compute/compare/authorize/share = hi
+  POP_EXPERT      population_expert.spthy          expert: compute Mental+Temporal -> lo (sigma1/3 cannot fire)
+  IF_HARDENED     interface_hardened_verify.spthy  compare Effort -> lo (sigma6 cannot fire)
+  IF_CLEAR        interface_clear_policy.spthy      set-policy control 'clear' (Policy_misleading unreachable)
+  IF_MISLEADING   interface_misleading_policy.spthy set-policy control 'misleading' (Policy_misleading fires)
+*/
+
+#ifdef LEXICON_DEFAULT
+// ===== the novice/default demand lexicon (maps action -> demand dimension + level). =====
+rule Seed_lexicon_tlx [color=#9b51e0]:
+    [ ]
+  --[ SeedLexicon() ]->
+    [ !Demands('compute',   'TemporalDemand', 'hi'),
+      !Demands('compute',   'MentalDemand',   'hi'),
+      !Demands('compare',   'Effort',         'hi'),
+      !Demands('authorize', 'Arousal',        'hi'),
+      !Demands('share',     'MentalDemand',   'hi'),
+      !Demands('share',     'TemporalDemand', 'hi') ]
+
+restriction OnceLexicon:
+  "All #i #j. SeedLexicon()@i & SeedLexicon()@j ==> #i = #j"
+#endif
+
+#ifdef POP_EXPERT
+// ===== expert population -- LOWERS compute demand to 'lo' so sigma1/sigma3 cannot fire. =====
+rule Seed_population_expert [color=#9b51e0]:
+    [ ]
+  --[ SeedPopulation('expert') ]->
+    [ !Demands('compute', 'MentalDemand',   'lo'),
+      !Demands('compute', 'TemporalDemand', 'lo'),
+      !Population('expert') ]
+
+restriction OncePopulationExpert:
+  "All #i #j. SeedPopulation('expert')@i & SeedPopulation('expert')@j ==> #i = #j"
+#endif
+
+#ifdef IF_HARDENED
+// ===== hardened verify interface -- compare Effort 'lo' (visual diff) so sigma6 cannot fire. =====
+rule Seed_interface_hardened_verify [color=#9b51e0]:
+    [ ]
+  --[ SeedInterface('hardened_verify') ]->
+    [ !Demands('compare', 'Effort', 'lo'),
+      !Interface('hardened_verify') ]
+
+restriction OnceHardenedVerify:
+  "All #i #j. SeedInterface('hardened_verify')@i & SeedInterface('hardened_verify')@j ==> #i = #j"
+#endif
+
+#ifdef IF_CLEAR
+// ===== clear policy control -- honest terminology; Policy_misleading is UNREACHABLE. =====
+rule Seed_interface_clear_policy [color=#9b51e0]:
+    [ ]
+  --[ SeedInterface('clear_policy') ]->
+    [ !ControlDesign('set-policy', 'clear'),
+      !Interface('clear_policy') ]
+
+restriction OnceClearPolicy:
+  "All #i #j. SeedInterface('clear_policy')@i & SeedInterface('clear_policy')@j ==> #i = #j"
+#endif
+
+#ifdef IF_MISLEADING
+// ===== misleading policy control -- confusing terminology; Policy_misleading fires (task-mediated). =====
+rule Seed_interface_misleading_policy [color=#9b51e0]:
+    [ ]
+  --[ SeedInterface('misleading_policy') ]->
+    [ !ControlDesign('set-policy', 'misleading'),
+      !Interface('misleading_policy') ]
+
+restriction OnceMisleadingPolicy:
+  "All #i #j. SeedInterface('misleading_policy')@i & SeedInterface('misleading_policy')@j ==> #i = #j"
+#endif
+
+#ifdef CUE_PHISH
+// ===== phishing lure: the fingerprint-verify step carries a high AUTHORITY persuasion cue ("your admin
+// vouches for this key") -- feeds SIGMA_CUE -> Naive on the compare. Same seed mechanism as !Demands. =====
+rule Seed_cue_phish [color=#9b51e0]:
+    [ ] --[ SeedCue('phish') ]-> [ !Cue('compare', 'authority', 'hi') ]
+
+restriction OnceCuePhish:
+  "All #i #j. SeedCue('phish')@i & SeedCue('phish')@j ==> #i = #j"
+#endif

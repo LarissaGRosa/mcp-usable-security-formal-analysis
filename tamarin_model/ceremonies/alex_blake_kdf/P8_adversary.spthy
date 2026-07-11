@@ -2,21 +2,36 @@ theory ToyCeremony_P8_Adversary
 begin
 
 /*
-  P8 -- adversary-INDUCED stressor. An Attentive KDF brings up the session; an APPROVE prompt is
-  posed with NO environmental stressor. The only route to Busy is the adversary injecting urgency
-  (adversary.spthy -> time_pressure_induced) -> the rushed user auto-approves the injected prompt.
-  Attribution lemmas trace the auto-approval to the adversary.
+  P8 -- ADVERSARY-INDUCED stressor. An Attentive inline KDF brings up the session; then a single
+  approval prompt with NO environmental stressor. The only route to a degraded mask is the ADVERSARY
+  injecting urgency on a prompt it controls, firing the adversary-induced TimePressure -> Busy -> the
+  rushed user auto-approves the injected prompt.
+  Arms: FINISH_PLAIN, LEXICON_DEFAULT, UI_APPROVE+MASK_CONFIRM, ADVERSARY, SIGMA_INDUCED_TIME.
   Run: check.py --prove ceremonies/alex_blake_kdf/P8_adversary.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive)
-#include "protocol/finish.spthy"
-#include "bundles/human_common.spthy"
+#define FINISH_PLAIN
+#define LEXICON_DEFAULT
+#define UI_APPROVE
+#define MASK_CONFIRM
+#define ADVERSARY
+#define SIGMA_INDUCED_TIME
 
-#include "phases/approve.spthy"           // APPROVE prompt + confirm behaviour (no environmental stressor)
-#include "../../core/adversary.spthy"                     // urgency-injection capability
-#include "../../core/stressors/time_pressure_induced.spthy"  // the ONLY route to Busy here
+#include "base.spthy"
 
-#include "experiments/P8_adversary.spthy"
+// the attack is reachable: the adversary gets its INJECTED prompt auto-approved.
+lemma P8_adv_autoapprove_reachable:
+  exists-trace
+  "Ex pid #o #j. AutoApprove('Alex', pid)@o & Injected(pid)@j"
+
+// the induced degradation is real: Busy is reachable here ONLY via the adversary.
+lemma P8_busy_requires_adv_urgency:
+  all-traces
+  "All p #s. SetMask(p, 'Busy')@s ==> (Ex u #i. InjectUrgency(u)@i & #i < #s)"
+
+// ATTRIBUTION: every auto-approval traces to a prior adversary urgency injection.
+lemma P8_autoapprove_requires_adv:
+  all-traces
+  "All p pid #o. AutoApprove(p, pid)@o ==> (Ex u #i. InjectUrgency(u)@i & #i < #o)"
 
 end

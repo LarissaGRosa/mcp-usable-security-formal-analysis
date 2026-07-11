@@ -1,8 +1,0 @@
-/*
-  bundles/human_common.spthy -- the standard human layer: human_manual (mask gates + one-answer +
-  outcome matrix + Alex enable) + the baseline lexicon_tlx demand profile. The lookup detectors read
-  the lexicon; it dangles harmlessly where none is armed. Add protocol/stress_blake.spthy to also
-  stress Blake (P1 / P3).
-*/
-#include "human_manual.spthy"
-#include "../../../core/lexicon_tlx.spthy"

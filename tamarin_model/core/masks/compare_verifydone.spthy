@@ -1,9 +1,0 @@
-/*
-  Effect adapter: Checked(P,vid) -> VerifyDone (the P4 infer_harness output).
-  A theory includes EITHER this or compare_keychecked, never both.
-*/
-
-rule Checked_to_VerifyDone [color=#f2994a]:
-    [ Checked(P, vid) ]
-  -->
-    [ VerifyDone(P, vid) ]

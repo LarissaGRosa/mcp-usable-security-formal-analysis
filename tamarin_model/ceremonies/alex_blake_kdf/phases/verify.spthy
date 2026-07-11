@@ -1,5 +1,0 @@
-/* phases/verify.spthy -- VERIFY_KEY kit: the fingerprint-compare producer + the compare behaviour
-   + its !KeyChecked adapter. Pair with a stressor (abstraction). */
-#include "../protocol/verify_ui.spthy"
-#include "../../../core/masks/compare_behavior.spthy"
-#include "../../../core/masks/compare_keychecked.spthy"

@@ -1,20 +1,27 @@
 # Agnostic stressor collection — design
 
-**Status:** ✅ **IMPLEMENTED** (2026-06-29). All seven collection detectors now read the agnostic
-`!Step` interface; all 9 profiles / 56 lemma checks prove green. See §6 for what landed and the
-commits. §1–§4 below are the original design rationale (the "today" they describe is the pre-migration
-state); §5–§7 record the realisation. **Companion:** [`STRESSORS.md`](../STRESSORS.md) documents the
-layer *as built*.
+**Status:** ✅ **IMPLEMENTED** (2026-06-29, updated 2026-07-10). All collection detectors read the
+agnostic **`!Prompt`** interface (prompt/perform seam, V3.2); all **17 profiles** prove green. See §6
+for what landed. §1–§4 below are the original design rationale (the "today" they describe is the
+pre-migration state — replace `!Step` mentally with `!Prompt` and old file paths with the consolidated
+`core/stressors.spthy` / `core/demands.spthy`). **Companion:** [`STRESSORS.md`](../STRESSORS.md)
+documents the layer *as built*.
+
+> **V3.2 prompt/perform (2026-07-10).** Layer 1 is now **`!Prompt(P,pid,action)` posed by the
+> interface**, not a step the ceremony declares the human took. Detectors read what was *shown*; the
+> mask performs and commits `!StepData` where needed. σ₁₀ still reads `!Failed` (a human outcome, not a
+> prompt). Design record: `MEMORY.md` lesson 19.
 
 This document changed the **trigger interface** — the seam where a `core/stressors/*` detector (the
 `f_U` function, machinery §6) reaches into a ceremony to "collect" its stressor. Two goals, from the
 request that prompted it:
 
 1. **Most agnostic possible** — a `core/` detector should not know any ceremony's task names. *(Met:
-   no detector names a task; a new ceremony participates by emitting `!Step` in the fixed taxonomy.)*
+   no detector names a task; a new ceremony participates by having its interface pose `!Prompt` in the
+   fixed taxonomy.)*
 2. **Reflect usability research** — the thing a detector reads should be a recognised usability /
    workload construct, with a citation, not an ad-hoc protocol flag. *(Met: NASA-TLX + cited
-   non-TLX constructs, in [`core/lexicon_tlx.spthy`](../core/lexicon_tlx.spthy).)*
+   non-TLX constructs, in [`core/demands.spthy`](../core/demands.spthy).)*
 
 ---
 
@@ -64,8 +71,8 @@ redesign makes it a hard, three-layer split so the detector ends up **ceremony-b
 
 ```mermaid
 flowchart LR
-  subgraph L1["Layer 1 — OBSERVATION (the ceremony emits)"]
-    S["!Step(P, sid, action)<br/>action ∈ fixed interaction taxonomy"]
+  subgraph L1["Layer 1 — the INTERFACE poses"]
+    S["!Prompt(P, pid, action)<br/>action ∈ fixed interaction taxonomy"]
   end
   subgraph L2["Layer 2 — VERDICT (cited lexicon, core/, stated once)"]
     D["Demands(action, dimension, level)<br/>NASA-TLX dimension + magnitude"]
@@ -87,9 +94,9 @@ flowchart LR
   dimensions, *with the citation in the file header*. This is the only place HCI knowledge lives.
 - **Layer 3 (detector):** reads `Demands(action, dimension, level)` and a threshold — **no task
   name, no operation name, no `'Hard'` flag.** Everything below `SetMask` (the persistent
-  current-mask gates in [`mask_state.spthy`](../core/transitions/mask_state.spthy), the masks, the
-  outcomes) is **unchanged** — this redesign touches only the LHS of the `f_U` rules and what feeds
-  it.
+  current-mask gates in [`core/framework.spthy`](../core/framework.spthy) (mask-state section), the
+  masks, the outcomes) is **unchanged** — this redesign touches only the LHS of the `f_U` rules and
+  what feeds it.
 
 ### Proposed Layer-1 interaction taxonomy
 
@@ -186,6 +193,9 @@ Demands('compute', 'TemporalDemand', 'hi')
 
 ## 5. Tamarin realisation notes (design risks to validate before building)
 
+> *Historical §5 — examples below use the pre–prompt/perform `!Step` vocabulary and old file paths.
+> As built: interface poses `!Prompt`; detectors read `!Prompt`; masks read `!Prompt`+`!Displayed`.*
+
 The downstream half is safe — `SetMask`, [`mask_state.spthy`](../core/transitions/mask_state.spthy),
 masks, outcomes are untouched. The risks are all on the new LHS:
 
@@ -213,39 +223,39 @@ masks, outcomes are untouched. The risks are all on the new LHS:
 
 ## 6. Implementation (as built)
 
-Done as a strangler migration — one detector per step, re-proving all 56 lemma checks each time, the
-`!Step` emissions added *additively* alongside the existing facts (which the masks still need). Each
-detector's final input:
+Done as a strangler migration — one detector per step, re-proving all lemma checks each time. As of
+V3.2 the interface poses **`!Prompt`** (and **`!Displayed`** where observables matter); detectors read
+`!Prompt`; masks perform and commit `!StepData`. Each detector's final input:
 
 | Detector | Mask | Reads | Layer-2 construct (citation) |
 |---|---|---|---|
-| σ₃ TimePressure | Busy | `!Step` + `!Demands('compute','TemporalDemand','hi')` | NASA-TLX Temporal Demand |
-| σ₁ HighCognitiveLoad | Busy | `!Step` + `!Demands('compute','MentalDemand','hi')` | NASA-TLX Mental Demand / Sweller 1988 |
-| σ₆ Abstraction | Naive | `!Step` + `!Demands('compare','Effort','hi')` | NASA-TLX Effort / Whitten & Tygar 1999 |
-| SecurityAnxiety | Fearful | `!Step` + `!Demands('authorize','Arousal','hi')` | Yerkes–Dodson 1908 (non-TLX) |
-| σ₉ AlertVolume | Careless | 3× `!Step(_,_,'decide')` (density, k=3) | alarm fatigue / Cvach 2012 |
-| σ₈ Habituation | Habituated | 2× `!Step(_,_,'confirm')` (density, k=2) | warning habituation / Anderson & Vance 2015 |
-| σ₂ ExternalDistraction | Careless | any `!Step` (action-generic, no lexicon) | Wickens' MRT 2008 |
+| σ₃ TimePressureDeadline | Busy | `!Prompt` + `!UnderDeadline(pid)` (situational) | Maule & Svenson 1993; NASA-TLX Temporal |
+| σ₁ HighCognitiveLoad | Busy | `!Prompt` + `!Demands` band (Mental ≥ `'hi'`) | NASA-TLX Mental Demand / Sweller 1988 |
+| σ₆ Abstraction | Naive | `!Prompt` + `!Demands` band (Effort ≥ `'hi'`) | NASA-TLX Effort / Whitten & Tygar 1999 |
+| SecurityAnxiety | Fearful | `!Prompt` + `!Demands` band (Arousal ≥ `'hi'`) | Yerkes–Dodson 1908 (non-TLX) |
+| σ₉ AlertVolume | Careless | 3× `!Prompt(_,_,'decide')` (density, k=3) | alarm fatigue / Cvach 2012 |
+| σ₈ Habituation | Habituated | 2× `!Prompt(_,_,'confirm')` (density, k=2) | warning habituation / Anderson & Vance 2015 |
+| σ₂ DistractionConcurrent | Careless | 2× distinct `!Prompt(P,_,_)` (any action) | Wickens' MRT 2008 |
+| AdditiveLoad | Busy | 2× `!Prompt` each with Mental `'med'` | Sweller additive load |
 | σ₁₀ RepeatedFailure | Careless | `!Failed` — **intentionally outside** the interface | frustration; chaining on a mask outcome |
 
 **Lookup vs density vs generic vs chaining.** Four detector *shapes* emerged: the lookup detectors
-(σ₃/σ₁/σ₆/anxiety) read `!Step` + a `!Demands` row (the lexicon is consulted); the density detectors
-(σ₈/σ₉) count `k` distinct `!Step` of one action (no lexicon — a count, not a per-step level); σ₂ is
-action-generic (any `!Step`, no lexicon); σ₁₀ is a **chaining** detector whose trigger is a failure
-*outcome* (`!Failed`, emitted by `busy_op`), not a presented step — so it correctly sits outside the
-Layer-1 interface and was not migrated, only renamed to drop its `_inferred` suffix.
+(σ₁/σ₃/σ₆/anxiety/additive) read `!Prompt` + a `!Demands` row (the lexicon is consulted); the density
+detectors (σ₈/σ₉) count `k` distinct `!Prompt` of one action (no lexicon — a count, not a per-step
+level); σ₂ counts two distinct `!Prompt` of any action; σ₁₀ is a **chaining** detector whose trigger is
+a failure *outcome* (`!Failed`, emitted by a compute slip), not a posed prompt.
 
-**Three clone pairs collapsed:** `time_pressure_share`, `cognitive_load_inferred`, `abstraction_inferred`
-were deleted (declared+inferred tiers became one agnostic detector each); `alert_volume_inferred` and
-`repeated_failure_inferred` were renamed without the suffix.
+**Scope boundary — masks read prompts, not tasks.** The masks (`f_H`) read `!Prompt`+`!Displayed` for
+the *content* a response needs (which key, which fingerprint, which recipient). They perform the step
+and commit `!StepData` where a downstream adapter reads it. Smell 2 is resolved at the **collection**
+seam (no detector names a task).
 
-**Scope boundary — masks unchanged.** The masks (`f_H`, the *response* layer) still read
-`!Req`/`!Op`/`!VerifyReq`/`!AuthReq` — those carry the *content* a response needs (which key, which
-fingerprint), which is the response layer, not stressor *collection*. So Smell 2 is resolved at the
-**collection** seam (no detector names a task); fully converting the masks to `!Step` would be a
-separate effort and is out of scope for this goal.
+**File layout (V3.1).** All 10 detectors live in one file,
+[`core/stressors.spthy`](../core/stressors.spthy), each wrapped in `#ifdef SIGMA*`. The lexicon lives in
+[`core/demands.spthy`](../core/demands.spthy). A profile `#define`s exactly what it arms.
 
 **Commits:** `d44f877` (consolidation + σ₃/σ₁/σ₆), `64d1e91` (σ₉/σ₈/anxiety/σ₁₀), `b10acfd` (σ₂).
+Prompt/perform seam: `MEMORY.md` lesson 19 (2026-07-10).
 
 ---
 
@@ -254,12 +264,14 @@ separate effort and is out of scope for this goal.
 - **Scope = design only → then implemented in full.** Started as a design doc (no `.spthy`), then the
   user approved building it detector-by-detector; all seven collection detectors migrated, green.
   (User, 2026-06-29.)
-- **Present-time vs handle-time counting (σ₈/σ₉).** Count `!Step` at the moment the ceremony *presents*
-  the step (not when a mask handles it), so Layer 1 stays ceremony-emitted. For σ₈ this dropped the old
-  "prior **Attentive**" filter — judged *more* faithful to prompt-bombing, and the prover confirmed the
-  shutout block + recovery causality are independent of how σ₈ triggers. (2026-06-29.)
-- **σ₁₀ left on `!Failed`** rather than forced onto `!Step` — a failure is an internal outcome, not a
-  presented step. (2026-06-29.)
+- **Present-time vs handle-time counting (σ₈/σ₉).** Count `!Prompt` at the moment the interface *poses*
+  the step (not when a mask performs it), so Layer 1 stays interface-emitted. For σ₈ this dropped the
+  old "prior **Attentive**" filter — judged *more* faithful to prompt-bombing, and the prover confirmed
+  the shutout block + recovery causality are independent of how σ₈ triggers. (2026-06-29.)
+- **σ₁₀ left on `!Failed`** rather than forced onto `!Prompt` — a failure is an internal outcome, not a
+  posed prompt. (2026-06-29.)
+- **Prompt/perform seam (2026-07-10).** Detectors read `!Prompt`; the interface no longer declares the
+  human's step. The mask performs against `!Displayed` and commits `!StepData`. See `MEMORY.md` lesson 19.
 - **Grounding = NASA-TLX spine + inline citations** — structure Layer 2 on the six TLX subscales,
   cite TLX / cognitive-load theory / alarm-fatigue / Yerkes–Dodson / MRT / GEMS in file headers;
   *not* the heavier multi-instrument encoding (TLX + Cognitive Dimensions + GEMS as separate

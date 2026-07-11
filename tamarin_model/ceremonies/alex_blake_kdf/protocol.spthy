@@ -1,0 +1,295 @@
+/*
+  protocol.spthy -- the alex_blake_kdf ceremony layer (crypto + wire + UI prompts), one file.
+  Merges the former protocol and interface fragments. Each selectable piece is #ifdef-gated.
+
+  RELAYER prompt/perform (step 3): the UI_* rules and the INFER_HARNESS poser only PROMPT -- they emit
+  !Prompt/!Displayed; the user's mask (core/masks.spthy) performs and commits !StepData (+ action
+  labels). The one consumer of a committed key is FINISH_CONFIRMED, and it reads the interface's
+  !Displayed (the objective correct key) so the shutdown can still catch a slipped/wrong result.
+  Sections/flags:
+
+  KDF_INIT           participant init (Alex/Blake) -> AlexInit/BlakeInit + !Party
+  KDF_WIRE           nonce exchange N_A/N_B over the public channel
+  COMPUTE_KEYRESULT  Respond -> KeyResult adapter (the standard compute output)
+  COMPUTE_OPRESULT   Respond -> OpResult adapter (the P4 harness output)   [EITHER/OR]
+  FINISH_PLAIN       unconditional finish + session
+  FINISH_CONFIRMED   key-confirmation shutdown finish + session           [EITHER/OR]
+  UI_POLICY          set-policy prompt + finish
+  UI_VERIFY          compare (fingerprint) prompt: genuine + tampered
+  UI_AUTHORIZE       authorize prompt
+  UI_APPROVE         approval prompts: self + injected
+  UI_APPROVE_SHUTOUT approval prompts with number-matching shutout
+  UI_WARNING         re-engagement warning -> recovery to Attentive (!EffectiveMask)
+  STRESS_ALEX        !StressEnable('Alex')     STRESS_BLAKE  !StressEnable('Blake')
+  IF_CALC_ALEX       Alex's key-derivation prompt (compute, under deadline)
+  IF_CALC_BLAKE      Blake's key-derivation prompt (multi-party)
+  IF_NONCE_ACK       exposure-only nonce acknowledgement (sigma2/additive)
+  INFER_HARNESS      the P4 token-bounded op/verify/decision poser
+*/
+
+#ifdef KDF_INIT
+// ===== participant init =====
+rule P_init_alex [color=#1f6fd0]:
+    [ Fr(~idA) ] --[ Start('Alex') ]-> [ AlexInit(~idA), !Party('Alex', ~idA) ]
+
+rule P_init_blake [color=#1f6fd0]:
+    [ Fr(~idB) ] --[ Start('Blake') ]-> [ BlakeInit(~idB), !Party('Blake', ~idB) ]
+#endif
+
+#ifdef KDF_WIRE
+// ===== nonce exchange over the public (Dolev-Yao) channel =====
+rule P_send_na [color=#1f6fd0]:
+    [ AlexInit(idA), Fr(~Na) ]
+  --[ Send('Alex', ~Na) ]->
+    [ AlexWait(idA, ~Na), Out(~Na) ]
+
+rule P_recv_na_send_nb [color=#1f6fd0]:
+    [ BlakeInit(idB), In(Na), Fr(~Nb) ]
+  --[ Send('Blake', ~Nb) ]->
+    [ BlakeHasNonces(idB, <Na, ~Nb>), !NoncesSeen('Blake', idB, <Na, ~Nb>), Out(~Nb) ]
+
+rule P_recv_nb [color=#1f6fd0]:
+    [ AlexWait(idA, Na), In(Nb) ]
+  --[ Recv('Alex', Nb) ]->
+    [ AlexHasNonces(idA, <Na, Nb>), !NoncesSeen('Alex', idA, <Na, Nb>) ]
+#endif
+
+#ifdef COMPUTE_KEYRESULT
+// ===== compute adapter: Respond -> KeyResult =====
+rule Compute_to_KeyResult:
+    [ Respond(P, rid, v) ]
+  -->
+    [ KeyResult(P, rid, v) ]
+#endif
+
+#ifdef COMPUTE_OPRESULT
+// ===== compute adapter: Respond -> OpResult (P4) =====
+rule Compute_to_OpResult:
+    [ Respond(P, rid, v) ]
+  -->
+    [ OpResult(P, rid, v) ]
+#endif
+
+#ifdef FINISH_PLAIN
+// ===== plain finish + session =====
+rule P_finish_alex [color=#1f6fd0]:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk) ]
+  --[ Finish('Alex') ]->
+    [ AlexDone(idA, sk), Out('ACK') ]
+
+rule P_enter_session [color=#1f6fd0]:
+    [ AlexDone(idA, sk) ]
+  --[ SessionUp('Alex') ]->
+    [ !Session('Alex', idA, sk) ]
+#endif
+
+#ifdef FINISH_CONFIRMED
+// ===== key-confirmation SHUTDOWN finish (P6) + session =====
+// The shutdown compares the human's COMMITTED key (KeyResult) against the objective correct key the
+// interface DISPLAYED (kdf(Na,Nb)) -- not against the human's own commit, which would trivially match.
+rule P_confirm_ok [color=#1f6fd0]:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk), !Displayed('Alex', rid, correct) ]
+  --[ KeyEq(sk, correct), KeyConfirmed('Alex'), Finish('Alex') ]->
+    [ AlexDone(idA, sk), Out('ACK') ]
+
+rule P_confirm_abort [color=#1f6fd0]:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk), !Displayed('Alex', rid, correct) ]
+  --[ KeyNeq(sk, correct), ShutdownAbort('Alex') ]->
+    [ ]
+
+restriction KeyEqHolds:  "All x y #i. KeyEq(x,y)@i ==> x = y"
+restriction KeyNeqHolds: "All x #i. KeyNeq(x,x)@i ==> F"
+
+rule P_enter_session_confirmed [color=#1f6fd0]:
+    [ AlexDone(idA, sk) ]
+  --[ SessionUp('Alex') ]->
+    [ !Session('Alex', idA, sk) ]
+#endif
+
+#ifdef UI_POLICY
+// ===== set-policy prompt + finish =====
+rule UI_policy_prompt:
+    [ !Party('Alex', idA), Fr(~pid) ]
+  --[ PolicyPrompt('Alex', ~pid) ]->
+    [ PolicyPending(idA, ~pid),
+      !Prompt('Alex', ~pid, 'set-policy') ]
+
+restriction OnePolicyPromptPerParty:
+  "All p pid1 pid2 #i #j. PolicyPrompt(p, pid1)@i & PolicyPrompt(p, pid2)@j ==> #i = #j"
+
+rule A_finish_policy:
+    [ PolicyPending(idA, pid), PolicyDone('Alex', pid) ]
+  --[ Finish('Alex') ]->
+    [ ]
+#endif
+
+#ifdef UI_VERIFY
+// ===== compare (fingerprint) prompt: genuine + adversary-tampered =====
+rule UI_verify_genuine:
+    [ !Session('Alex', idA, sk), Fr(~vid) ]
+  --[ VerifyPrompt('Alex', ~vid, 'genuine') ]->
+    [ !Prompt('Alex', ~vid, 'compare'),
+      !Displayed('Alex', ~vid, <~vid, ~vid>) ]
+
+rule UI_verify_tampered:
+    [ !Session('Alex', idA, sk), In(vid), Fr(~ref) ]
+  --[ VerifyPrompt('Alex', vid, 'tampered'), Tampered(vid) ]->
+    [ !Prompt('Alex', vid, 'compare'),
+      !Displayed('Alex', vid, <vid, ~ref>) ]
+#endif
+
+#ifdef UI_AUTHORIZE
+// ===== authorize prompt =====
+rule UI_authorize_request:
+    [ !Session('Alex', idA, sk), Fr(~aid) ]
+  --[ AuthPrompt('Alex', ~aid) ]->
+    [ !Prompt('Alex', ~aid, 'authorize') ]
+#endif
+
+#ifdef UI_APPROVE
+// ===== approval prompts: legitimate self + adversary-injected =====
+rule UI_issue_self_prompt:
+    [ !Session('Alex', idA, sk), Fr(~pid) ]
+  --[ PromptShown('Alex', ~pid, 'self') ]->
+    [ !Prompt('Alex', ~pid, 'confirm'),
+      !Displayed('Alex', ~pid, <~pid, ~pid>) ]
+
+rule UI_inject_prompt:
+    [ !Session('Alex', idA, sk), In(pid), Fr(~own) ]
+  --[ PromptShown('Alex', pid, 'injected'), Injected(pid) ]->
+    [ !Prompt('Alex', pid, 'confirm'),
+      !Displayed('Alex', pid, <pid, ~own>) ]
+#endif
+
+#ifdef UI_APPROVE_SHUTOUT
+// ===== approval prompts WITH number-matching shutout (P6) =====
+rule UI_self_prompt:
+    [ !Session('Alex', idA, sk), Fr(~pid) ]
+  --[ PromptShown('Alex', ~pid, 'self') ]->
+    [ !Prompt('Alex', ~pid, 'confirm'),
+      !Displayed('Alex', ~pid, <~pid, ~pid>) ]
+
+rule UI_inject_shutout:
+    [ !Session('Alex', idA, sk), In(pid), Fr(~own) ]
+  --[ PromptShown('Alex', pid, 'injected'), Injected(pid), Shutout(pid) ]->
+    [ !Prompt('Alex', pid, 'confirm'),
+      !Displayed('Alex', pid, <pid, ~own>) ]
+#endif
+
+#ifdef UI_WARNING
+// ===== good-usability re-engagement warning -> recovery to Attentive =====
+rule UI_warning_reengage:
+    [ !Session('Alex', idA, sk), !EffectiveMask('Alex', m), !Compose(m, 'Attentive', m) ]
+  --[ WarningShown('Alex'), InequalityMask(m, 'Attentive'), SetMask('Alex','Attentive'), Recover('Alex'), RecoveryDone('Alex') ]->
+    [ !EffectiveMask('Alex', 'Attentive') ]
+
+restriction OnceWarningShown:
+  "All #i #j. WarningShown('Alex')@i & WarningShown('Alex')@j ==> #i = #j"
+
+restriction OnceRecoveryDone:
+  "All #i #j. RecoveryDone('Alex')@i & RecoveryDone('Alex')@j ==> #i = #j"
+#endif
+
+#ifdef STRESS_ALEX
+// ===== stress targeting: Alex =====
+rule Enable_Stress_Alex:
+    [ !Party('Alex', id) ] --[ StressOn('Alex') ]-> [ !StressEnable('Alex') ]
+
+restriction OnceStressAlex:
+  "All #i #j. StressOn('Alex')@i & StressOn('Alex')@j ==> #i = #j"
+#endif
+
+#ifdef STRESS_BLAKE
+// ===== stress targeting: Blake =====
+rule Enable_Stress_Blake:
+    [ !Party('Blake', id) ] --[ StressOn('Blake') ]-> [ !StressEnable('Blake') ]
+
+restriction OnceStressBlake:
+  "All #i #j. StressOn('Blake')@i & StressOn('Blake')@j ==> #i = #j"
+#endif
+
+#ifdef INFER_HARNESS
+// ===== P4 token-bounded op/verify/decision harness =====
+rule Seed_infer:
+    [ AlexInit(idA) ]
+  --[ Seeded('Alex') ]->
+    [ OpToken(idA), OpToken(idA),
+      DecToken(idA), DecToken(idA), DecToken(idA), DecToken(idA) ]
+
+rule Pose_kdf:
+    [ OpToken(idA), Fr(~rid), Fr(~Na), In(Nb) ]
+  --[ PoseOp('Alex', 'kdf') ]->
+    [ Pending(idA, ~rid),
+      !Prompt('Alex', ~rid, 'compute'),
+      !Displayed('Alex', ~rid, kdf(~Na, Nb)) ]
+
+rule Pose_verify_genuine:
+    [ OpToken(idA), Fr(~vid) ]
+  --[ PoseOp('Alex', 'verify'), GenuineFp('Alex', ~vid) ]->
+    [ Pending(idA, ~vid),
+      !Prompt('Alex', ~vid, 'compare'),
+      !Displayed('Alex', ~vid, <~vid, ~vid>) ]
+
+rule Pose_verify_tampered:
+    [ OpToken(idA), Fr(~vid), In(x) ]
+  --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
+    [ Pending(idA, ~vid),
+      !Prompt('Alex', ~vid, 'compare'),
+      !Displayed('Alex', ~vid, <x, ~vid>) ]
+
+rule Pose_decision:
+    [ DecToken(idA), Fr(~did) ]
+  --[ PoseDecision('Alex', ~did) ]->
+    [ DecPending(idA, ~did),
+      !Prompt('Alex', ~did, 'decide') ]
+
+rule Finish_op:
+    [ Pending(idA, rid), OpResult('Alex', rid, m) ]
+  --[ DoneOp('Alex', rid) ]->
+    [ ]
+
+rule Finish_verify:
+    [ Pending(idA, rid), VerifyDone('Alex', rid) ]
+  --[ DoneVerify('Alex', rid) ]->
+    [ ]
+
+rule Finish_decision:
+    [ DecPending(idA, did), DecisionDone('Alex', did) ]
+  --[ DoneDecision('Alex', did) ]->
+    [ ]
+#endif
+
+#ifdef IF_CALC_ALEX
+rule IF_calc_alex [color=#f2994a]:
+    [ AlexHasNonces(idA, <Na, Nb>), Fr(~rid) ]
+  --[ UIStep('Alex', 'calc_sk') ]->
+    [ !Prompt('Alex', ~rid, 'compute'),
+      !Displayed('Alex', ~rid, kdf(Na, Nb)),
+      !UnderDeadline(~rid),
+      AlexAwaitKey(idA, ~rid) ]
+#endif
+
+#ifdef IF_CALC_BLAKE
+rule IF_calc_blake [color=#f2994a]:
+    [ BlakeHasNonces(idB, <Na, Nb>), Fr(~rid) ]
+  --[ UIStep('Blake', 'calc_sk') ]->
+    [ !Prompt('Blake', ~rid, 'compute'),
+      !Displayed('Blake', ~rid, kdf(Na, Nb)),
+      !UnderDeadline(~rid),
+      BlakeAwaitKey(idB, ~rid) ]
+#endif
+
+#ifdef IF_NONCE_ACK
+rule IF_nonce_ack_alex [color=#f2994a]:
+    [ !NoncesSeen('Alex', idA, <Na, Nb>), Fr(~pid) ]
+  --[ UIStep('Alex', 'nonce_ack'), NonceAck('Alex') ]->
+    [ !Prompt('Alex', ~pid, 'confirm'), !Displayed('Alex', ~pid, <Nb, Nb>) ]
+
+rule IF_nonce_ack_blake [color=#f2994a]:
+    [ !NoncesSeen('Blake', idB, <Na, Nb>), Fr(~pid) ]
+  --[ UIStep('Blake', 'nonce_ack'), NonceAck('Blake') ]->
+    [ !Prompt('Blake', ~pid, 'confirm'), !Displayed('Blake', ~pid, <Na, Na>) ]
+
+restriction OnceNonceAckPerParty:
+  "All p #i #j. NonceAck(p)@i & NonceAck(p)@j ==> #i = #j"
+#endif

@@ -1,94 +1,105 @@
-# Ceremony C1 — secure email (LAYERED v2)
+# secure_email ceremony
 
-Models `secure-email-mock.html` (repo root): Alex sends Blake a secure email by **OpenPGP**
-(Method 2) or **password** (Method 3). Built as **five strict layers** — the design in
-[`docs/LAYERED_V2_PLAN.md`](../../docs/LAYERED_V2_PLAN.md) — color-coded in the interactive
-trace graphs (`tamarin-prover interactive .`):
+Proton-style secure email between **Alex** (sender) and **Blake** (recipient), in two pathways held in
+one theory: **PGP** (public-key, fingerprint-verified) and **password** (passphrase shared out-of-band).
+This is the PRIMARY ceremony for testing the stressor machinery, so it is deliberately abstracted down
+to the human-factors layer.
 
-```
-🔵 protocol/   #1f6fd0  crypto, wire (DY), storage, channels (public / OOB), participants
-     ▲ PReq_* requests        │ results (KeyReady, FetchedKey, OobFp, MailPwReq, …)
-🟠 interface/  #f2994a  one rule per mock control; PROMPTS the user (!Step + observables + context)
-     ▲ mask answers           ▼ prompts + context (!UnderDeadline, prompt density)
-🔴 stressors   #eb5757  read ONLY the interface's prompts/context (+ 🟣 #9b51e0 lexicon/config rows)
-     │ SetMask(P, mask)       ▼
-🟢 user        #27ae60  answers each prompt according to the mask it wears (mask_state gates)
-```
+## Design invariant: a breach is ALWAYS a human mistake
 
-## What is modeled (and what is NOT hard-coded)
+The email transport is a **private channel**, so the Dolev-Yao adversary (`Out()`) sees a secret **only**
+when a human errs through a mask. There is no adversary-controlled keyserver and no open mail channel.
+The only `Out()` emissions are:
 
-- **The PK sub-ceremony.** Blake's key exists only if the ceremony ran: keygen → publish sends
-  the public key over the **public channel** (keyserver = DY territory) and the fingerprint over
-  the **OOB channel** (the Signal thread, `OobFp`).
-- **Tampering is the adversary's choice.** One fetch rule reads `In(k)`: the DY forwards Blake's
-  genuine key or substitutes its own. No genuine/tampered producer branch, no oracle tag; the
-  human decides at the compare prompt `<fetched key, OOB fingerprint>`.
-- **Phishing EMERGES.** The mail channel is open and unauthenticated (`<'pwreq', to, replyTo>`
-  from `In`), and **Eve** is a first-class malicious participant (`!Corrupt`: her OOB inbox is
-  DY-readable). A password request renders as an ordinary reply prompt; the share observables are
-  `<replyTo, correspondent, pw>` and an **Attentive recipient's check (replyTo = correspondent)
-  defeats it** (`S2_attentive_defeats_phish`). Capturing the secret needs a degraded recipient.
-- **Verdict-free step data everywhere** (repo `MEMORY.md` lesson 14): compare `<offered, ref>`,
-  confirm `<claimed, own>`, share `<recipient, correspondent, payload>` — the Attentive rule
-  PERFORMS each check; producers never declare outcomes.
-
-## Stressor triggering (v2, literature-grounded)
-
-| Detector | Reads (from the interface) | Grounding |
+| rule (`protocol.spthy`) | mistake | outcome |
 |---|---|---|
-| σ1 Load → Busy | prompt + lexicon `MentalDemand hi` | Sweller 1988; NASA-TLX |
-| σ3 TimePressure v2 → Busy | prompt + **`!UnderDeadline(pid)` context** (the expiring-link timer) — situational, not task-intrinsic | Maule & Svenson 1993; TLX |
-| σ2 Distraction v2 → Careless | **two prompts pending** (k=2, any classes) — competing demand | Wickens MRT 2008 |
-| σ6 Abstraction → Naive | prompt + lexicon `Effort hi` (the fingerprint compare) | Whitten & Tygar 1999 |
-| σ8 Habituation → Habituated | 2 `confirm` prompts (the two routine buttons) | Anderson & Vance CHI 2015 |
-| σ9 AlertVolume → Careless | 3 `decide` prompts (the method toggle) | Cvach 2012 |
-| Anxiety → Fearful | `authorize` prompt (+ `Arousal hi`): the send button | Yerkes–Dodson 1908 |
+| `IF_send_pgp_leak` | a credulous fingerprint **compare** accepted a non-correspondent | message sent out |
+| `PW_deliver_misdeliver` | the address/send step went to the **wrong contact** | message + passphrase out |
+| `PW_deliver_inband` | the passphrase was **leaked in-band** (Blake still reads → silent) | message out |
 
-Opt-in outcome rows (🟣, one include each): Habituated **click-through** and Careless
-**skip-the-check** on the compare; **degraded final click** on the authorize (only Fearful
-refuses to send).
+Happy-path email goes to a private `Mailbox`; the passphrase goes on a private `OobPw`. Alex and Blake
+are each initiated **once**, and every human step is once-bounded.
 
-## Profiles — 3 stressors at a time (all ≤ 5 min)
+## Crypto is abstracted (human-factors focus)
 
-| Profile | Stressors | Time | Story |
-|---|---|---|---|
-| `S0_baseline` | none | ~9 s | five-layer happy paths; **secrecy is absolute** (`S0_secrecy_absolute`) |
-| `S1_trio_pgp` | σ6, σ8, σ2 | ~130 s | three degraded routes to accepting the DY-substituted key |
-| `S2_trio_pw` | σ1, σ3, σ9 | ~50 s | misdelivery, silent in-band leak, **emergent phishing** on the recipient |
-| `S3_trio_mixed` | σ6, σ3, Anxiety | ~13 s | one failure per pathway + the **Fearful freeze** (safe-fail) |
-| `S4_worstcase` | all 7 | ~174 s | the §6a state-space canary; every trio is a subset |
+Following the alex_blake_kdf ceremony, keys/fingerprints are opaque handles rather than real
+`aenc`/`senc`. The fingerprint offered to Alex is **adversary-mediated** `In(offered)`; the OOB reference
+is the correspondent identity `'Blake'`. The Attentive mask **performs** the check (matches
+`offered = 'Blake'`); a credulous mask accepts a substitute. Whether the send is safe is **derived** from
+the committed recipient (`'Blake'` → private delivery; anything else → `Out`) — there is no
+genuine/tampered *rule* branch, which keeps the all-traces search small.
 
-Anti-explosion toolkit (repo `MEMORY.md` lesson 15): gate only the outcome-driving crossings
-(compare / share / authorize); every other control is an exposure-only prompt (density detectors
-count POSED prompts); no behavior file whose answers drive nothing; the shared `[reuse]` helper
-trio (`experiments/helpers.spthy`: `H_pw_stays_oob`, `H_sk_secret` `[heuristic=C]`,
-`H_encto_shape`); the attribution lemma only (its contrapositive — attentive-keeps-secret — holds
-by the same proof and is not proven twice).
+## Addressing / verification are human actions
 
-## Files
+Choosing *who the message reaches* is a human action, and a degraded mask's response is what misdirects it:
 
-Each profile entry is just **`#include "spine.spthy"` + the stressors it arms + its lemmas** — so
-reviewing a profile means reading ~6 lines. `spine.spthy` is the shared base (crypto + protocol +
-interface + human layer + the compare/share/authorize behaviours) that S0–S4 all reuse identically.
+- **PGP** — the fingerprint **compare** (`IF_verify_fp`) is the addressing decision; the accepted
+  recipient routes the send (`IF_send_pgp_good` vs `IF_send_pgp_leak`).
+- **Password** — the address/send **share** (`IF_btn_send_pw`) is the addressing decision; the share
+  outcome (oob / misdeliver / inband-leak) routes the envelope (`PW_deliver_*`).
 
-```
-secure_email/
-├── S0_baseline.spthy … S4_worstcase.spthy   # profile entry points (spine + stressors + lemmas)
-├── spine.spthy        # the shared base every profile includes (13 lines → 1)
-├── protocol/          🔵 crypto.spthy · keys.spthy (participants+Eve, keygen, publish, DY fetch)
-│                         mail.spthy (send/store/unlock, open pwreq channel, corrupt-OOB delivery)
-│                         stress_alex.spthy · stress_blake.spthy (🟣 targeting)
-├── interface/         🟠 sender.spthy (one rule per composer control, deadline context)
-│                         recipient.spthy (Blake's pane + the emergent reply prompt)
-│                         effects.spthy (share adapters → channels)
-├── bundles/human_common.spthy   # mask gates + one-answer + outcome matrix + lexicon + targeting
-└── experiments/       helpers.spthy ([reuse] trio) + one lemma file per profile
-```
+Protocol effects are folded into the interface rules (no `PReq_`/`P_` split).
 
-## Run
+## Performance discipline (why it proves fast)
 
-```
+Three points make it fast:
+
+- **Pushed mask (core framework, Approach A)** — each stressor onset produces `!EffectiveMask(P,<its
+  mask>)` *directly*, without reading the current mask or composing (no `!Compose`, no `_keep` twin). No
+  producer of `!EffectiveMask` reads it, so its source graph is acyclic and refined-sources terminate in
+  one step — this is what took the σ2/σ9 profiles from timeouts to seconds. Behaviours still read
+  `!EffectiveMask` and act on the prompt (unchanged); the trade-off is a safe over-approximation of
+  worst-mask-wins (a stressed human may act as any active mask).
+- **Selective load surface** — the ambient exposure prompts (confirm → σ8, decide → σ9, compute+deadline
+  → σ1/σ3) are posed only when the profile arms the detector that reads them (`#ifdef`). An unread prompt
+  is pure branching that multiplies the all-traces search (lesson 15b).
+- **Single-`In` compare, derived verdict** — one `verify` rule with `In(offered)`, tamperedness derived
+  (lesson 14). A genuine/tampered *producer branch* doubles the search.
+
+## Profiles
+
+| profile | stressors | headline |
+|---|---|---|
+| `S0_baseline` | none | both pathways deliver; secrecy is absolute |
+| `S1_trio_pgp` | σ6 Abstraction, **σ2** Concurrency | degraded compare → wrong-recipient send |
+| `S2_trio_pw` | σ1 Load, σ3 Deadline, **σ9** AlertVolume | degraded address/send → misdeliver or silent in-band leak |
+| `S3_trio_mixed` | σ6 Abstraction, **σ8** Habituation, Anxiety | two compare failures + the Fearful freeze (degradation that *helps*) |
+| `S4_worstcase` | σ1, σ3, σ6, Anxiety, **σ2** + `PROPERTIES` | reachability + secrecy pair + agnostic attribution over a broad set |
+| `S5_cue_phish` | σ_CUE (authority cue) | phishing: a persuasion cue → Naive → credulous compare → leak; the Naive is attributable to the cue |
+| `S6_recovery_habituation` | σ8 + recovery | Habituated recovers via a **mode-break**, *not* a warning (matched recovery) |
+| `S7_recovery_careless` | σ2 + recovery | Careless recovers via a **warning**, *not* a mode-break (matched recovery) |
+
+**One density detector per profile.** The three *density* detectors — σ2 (concurrency, matches any two
+prompts), σ8 (habituation, two `confirm`s), σ9 (alert-volume, three `decide`s) — may not share a
+profile: stacking them overruns the all-traces mask-interleaving proof search. So each lives in exactly
+one profile (σ2→S1 & S4, σ9→S2, σ8→S3). A single density detector alongside any number of single-prompt
+detectors is fine (S4 = 5 detectors, ~2 min). Bold marks each profile's density detector.
+
+**Stressor mechanism families.** A detector reads some slice of the trace/state and maps it to a mask:
+*lookup / dose-response* (this step's demand band → σ1/σ3/σ6/anxiety), *density / count* (k co-present
+prompts → σ2/σ8/σ9), *additive* (sub-threshold sum), *history* (a prior-state marker → σ10), and
+*cue / persuasion* — the same lookup shape but on a persuasion dimension (`!Cue(action, principle,
+level)`; authority/urgency/familiarity) → Naive. `SIGMA_CUE` + `CUE_PHISH` is the social-engineering
+axis (S5): the attacker's only lever is the cue, and the human mistake stays the sole leak route.
+
+**Matched recovery.** Returning to Attentive must fit the degrade's driver, so recovery is per-mask: a
+re-engagement **warning** recovers Careless (salience) but not Habituated (warnings habituate); a
+forcing-function **mode-break** recovers Habituated (resets automaticity) but not Careless. Each
+`Recover_*` rule (`core/knobs.spthy`, opt-in via `RECOVERY_WARNING` / `RECOVERY_MODEBREAK`) reads the
+specific degrade mask and emits `SetMask(P,'Attentive')`; the `MASK_RECOVERY` restrictions
+(`core/framework.spthy`) make that event deactivate the degrade. S6/S7 prove each mask recovers *only*
+via its matched intervention; a mask with no matched recovery armed simply never returns.
+
+Prove one with:
+
+```bash
 export PATH="$HOME/.local/bin:$PATH"
-python3 .claude/skills/model-tamarin/check.py --prove ceremonies/secure_email/S1_trio_pgp.spthy
-tamarin-prover interactive ceremonies/secure_email/    # colored layer graphs at :3001
+python3 .claude/skills/model-tamarin/check.py --prove tamarin_model/ceremonies/secure_email/S0_baseline.spthy
 ```
+
+## Layers
+
+`base.spthy` fixes the flags constant across profiles (compare / share / authorize behaviours, the
+degraded-click row, the novice lexicon) and assembles the layers in order:
+`framework → protocol → demands → masks → stressors → knobs → properties → lemmas`. Each profile
+`#define`s its stressors, then `#include "base.spthy"`, then its own lemmas.

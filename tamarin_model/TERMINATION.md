@@ -1,25 +1,30 @@
 # Termination & scale playbook (ROADMAP #7)
 
-Attaching the human layer to a real protocol is cheap by design — the protocol's human-action rules emit
-`!Step(P, sid, action)` (+ `!StepData` where an outcome needs ground truth), include the core human layer,
-and instantiate the property templates ([`usability_properties.spthy`](core/usability_properties.spthy)).
-The risk at scale is **state-space explosion** in Tamarin's backward search (the machinery's §6a blow-up:
-masks × stressors × phases × parties). This is the checklist that keeps proofs terminating — each lever is
-already used somewhere in this model, so it doubles as a worked reference.
+Attaching the human layer to a real protocol is cheap by design — the ceremony's **interface** poses
+`!Prompt(P, pid, action)` (+ `!Displayed` where observables matter); the mask performs and commits
+`!StepData` where a downstream rule needs the value; a profile `#define`s the human layer and
+`#include`s the consolidated `core/` files. The risk at scale is **state-space explosion** in
+Tamarin's backward search (the machinery's §6a blow-up: masks × stressors × phases × parties). This
+is the checklist that keeps proofs terminating — each lever is already used somewhere in this model,
+so it doubles as a worked reference.
 
 ## The attachment recipe (minimal intrusion)
 
-1. On each rule where a human acts, add `!Step(P, sid, action)` with `action` from the fixed taxonomy
-   (`compute | compare | confirm | decide | authorize | set-policy`). Add `!StepData(P, sid, …)` only if
-   the response needs the step's OBSERVABLES (the correct value for `compute`; `<offered, reference>` for
-   `compare`; `<claimed, own>` for `confirm` — never a pre-computed verdict, repo MEMORY.md lesson 14).
-2. Include the core human layer: `transitions/mask_state` + `transitions/answered_once`, `masks/outcome_policy`
-   + the `<class>_behavior` files for the actions you use, the `stressors/*` you want, a stress-enable, and
-   `lexicon_tlx` (or a population/interface profile) for the lookup detectors.
-3. If an approval/verification **gates** a downstream protocol step, consume the behavior's output fact
-   (`Respond` / `Checked` / `Confirmed`) in a thin per-ceremony adapter — see `compare_keychecked`
-   (A_send_pgp is gated on `!KeyChecked`).
-4. Instantiate the property templates; run `check.py --prove`; feed the pairs to `tools/rfc_gen.py`.
+1. On each rule where a human is **shown** a step, add `!Prompt(P, pid, action)` with `action` from
+   the fixed taxonomy (`compute | compare | confirm | decide | authorize | share | set-policy`). Add
+   `!Displayed(P, pid, …)` only when the mask needs the UI's *observables* (the correct value for
+   `compute`; `<offered, reference>` for `compare`; `<claimed, own>` for `confirm` — never a
+   pre-computed verdict; see repo `MEMORY.md` lesson 14). The mask in `core/masks.spthy` performs the
+   step and commits `!StepData` where an advance/effect adapter reads it.
+2. Include the human layer via the flat template: `#include core/framework.spthy` (always on) +
+   `#define` the `MASK_*` classes, `SIGMA*` detectors, and one demand profile (`LEXICON_DEFAULT` /
+   `POP_EXPERT` / `IF_*`) + `#include core/{demands,masks,stressors,knobs,properties}.spthy`.
+   Seed `!StressEnable(P)` for each party you intend to stress.
+3. If a human outcome **gates** a downstream protocol step, consume the mask's output in a thin
+   advance/effect adapter — see `COMPUTE_KEYRESULT`, `MASK_COMPARE_KEYCHECKED`, and the
+   `Share_*_effect` rules in `secure_email/interface.spthy`.
+4. Instantiate the property templates from `core/properties.spthy`; run `check.py --prove`; feed the
+   pairs to `tools/rfc_gen.py`.
 
 The retired `fido_auth` ceremony (git 2c56573, removed 2026-07-09) was the worked example: a signature
 protocol (`builtins: signing`) with the human layer attached this way, proving a crypto property (auth
@@ -30,34 +35,38 @@ reusing the masks/σ₈/shutout verbatim. The recipe above is what it demonstrat
 
 | Lever | Why | Where |
 |---|---|---|
-| **One instance per human** (`Start(p)` once) | stops concurrent sessions mixing facts | `core/types.spthy` `OneInstancePerHuman` |
-| **One onset per stressor per party** (`Once*`/`One*`) | a detector reads a *persistent* trigger and would re-fire forever | every `core/stressors/*` |
-| **One `SetMask` per mask per party** | bounds the event set the interval reasoning in `mask_state` walks | `OneSetMaskPerMask` |
-| **"Active until recovery", not latest-wins** | strict latest-mask-wins needs a "no `SetMask` between" clause whose all-traces search blows up once ≥3 stressors interleave | `mask_state.spthy` design note |
-| **Bounded token harness** | a fixed number of `OpToken`/`DecToken` makes the counting detectors (σ₈/σ₉) terminate | `infer_harness.spthy` |
-| **Exact-match levels (no `≥`)** | an ordinal `≥` relation over level atoms adds a transitive search; exact-match `'hi'` is flat | `AGNOSTIC_STRESSOR_INTERFACE.md` §5, `CALIBRATION.md` §2 |
-| **Persistent, read-only `!Step`/`!StepData`/`!Demands`** | no consume-and-reproduce → no sources loop (the stored-`St_H` style provably loops the sources solver) | all producers/detectors |
-| **One `outcome_policy` / lexicon per theory** | duplicate seed rules = duplicate-fact / sources noise | entries seed once (P2/S0/S1) |
+| **One instance per human** (`Start(p)` once) | stops concurrent sessions mixing facts | `core/framework.spthy` `OneInstancePerHuman` |
+| **One onset per stressor per party** (`Once*`/`One*`) | a detector reads a *persistent* trigger and would re-fire forever | each `#ifdef` block in `core/stressors.spthy` |
+| **One `SetMask` per mask per party** | bounds the event set the interval reasoning walks | `OneSetMaskPerMask` in `core/framework.spthy` |
+| **"Active until recovery", not latest-wins** | strict latest-mask-wins needs a "no `SetMask` between" clause whose all-traces search blows up once ≥3 stressors interleave | `core/framework.spthy` mask-state design note |
+| **Bounded token harness** | a fixed number of `OpToken`/`DecToken` makes the counting detectors (σ₈/σ₉) terminate | `INFER_HARNESS` in `alex_blake_kdf/protocol.spthy` |
+| **Band thresholds (`!AtLeast`)** | lookup detectors fire on a graded band `'lo'<'med'<'hi'`, not unbounded order search | `Seed_levels` + lookup rules in `core/framework.spthy` / `core/stressors.spthy` |
+| **Persistent, read-only `!Prompt`/`!Displayed`/`!StepData`/`!Demands`** | no consume-and-reproduce → no sources loop (the stored-`St_H` style provably loops the sources solver) | interface producers + detectors + masks |
+| **No vestigial persistent facts** | facts that nothing consumes multiply the state space (the old mask `!Step` commit was removed for this reason) | see `MEMORY.md` lesson 19 §5c |
+| **One demand profile / lexicon seed per theory** | duplicate seed rules = duplicate-fact / sources noise | `#define LEXICON_DEFAULT` or one alternative in `core/demands.spthy` |
 | **Keep `Inequality`-named restrictions apart** | σ₈ and σ₉ both define `Inequality`; composing them double-defines it | σ₈ in P2/P6, σ₉ in P4/S1 |
 
-## When P3 (the worst case) stops terminating
+## When P3 / S4 (the worst case) stops terminating
 
-`P3_worstcase` is the deliberate §6a canary — all phases/masks/stressors on both parties. If a change makes
-it non-terminating, that **is** the blow-up; narrow the enabled set rather than fight the prover:
+`P3_worstcase` / `S4_worstcase` are the deliberate §6a canaries — all phases/masks/stressors on both
+parties (S4: all 7 detectors). If a change makes either non-terminating, that **is** the blow-up;
+narrow the enabled set rather than fight the prover:
 
-- **Stress one party**, not both (drop a `stress_*` include).
-- **Drop a phase bundle** the property under test doesn't need.
-- **Cap the enabled stressors per party** (a profile need not host every detector).
-- **Split into per-phase profiles** and prove the phase properties separately (the phase bundles are
-  designed for this — closedness is phase-driven).
-- Add a **`sources` lemma** if a new `!Step`/`!StepData` read introduces partial deconstructions; budget a
-  re-prove of P3 after any shared-file change.
+- **Stress one party**, not both (drop `#define STRESS_BLAKE` or the recipient targeting).
+- **Drop a phase flag** the property under test doesn't need (`#define UI_VERIFY`, …).
+- **Cap the enabled stressors per party** (a profile need not `#define` every `SIGMA*`).
+- **Split into per-phase profiles** and prove the phase properties separately (each `#ifdef` block is
+  designed for this — closedness is flag-driven).
+- Add a **`sources` lemma** if a new `!Prompt`/`!StepData` read introduces partial deconstructions;
+  budget a re-prove of P3/S4 after any shared-file change.
 
 ## What does NOT scale (be honest in the writeup)
 
-- **Possibilistic, not probabilistic.** Proofs say a bad outcome is *reachable*, not *likely*. Reachability
-  under realistic stressors is the RFC-useful claim; severity/likelihood ranking is out of scope.
-- **Unbounded prompt/decision flooding** must be bounded (the token harness) — an unbounded count detector
-  does not terminate. Model "≥ k" with a fixed small k; `log`/document the cap.
+- **Possibilistic, not probabilistic.** Proofs say a bad outcome is *reachable*, not *likely*.
+  Reachability under realistic stressors is the RFC-useful claim; severity/likelihood ranking is out
+  of scope.
+- **Unbounded prompt/decision flooding** must be bounded (the token harness) — an unbounded count
+  detector does not terminate. Model "≥ k" with a fixed small k; log/document the cap.
 - **Big real protocols** (full TLS/OAuth state machines) will need per-phase compositional proofs; the
-  `!Step` seam makes attachment cheap, but the protocol's own state space is the dominant cost.
+  `!Prompt`/`!Displayed` seam makes attachment cheap, but the protocol's own state space is the
+  dominant cost.

@@ -2,17 +2,20 @@ theory ToyCeremony_P10_AdditiveLoad
 begin
 
 /*
-  P10 -- ADDITIVE cognitive load (Sweller). The compute and the nonce-ack are each MODERATE demand
-  ('med'), individually below sigma1's 'hi' threshold -- so sigma1 never fires -- yet the two
-  moderate loads presented together SUM past it: additive_load fires -> Busy -> the compute slips.
-  The contrast (P10_no_solo_load vs P10_additive_busy) is the point.
+  P10 -- ADDITIVE cognitive load. The compute and the nonce-ack are each MODERATE demand ('med'),
+  individually below sigma1's 'hi' threshold -- so sigma1 never fires -- yet the two moderate loads
+  presented together SUM past it: additive_load fires -> Busy -> the compute slips. Uses the manual
+  demand layer; the moderate seed below is the profile-local demand profile.
+  Arms: FINISH_PLAIN, IF_NONCE_ACK (the second moderate step), SIGMA1_LOAD, SIGMA_ADDITIVE.
   Run: check.py --prove ceremonies/alex_blake_kdf/P10_additive_load.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline
-#include "protocol/finish.spthy"
-#include "interface/nonce_ack.spthy"      // the SECOND moderate step
-#include "bundles/human_manual.spthy"     // manual layer -- the moderate seed below is the demand profile
+#define FINISH_PLAIN
+#define IF_NONCE_ACK
+#define SIGMA1_LOAD
+#define SIGMA_ADDITIVE
+
+#include "base.spthy"
 
 // moderate demand seed (profile-local): compute + confirm are 'med', each sub-threshold for sigma1
 rule Seed_moderate_demand [color=#9b51e0]:
@@ -20,9 +23,24 @@ rule Seed_moderate_demand [color=#9b51e0]:
     [ !Demands('compute', 'MentalDemand', 'med'), !Demands('confirm', 'MentalDemand', 'med') ]
 restriction OnceModerate: "All #i #j. SeedModerate()@i & SeedModerate()@j ==> #i = #j"
 
-#include "../../core/stressors/cognitive_load.spthy"   // sigma1 -- never fires (nothing is 'hi')
-#include "../../core/stressors/additive_load.spthy"    // two 'med' -> Busy
+// CONTRAST (the point): sigma1 HighCognitiveLoad NEVER onsets -- neither moderate step crosses 'hi'.
+lemma P10_no_solo_load:
+  all-traces
+  "not (Ex p #i. Load(p)@i)"
 
-#include "experiments/P10_additive_load.spthy"
+// ...yet the two moderate loads, presented together, SUM past the threshold: additive fires.
+lemma P10_additive_busy:
+  exists-trace
+  "Ex #i. AdditiveLoad('Alex')@i"
+
+// consequence: the additive overload degrades the compute -> a Busy slip (a fresh wrong key).
+lemma P10_additive_slip:
+  exists-trace
+  "Ex #a #s. AdditiveLoad('Alex')@a & Slip('Alex')@s & #a < #s"
+
+// the additive onset is for an ENABLED party (the Stage-B gate holds here too).
+lemma P10_additive_requires_enable:
+  all-traces
+  "All p #i. AdditiveLoad(p)@i ==> (Ex #s. StressOn(p)@s & #s < #i)"
 
 end

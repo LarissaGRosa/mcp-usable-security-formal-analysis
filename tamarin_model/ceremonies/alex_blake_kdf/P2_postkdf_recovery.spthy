@@ -1,27 +1,65 @@
-theory ToyCeremony_P2_PostKdfRecovery
+theory ToyCeremony_P2_PostKDFRecovery
 begin
 
 /*
-  P2 -- the post-KDF phases under stress, with recovery. An unstressed KDF brings up the session;
-  then each control is posed with its stressor: APPROVE + sigma8 Habituation (auto-approve),
-  VERIFY + sigma6 Abstraction (accept tampered), AUTHORIZE + SecurityAnxiety (Fearful abort), and
-  warning_ui recovers the user to Attentive.
+  P2 -- post-KDF phases + recovery. An Attentive KDF, then the APPROVE / VERIFY / AUTHORIZE phases
+  under their three stressors (sigma8 Habituation, sigma6 Abstraction, Anxiety), plus the good-usability
+  warning that returns the user to Attentive.
+  Arms: FINISH_PLAIN, LEXICON_DEFAULT, UI_APPROVE+MASK_CONFIRM, UI_VERIFY+MASK_COMPARE(+KEYCHECKED),
+        UI_AUTHORIZE+MASK_AUTHORIZE, UI_WARNING + sigma8/6/anxiety.
   Run: check.py --prove ceremonies/alex_blake_kdf/P2_postkdf_recovery.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive here)
-#include "protocol/finish.spthy"
-#include "bundles/human_common.spthy"
+#define FINISH_PLAIN
+#define LEXICON_DEFAULT
+#define UI_APPROVE
+#define MASK_CONFIRM
+#define UI_VERIFY
+#define MASK_COMPARE
+#define MASK_COMPARE_KEYCHECKED
+#define UI_AUTHORIZE
+#define MASK_AUTHORIZE
+#define UI_WARNING
+#define MASK_RECOVERY
+#define SIGMA8_HABITUATION
+#define SIGMA6_ABSTRACTION
+#define SIGMA_ANXIETY
 
-// -- one phase kit + its stressor per line --
-#include "phases/approve.spthy"
-#include "../../core/stressors/habituation.spthy"       // sigma8
-#include "phases/verify.spthy"
-#include "../../core/stressors/abstraction.spthy"       // sigma6
-#include "phases/authorize.spthy"
-#include "../../core/stressors/security_anxiety.spthy"  // Anxiety
-#include "protocol/warning_ui.spthy"                    // recovery -> Attentive
+#include "base.spthy"
 
-#include "experiments/P2_postkdf_recovery.spthy"
+// sanity: a fully-attentive user completes through to authorization.
+lemma P2_happy_path:
+  exists-trace
+  "Ex aid #i. Authorized('Alex', aid)@i"
+
+// each post-KDF failure mode is reachable:
+lemma P2_autoapprove_injected_reachable:
+  exists-trace "Ex pid #o #j. AutoApprove('Alex',pid)@o & Injected(pid)@j"
+
+lemma P2_mistake_reachable:
+  exists-trace "Ex vid #o #t. Mistake('Alex',vid)@o & Tampered(vid)@t"
+
+lemma P2_abort_reachable:
+  exists-trace "Ex aid #o. Abort('Alex',aid)@o"
+
+// RECOVERY: habituate -> auto-approve -> UI warning -> re-engaged Attentive approval.
+lemma P2_recovery_reachable:
+  exists-trace
+  "Ex p1 p2 #h #o #w #a.
+       Habituate('Alex')@h & AutoApprove('Alex',p1)@o
+     & WarningShown('Alex')@w & Approve('Alex',p2,'Attentive')@a
+     & #h < #o & #o < #w & #w < #a"
+
+// recovery is CAUSED by the warning: no spontaneous return to Attentive after habituation.
+//                                                            [Safety: recovery causality]
+lemma P2_recovery_requires_warning:
+  all-traces
+  "All p pid #a #h. Approve(p,pid,'Attentive')@a & Habituate(p)@h & #h < #a
+                    ==> (Ex #w. WarningShown(p)@w & #h < #w & #w < #a)"
+
+// composition preserves per-stressor safety: a mistake requires its abstraction stressor.
+lemma P2_mistake_requires_abstraction:
+  all-traces
+  "All p vid #o. Mistake(p,vid)@o ==> (Ex #s. Abstraction(p)@s & #s < #o)"
 
 end

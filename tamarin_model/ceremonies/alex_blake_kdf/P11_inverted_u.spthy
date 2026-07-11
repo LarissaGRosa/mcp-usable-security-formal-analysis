@@ -4,14 +4,18 @@ begin
 /*
   P11 -- the INVERTED-U facilitating zone (Yerkes-Dodson). The AUTHORIZE control is MODERATE arousal
   ('med'), below SecurityAnxiety's 'hi' threshold -- so anxiety never fires, the user stays Attentive
-  and GRANTS, and the Fearful abort is unreachable. Contrast P2/P3 at 'hi' (abort reachable): moderate
-  stakes do not freeze the user, only high ones do.
+  and GRANTS, and the Fearful abort is unreachable. Contrast P2/P3 at 'hi'. Uses the manual demand
+  layer; the moderate-arousal seed below is the profile.
+  Arms: FINISH_PLAIN, UI_AUTHORIZE+MASK_AUTHORIZE, SIGMA_ANXIETY (cannot fire at 'med').
   Run: check.py --prove ceremonies/alex_blake_kdf/P11_inverted_u.spthy
 */
 
-#include "spine.spthy"                    // crypto + KDF wire + Alex compute pipeline (Attentive)
-#include "protocol/finish.spthy"
-#include "bundles/human_manual.spthy"     // manual layer -- the moderate-arousal seed below is the profile
+#define FINISH_PLAIN
+#define UI_AUTHORIZE
+#define MASK_AUTHORIZE
+#define SIGMA_ANXIETY
+
+#include "base.spthy"
 
 // moderate arousal seed (profile-local): authorize is 'med' -- the facilitating zone
 rule Seed_moderate_arousal [color=#9b51e0]:
@@ -19,9 +23,19 @@ rule Seed_moderate_arousal [color=#9b51e0]:
     [ !Demands('authorize', 'Arousal', 'med') ]
 restriction OnceModArousal: "All #i #j. SeedModArousal()@i & SeedModArousal()@j ==> #i = #j"
 
-#include "phases/authorize.spthy"
-#include "../../core/stressors/security_anxiety.spthy"   // cannot fire at 'med' arousal
+// the facilitating zone: at 'med' arousal SecurityAnxiety NEVER onsets (below the 'hi' threshold).
+lemma P11_no_anxiety_at_moderate:
+  all-traces
+  "not (Ex p #i. SecurityAnxiety(p)@i)"
 
-#include "experiments/P11_inverted_u.spthy"
+// ...so the user stays Attentive and GRANTS the authorization (no Fearful abort).
+lemma P11_authorize_granted:
+  exists-trace
+  "Ex aid #i. Authorized('Alex', aid)@i"
+
+// and the Fearful abort is UNREACHABLE here (contrast P2_abort_reachable / P3_abort_reachable at 'hi').
+lemma P11_no_abort:
+  all-traces
+  "not (Ex p aid #i. Abort(p, aid)@i)"
 
 end

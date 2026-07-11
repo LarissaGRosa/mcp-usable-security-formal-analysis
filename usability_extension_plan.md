@@ -1,6 +1,11 @@
 # Plan: Extending Usability Stressors, Mask Transitions, and Masks
 
-> **Status (2026-06-26): Phase 0 + Experiments 02–17 are built and proven** in `tamarin_model/` — 18 experiments, 75 lemmas. Includes both **failure pathways** (A: stressor→mask→degraded; **B: task-mediated `mistake`**, Exp 13 / AWS-S3), the recovery edge, a **complete stressor-inference tier** (Exp 10–12, 15 — σ₁/σ₆/σ₉/σ₁₀ all inferred from the trace), and **three failure↔fix pairs** spanning two Poka-Yoke levels — `shutout` (σ₈ Exp 02↔14, σ₆ Exp 06↔17) and `shutdown` (σ₁ Exp 01↔16). See §0. The rest of this plan is the remaining roadmap.
+> **⚠️ Historical plan (2026-06-26).** This document describes the *original* experiment spine
+> (`00_baseline.spthy` … `17_verify_shutout.spthy`, Appendix-A fragment layout). The live model has
+> since been consolidated to **17 profiles** (alex_blake P0–P11, secure_email S0–S4) with the
+> **prompt/perform seam** (`!Prompt`/`!Displayed`/`!StepData`), flat `#ifdef` files under
+> `tamarin_model/core/` and `tamarin_model/ceremonies/`. For current architecture start at
+> `tamarin_model/AUTHORING_GUIDE.md`; for build history see `MEMORY.md` lessons 18–19.
 
 > **Scope.** Deliverables for the Ceremony Mask framework:
 > 0. **First toy ceremony + bootstrap experiment (new — start here).** A concrete `alex_blake_kdf` ceremony (§C0) plus a vertical-experiment build/test plan (§Phase 0) that proves *one stressor → one transition → one broken property* end-to-end **before** any breadth is added.

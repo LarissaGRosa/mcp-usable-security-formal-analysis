@@ -9,60 +9,63 @@ requirements**. It ties together the deeper docs — [`AGNOSTIC_STRESSOR_INTERFA
 
 ## 1. The picture
 
-You write only the **protocol** and the **`!Step` annotations**. The reusable **human layer** (`core/`)
-degrades the human under usability problems; **levers** (interface / population / adversary / identity)
+You write only the **protocol** and the **interface prompts** (`!Prompt`/`!Displayed`). The reusable
+**human layer** (`core/`) performs the prompted step and degrades under usability problems; **levers**
+(interface / population / adversary / identity)
 shift the same demand profile; the **tools** turn the proofs into requirements.
 
-> **The layered template (V3).** Both shipped ceremonies use one directory shape — copy it for a new
-> ceremony and swap the protocol:
+> **The flat template (V3.1).** Both shipped ceremonies use one directory shape — copy it for a new
+> ceremony and swap the protocol. One file per layer; selection is by `#ifdef`:
 > ```
+> core/   framework.spthy (always on) · masks.spthy · stressors.spthy · demands.spthy · knobs.spthy · properties.spthy
 > <ceremony>/
-> ├── <X>0_baseline.spthy … <X>N.spthy    # profile entry points (includes only)
-> ├── protocol/    🔵 crypto + setup/exchange over real channels + finish (+ finish_confirmed for a shutdown)
-> ├── interface/   🟠 one rule per control: PROMPTS the user (!Step + !StepData + context like !UnderDeadline)
-> ├── bundles/human_common.spthy   # mask_state + answered_once + outcome_policy + lexicon + stress_alex
-> └── experiments/  # helpers (shared [reuse] lemmas) + one <profile>.spthy of lemmas each
+> ├── <X>0_baseline.spthy … <X>N.spthy    # profiles: #define flags + #include base + lemmas
+> ├── base.spthy    ceremony-constant #defines + the layer #includes
+> ├── protocol.spthy   🔵 crypto + setup/exchange + finish (#ifdef FINISH_PLAIN/FINISH_CONFIRMED) + UI producers (#ifdef UI_*)
+> ├── interface.spthy  🟠 one rule per control: PROMPTS the user (!Prompt + !Displayed + context like !UnderDeadline)
+> └── lemmas.spthy     shared [reuse] lemmas (if any)
 > ```
-> The stressor layer reads the **interface's** `!Step`, never the protocol. Triggering is a graded
-> **dose-response**: the lexicon rates a step `'lo' < 'med' < 'hi'` and a lookup detector fires on a
-> BAND — `!Demands(action,dim,lvl) & !AtLeast(lvl, thr)` (the order is seeded in `core/types.spthy`).
-> So a good interface / expert population that lowers a step to `'med'`/`'lo'` provably keeps the
-> detector from firing. Realism detectors beyond the single-step lookups: `additive_load` (two `'med'`
-> steps sum past the threshold — Sweller), the inverted-U (`'med'` arousal facilitates, `'hi'`
-> freezes — Yerkes-Dodson), and the density detectors (`habituation`, `alert_volume`,
-> `distraction_concurrent`). A profile that SWAPS the lexicon for an `interface_*`/`population_*`
-> demand profile composes the human layer manually (not via `human_common`, which would double-seed
-> the lexicon) — see `alex_blake_kdf/P7`, `P9`.
+> The stressor layer reads the **interface's** `!Prompt`, never the protocol. A profile `#define`s exactly
+> the flags it arms, then `#include "base.spthy"`; each `#ifdef` block compiles in only when its flag is
+> set (byte-identical to hand-including the old fragment). Triggering is a graded **dose-response**: the
+> demand profile rates a step `'lo' < 'med' < 'hi'` and a lookup detector fires on a BAND —
+> `!Demands(action,dim,lvl) & !AtLeast(lvl, thr)` (the order is seeded in `core/framework.spthy`). So a
+> good interface / expert population that lowers a step to `'med'`/`'lo'` provably keeps the detector
+> from firing. Realism detectors beyond the single-step lookups (all in `core/stressors.spthy`):
+> `SIGMA_ADDITIVE` (two `'med'` steps sum past the threshold — Sweller), the inverted-U (`'med'` arousal
+> facilitates, `'hi'` freezes — Yerkes-Dodson), and the density detectors (`SIGMA8_HABITUATION`,
+> `SIGMA9_ALERTVOLUME`, `SIGMA2_CONCURRENCY`). To SWAP the demand profile, `#define` `POP_EXPERT` /
+> `IF_HARDENED` (or an inline seed) instead of `LEXICON_DEFAULT` — see `alex_blake_kdf/P7`, `P9`.
 
 ```mermaid
 flowchart TB
   subgraph YOU["YOU write (per ceremony)"]
     P["protocol rules<br/>(crypto, messages, state)"]
-    ST["!Step(P,sid,action) + !StepData<br/>on each human step"]
-    EA["thin effect adapters<br/>(only if a step gates a downstream action)"]
+    ST["interface: !Prompt(P,pid,action) + !Displayed<br/>pose + display on each human step"]
+    EA["advance rules / effect adapters<br/>(consume the mask's committed !StepData)"]
     LM["lemmas = instantiated property templates"]
   end
   subgraph CORE["core/ — REUSE verbatim (the human layer)"]
-    LEX["lexicon_tlx / interface / population<br/>(action → demand level)"]
-    POL["outcome_policy<br/>(mask × action → outcome)"]
-    DET["stressors/*  (f_U detectors)"]
-    BEH["masks/*_behavior  (f_H responses)"]
-    GATE["transitions/mask_state  (which mask is active)"]
-    MIT["mitigations / adversary / usability_properties"]
+    LEX["demands.spthy<br/>(action → demand level)"]
+    POL["framework.spthy: outcome_policy<br/>(mask × action → outcome)"]
+    DET["stressors.spthy  (f_U detectors)"]
+    BEH["masks.spthy  (f_H responses)"]
+    GATE["framework.spthy: mask_state  (which mask is active)"]
+    MIT["knobs.spthy / properties.spthy"]
   end
   subgraph TOOLS["tools/"]
-    SA["step_analyzer.py<br/>propose !Step"]
+    SA["step_analyzer.py<br/>propose !Prompt"]
     CK["check.py --prove<br/>verify lemmas"]
     RG["rfc_gen.py<br/>→ RFC_GUIDANCE.md"]
   end
   P --> ST
-  ST -->|read by| DET
-  ST -->|read by| BEH
+  ST -->|!Prompt read by| DET
+  ST -->|!Prompt+!Displayed read by| BEH
   LEX --> DET
   POL --> BEH
   DET -->|SetMask| GATE
   GATE --> BEH
-  BEH -->|outcome| EA
+  BEH -->|committed !StepData / outcome| EA
   EA --> P
   SA -.proposes.-> ST
   LM --> CK
@@ -71,29 +74,25 @@ flowchart TB
 
 ## 2. The core elements you compose
 
-| Element (`core/…`) | Role | When you include it |
+| File (`core/…`) | Role | How you select it |
 |---|---|---|
-| `types.spthy` | `OneInstancePerHuman` + the `kdf` symbol | always |
-| `transitions/mask_state.spthy` | the persistent **current mask** (which degraded mode is active, gated by `SetMask`/`RespMask`) | always (if any stressor) |
-| `transitions/answered_once.spthy` | one response per step | always |
-| `lexicon_tlx.spthy` | **Layer 2**: action → NASA-TLX demand level (the cited HCI knowledge) | for lookup detectors (σ₁/σ₃/σ₆/anxiety) |
-| `interface_*.spthy` / `population_*.spthy` | an alternative demand profile (lower = good interface / expert; absent = baseline/novice) | include *instead of* `lexicon_tlx` to model that interface/population |
-| `masks/outcome_policy.spthy` | the **(mask × action) → outcome** matrix (the human-behaviour table) | always (if any mask) |
-| `masks/<class>_behavior.spthy` | **f_H**: how a mask responds for an action class (`compute`/`compare`/`confirm`/`decide`/`authorize`/`share`/`policy`) | one per action class your ceremony uses |
-| `stressors/<σ>.spthy` | **f_U**: the detector that fires a stressor from `!Step` (+ lexicon) | one per stressor you exercise |
-| `adversary.spthy` + `stressors/time_pressure_induced.spthy` | the adversary *inducing* a stressor (e.g. urgency) | to model adversary-induced attacks (#6) |
-| `mitigations.spthy` | Poka-Yoke restrictions (shutout / verify-shutout) | to model the fix |
-| `usability_properties.spthy` | 2 generic invariants + 4 property **templates** | always (instantiate the templates) |
+| `framework.spthy` | `OneInstancePerHuman` + `kdf` symbol + the `'lo'<'med'<'hi'` band + the persistent **current-mask** gates + answered-once + the **(mask × action) → outcome** matrix | always on (plain `#include`, no flag) |
+| `demands.spthy` | the demand profiles: `LEXICON_DEFAULT` (novice), `POP_EXPERT`, `IF_HARDENED`, `IF_CLEAR`, `IF_MISLEADING` | `#define` the one your profile uses (feeds the lookup detectors σ₁/σ₃/σ₆/anxiety) |
+| `masks.spthy` | **f_H** behaviours per action class + the opt-in outcome rows | `#define MASK_<CLASS>` per action class you use (`MASK_COMPUTE`/`MASK_COMPARE`/…); `OUTCOME_*` for opt-in rows |
+| `stressors.spthy` | **f_U** detectors that fire a stressor from `!Prompt` (+ demands) | `#define SIGMA<n>_<name>` per stressor you exercise |
+| `knobs.spthy` | `ADVERSARY` (inject urgency; feeds `SIGMA_INDUCED_TIME`) + `MITIGATIONS` (shutout / verify-shutout) | `#define ADVERSARY` / `MITIGATIONS` |
+| `properties.spthy` | 2 generic invariants + 4 property **templates** | `#define PROPERTIES` for the invariants; instantiate the templates in your profile |
 
 The masks/stressors **key on the party `P`**, so they are ceremony- and party-generic — you add no `core/`
-files for a standard interaction.
+rules for a standard interaction; you only `#define` the flags your profile arms.
 
-## 3. The action taxonomy + `!Step` cheat-sheet
+## 3. The action taxonomy + `!Prompt` cheat-sheet
 
-Every human step is **one** action. Tag it; add `!StepData` only when the response needs the step's
-*observables* — what the UI shows, never a pre-computed verdict (verdicts are derived in the mask layer).
+Every human step is **one** action the interface POSES with `!Prompt(P,pid,action)`. Add
+`!Displayed(P,pid,shown)` only when a performed step needs the UI's *observables* — what the UI shows,
+never a pre-computed verdict (verdicts are derived in the mask layer, which then commits `!StepData`).
 
-| `action` | the human is… | `!StepData` carries | detectors that read it |
+| `action` | the human is… | `!Displayed` shows | detectors that read the prompt |
 |---|---|---|---|
 | `compute` | deriving a value they can't do in-head | the correct value (e.g. `kdf(a,b)`) | σ₁ (Mental), σ₃ (Temporal) |
 | `compare` | judging two artefacts equal/authentic | `<offered, reference>` — Attentive *performs* the comparison (matches `<k,k>`); tamperedness is never declared | σ₆ (Effort) |
@@ -103,20 +102,22 @@ Every human step is **one** action. Tag it; add `!StepData` only when the respon
 | `share` | disclosing a secret over a channel | `<recipient, secret>` | σ₁/σ₃ via lexicon |
 | `set-policy` | configuring access (task-mediated) | — (the control's design quality is a profile-level interface seed, `!ControlDesign` via `interface_clear_policy` / `interface_misleading_policy`, never step data) | σ₄ (Pathway B — task, not mask) |
 
-σ₂ ExternalDistraction reads **any** `!Step` (action-generic). The outcome a mask produces per action is in
-`outcome_policy.spthy`; if that outcome must drive the protocol (a wrong key, an approval that gates a
-signature), consume the behaviour's output fact (`Respond` / `Checked` / `Confirmed`) in a one-line
-**effect adapter** (see `compute_keyresult`, `compare_keychecked`, `share_effects`).
+σ₂ Concurrency reads **any two** distinct `!Prompt` (competing demands). The outcome a mask produces per
+action is in the `outcome_policy` matrix (`core/framework.spthy`); if that outcome must drive the
+protocol (a wrong key, an approval that gates a signature), consume the behaviour's output fact
+(`Respond` / `Checked` / `Confirmed`) — or the mask's committed `!StepData` — in a one-line **advance /
+effect adapter** (see the `COMPUTE_KEYRESULT` / `MASK_COMPARE_KEYCHECKED` blocks and the
+`Share_*_effect` rules in `secure_email/interface.spthy`).
 
 ## 4. Step-by-step: a new ceremony from scratch
 
 ```mermaid
 flowchart LR
-  A["1. Write the protocol<br/>(rules with the human's steps)"] --> B["2. Annotate human steps<br/>!Step + !StepData<br/>(step_analyzer.py proposes)"]
-  B --> C["3. Include the human layer<br/>transitions + outcome_policy<br/>+ behaviors + stressors + lexicon"]
+  A["1. Write the protocol<br/>(rules with the human's steps)"] --> B["2. Pose interface prompts<br/>!Prompt + !Displayed<br/>(step_analyzer.py proposes)"]
+  B --> C["3. Include the human layer<br/>framework + demands + masks + stressors"]
   C --> D["4. Add effect adapters<br/>if a step gates the protocol"]
-  D --> E["5. Pick an interface / population<br/>(swap the lexicon)"]
-  E --> F["6. Instantiate property templates<br/>(usability_properties.spthy)"]
+  D --> E["5. Pick an interface / population<br/>(swap the demand profile)"]
+  E --> F["6. Instantiate property templates<br/>(core/properties.spthy)"]
   F --> G["7. check.py --prove<br/>iterate until green"]
   G --> H["8. rfc_gen.py<br/>→ RFC_GUIDANCE.md"]
 ```
@@ -128,35 +129,41 @@ theory MyCeremony
 begin
 // builtins: signing      // only if you use real crypto (signatures/aenc/…)
 
-#include "../../core/types.spthy"
+// --- 3. select the reusable human layer by flag (BEFORE the includes read them) ---
+#define LEXICON_DEFAULT       // or POP_EXPERT / IF_HARDENED / an inline demand seed
+#define MASK_CONFIRM          // the action class(es) you use
+#define SIGMA8_HABITUATION    // the stressor(s) you exercise
 
-// --- 1+2. your protocol; each human-step rule emits !Step (+ !StepData) ---
-// rule Human_approves_transfer:
+#include "../../core/framework.spthy"   // always on: types + mask-state + answered-once + outcome matrix
+// --- 1+2. your interface POSES a prompt (+ DISPLAYS observables); the mask performs it ---
+// rule UI_prompts_transfer:
 //     [ Session($A, sid), In(req) ]
 //   --[ Prompted($A, ~pid) ]->
-//     [ !Step($A, ~pid, 'confirm'), !StepData($A, ~pid, 'injected'), Pending(~pid, req) ]
+//     [ !Prompt($A, ~pid, 'confirm'), !Displayed($A, ~pid, <~pid,~pid>), Pending(~pid, req) ]
+//   // core/masks.spthy then reads !Prompt+!Displayed, performs the confirm, and emits Confirmed(...)
+//   // (+ committed !StepData only if your advance rule needs the value).
 
 // --- per-party stress enable (Stage B targeting) ---
 // rule Enable: [ !Party($A, id) ] --[ StressOn($A) ]-> [ !StressEnable($A) ]
 // restriction OnceStress: "All a #i #j. StressOn(a)@i & StressOn(a)@j ==> #i = #j"
 
-// --- 3. the reusable human layer ---
-#include "../../core/transitions/mask_state.spthy"
-#include "../../core/transitions/answered_once.spthy"
-#include "../../core/lexicon_tlx.spthy"              // or interface_*/population_*
-#include "../../core/masks/outcome_policy.spthy"
-#include "../../core/masks/confirm_behavior.spthy"   // the action class(es) you use
-#include "../../core/stressors/habituation.spthy"    // the stressor(s) you exercise
+#include "../../core/demands.spthy"     // the demand profile (guarded by the flag above)
+#include "../../core/masks.spthy"       // the behaviours (guarded by MASK_*)
+#include "../../core/stressors.spthy"   // the detectors (guarded by SIGMA*)
+// #include "../../core/knobs.spthy" / "../../core/properties.spthy"  // if you #define ADVERSARY/MITIGATIONS/PROPERTIES
 
 // --- 4. effect adapter (only if the approval gates a protocol step) ---
 // rule Approval_to_action: [ Confirmed($A, pid, m), Pending(pid, req) ] --> [ DoAction(req) ]
 
-// --- 6. lemmas: instantiate the templates from usability_properties.spthy ---
+// --- 6. lemmas: instantiate the templates from core/properties.spthy ---
 // lemma bad_outcome_reachable: exists-trace "Ex ... AutoApprove(...) ..."
 // lemma fixed: all-traces "not (Ex ...)"
 
 end
 ```
+
+(For a multi-profile ceremony, factor the shared `#define`s + `#include`s into a `base.spthy` and make
+each profile a `#define` list + `#include "base.spthy"` + its lemmas, as the two shipped ceremonies do.)
 
 Then: `python3 .claude/skills/model-tamarin/check.py --prove tamarin_model/ceremonies/myceremony/MyCeremony.spthy`.
 If `P3`-style worst cases stop terminating, see [`TERMINATION.md`](TERMINATION.md) (narrow the enabled set).
@@ -222,13 +229,14 @@ Concretely, the model lets you find:
 
 ```mermaid
 flowchart LR
-  C["ceremony .spthy<br/>(protocol + !Step)"] -->|step_analyzer.py| C2["proposed !Step / lexicon<br/>(you confirm)"]
+  C["ceremony .spthy<br/>(protocol + !Prompt)"] -->|step_analyzer.py| C2["proposed !Prompt / lexicon<br/>(you confirm)"]
   C2 --> CK["check.py --prove<br/>per profile"]
   CK -->|verified lemmas| M["tools/rfc_requirements.json<br/>(risk lemma + fix lemma + lever)"]
   M -->|rfc_gen.py| R["RFC_GUIDANCE.md<br/>normative MUST/SHOULD, each proof-backed"]
 ```
 
-- `python3 tamarin_model/tools/step_analyzer.py <protocol.spthy>` — propose `!Step` annotations.
+- `python3 tamarin_model/tools/step_analyzer.py <protocol.spthy>` — propose `!Prompt` annotations (the
+  tool still prints `!Step`; treat its suggestions as the interface `!Prompt` to pose).
 - `python3 .claude/skills/model-tamarin/check.py --prove <profile.spthy>` — verify a profile's lemmas.
 - `python3 tamarin_model/tools/rfc_gen.py` — re-prove the manifest's pairs, emit `RFC_GUIDANCE.md`.
 - `tamarin-prover interactive <ceremony-dir> --port=3001` — browse/step proofs in the GUI (run one server
@@ -236,10 +244,11 @@ flowchart LR
 
 ## 8. Checklist
 
-- [ ] Protocol rules written; each human step emits `!Step(P,sid,action)` (+ `!StepData` if needed).
+- [ ] Protocol + interface rules written; each human step is POSED as `!Prompt(P,pid,action)`
+      (+ `!Displayed(P,pid,shown)` for a performed step). The mask performs it and commits `!StepData`.
 - [ ] `step_analyzer.py` proposals reviewed (no human step missed).
-- [ ] Human layer included: `mask_state` + `answered_once` + `outcome_policy` + the `<class>_behavior`
-      files + the `stressors/*` + a demand profile (`lexicon_tlx` or an interface/population) + a stress-enable.
+- [ ] Human layer selected: `#include core/framework` (always) + `#define` the `MASK_*` classes, the
+      `SIGMA*` detectors, and one demand profile (`LEXICON_DEFAULT` or an interface/population) + a stress-enable.
 - [ ] Effect adapter added wherever a human outcome must drive the protocol.
 - [ ] Property templates instantiated (reachability + attribution + the lever pair).
 - [ ] `check.py --prove` green for every profile (see `TERMINATION.md` if it stalls).

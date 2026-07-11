@@ -1,0 +1,26 @@
+/*
+  lemmas.spthy -- the shared [reuse] lemma trio (was experiments/helpers.spthy; repo MEMORY.md
+  lesson 15): the key-derivation facts proven once so every profile's secrecy pair terminates over
+  the layered state space. Included by base.spthy BEFORE any profile's own lemmas.
+*/
+
+// the passphrase reaches the adversary only through a degraded share outcome.
+lemma H_pw_stays_oob [reuse]:
+  all-traces
+  "All pw #c #k.
+     PwCreated(pw)@c & K(pw)@k
+   ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)"
+
+// a generated private key never reaches the adversary (it never leaves !OwnSk).
+lemma H_sk_secret [reuse, heuristic=C]:
+  all-traces
+  "All p sk #g #k. OwnSkGen(p, sk)@g & K(sk)@k ==> F"
+
+// STRUCTURAL: a message is sent to the correspondent ('Blake') only, unless the fingerprint compare
+// was answered credulously (a Mistake) and it went to a non-correspondent.
+lemma H_encto_shape [reuse]:
+  all-traces
+  "All m rcpt #e.
+     EncTo(m, rcpt)@e
+   ==> (rcpt = 'Blake')
+     | (Ex p vid #d. Mistake(p, vid)@d)"

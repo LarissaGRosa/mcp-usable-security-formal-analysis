@@ -2,22 +2,55 @@ theory SecureEmail_S1_TrioPGP
 begin
 
 /*
-  S1 -- TRIO on the PGP key-verification surface: sigma6 Abstraction (Naive), sigma8 Habituation
-  (click-through), sigma2 Concurrency (skip-the-check). All three converge on the same weak point --
-  the DY-substituted keyserver answer survives a degraded compare and the message is encrypted to the
-  adversary. Run: check.py --prove ceremonies/secure_email/S1_trio_pgp.spthy
+  S1 -- PAIR on the PGP key-verification surface: sigma6 Abstraction (Naive) + sigma2 Concurrency
+  (skip-the-check). Both converge on the same weak point -- a degraded compare accepts a substituted
+  key and the message is sent to a non-correspondent. (Habituation sigma8 lives in S3: two DENSITY
+  detectors -- sigma2/sigma8/sigma9 -- cannot share a profile, else the all-traces mask-interleaving
+  search explodes; one density detector per profile keeps every proof in budget.)
+  Run: check.py --prove ceremonies/secure_email/S1_trio_pgp.spthy
 */
 
-#include "spine.spthy"
+// -- sigma6 + the density detector sigma2, plus the opt-in row the concurrency story needs --
+#define SIGMA6_ABSTRACTION
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_CARELESS_SKIPCHECK
 
-// -- the trio --
-#include "../../core/stressors/abstraction.spthy"
-#include "../../core/stressors/habituation.spthy"
-#include "../../core/stressors/distraction_concurrent.spthy"
-// -- opt-in outcome rows this trio's stories need --
-#include "../../core/masks/outcome_habituated_clickthrough.spthy"
-#include "../../core/masks/outcome_careless_skipcheck.spthy"
+#include "base.spthy"
 
-#include "experiments/S1_trio_pgp.spthy"
+// ---- security properties under this trio ----
+
+// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
+// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
+lemma S1_message_secrecy_attribution:
+  all-traces
+  "All m #s #k.
+     Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)"
+
+lemma S1_degrade_from_interface_step:
+  all-traces
+  "All p m #s.
+     SetMask(p, m)@s & not(m = 'Attentive')
+   ==> (Ex step #u. UIStep(p, step)@u & #u < #s)"
+
+// ---- one chain per stressor: control -> onset -> mask -> mistake -> send ----
+
+// sigma6: the fingerprint compare overwhelms -> Naive accepts whatever the network delivered.
+lemma S1_abstraction_naive_substitution:
+  exists-trace
+  "Ex m vid #u #o #v #d #s.
+     UIStep('Alex','btn_verify_fp')@u & Abstraction('Alex')@o
+   & Verify('Alex', vid, 'Naive')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"
+
+// sigma2: two prompts pending (competing demand) -> Careless SKIPS the check.
+lemma S1_distraction_skipcheck:
+  exists-trace
+  "Ex m vid #o #v #d #s.
+     Distract('Alex')@o
+   & Verify('Alex', vid, 'Careless')@v & Mistake('Alex', vid)@d
+   & Send('Alex','PGP', m)@s"
 
 end

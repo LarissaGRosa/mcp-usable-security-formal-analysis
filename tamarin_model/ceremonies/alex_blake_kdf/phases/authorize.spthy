@@ -1,4 +1,0 @@
-/* phases/authorize.spthy -- AUTHORIZE kit: the authorize producer + the authorize behaviour
-   (Attentive grant / Fearful abort). Pair with a stressor (security_anxiety). */
-#include "../protocol/authorize_ui.spthy"
-#include "../../../core/masks/authorize_behavior.spthy"
