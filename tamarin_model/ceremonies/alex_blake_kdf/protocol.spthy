@@ -303,3 +303,99 @@ rule IF_nonce_ack_blake [color=#f2994a]:
 restriction OnceNonceAckPerParty:
   "All p #i #j. NonceAck(p)@i & NonceAck(p)@j ==> #i = #j"
 #endif
+
+#ifdef KDF_MESSENGER
+// ===== invented PRIVATE messenger interface (K-profiles) -- alternative to KDF_WIRE =====
+// Each party manually TRANSCRIBES its own nonce and SHARES it over a PRIVATE Chat(); the correspondent
+// reads it from the chat. The DY adversary learns a nonce ONLY on a human mistake (share misdeliver /
+// inband-leak -> Out(nonce)). sk = kdf(Na,Nb): kdf/2 is FREE, so K(sk) needs BOTH nonces -- leaking ONE
+// is provably insufficient. Arms only transcribe / share / compute -- ZERO new core rules. Both parties
+// symmetric; a profile stresses ONE (STRESS_ALEX/BLAKE), or both to reach the full breach.
+// Tractability: shallow anchors, single-source joins, the single sigma2 !Copresent marker.
+// Proven (both-stress, ~17s): completion (both SessionUp), secrecy-absolute (no mistake -> no K(sk)),
+// the compositional payoff "K(sk) => BOTH parties leaked a nonce" (one leak insufficient), breach
+// reachable. DEFERRED to step 8 (added when arming K2_mitm / K4_confirm, with tractability checks):
+// K2 incoming-nonce MITM compare, K3 key-entry transcribe (additive), K4 explicit start-session
+// authorize + OUTCOME_PREMATURE (SessionUnconfirmed). K4 currently finishes via the compute-vs-DISPLAYED
+// shutdown (lesson-19 trap).
+
+// --- K1 send-code: transcribe own nonce (!Displayed = own nonce) + share to the correspondent's chat ---
+rule IF_k1_alex [color=#f2994a]:
+    [ AlexInit(idA), Fr(~Na), Fr(~nId), Fr(~shId) ]
+  --[ PoseK1('Alex'), OwnNonce('Alex', ~Na) ]->
+    [ Prompt('Alex', ~nId, 'transcribe'), !Demand('Alex', ~nId, 'transcribe'), !Displayed('Alex', ~nId, ~Na),
+      Prompt('Alex', ~shId, 'share'),     !Demand('Alex', ~shId, 'share'),     !Displayed('Alex', ~shId, <'Blake','Blake','nonce'>),
+      !Copresent('Alex'), !AlexNonce(idA, ~Na), K1Alex(idA, ~nId, ~shId) ]
+
+rule IF_k1_blake [color=#f2994a]:
+    [ BlakeInit(idB), Fr(~Nb), Fr(~nId), Fr(~shId) ]
+  --[ PoseK1('Blake'), OwnNonce('Blake', ~Nb) ]->
+    [ Prompt('Blake', ~nId, 'transcribe'), !Demand('Blake', ~nId, 'transcribe'), !Displayed('Blake', ~nId, ~Nb),
+      Prompt('Blake', ~shId, 'share'),     !Demand('Blake', ~shId, 'share'),     !Displayed('Blake', ~shId, <'Alex','Alex','nonce'>),
+      !Copresent('Blake'), !BlakeNonce(idB, ~Nb), K1Blake(idB, ~nId, ~shId) ]
+
+restriction OncePoseK1: "All p #i #j. PoseK1(p)@i & PoseK1(p)@j ==> #i = #j"
+
+// K1 send EFFECT: route the COMMITTED transcription (a Busy slip ships the typo) by the share outcome.
+// oob -> private Chat; misdeliver -> Out(nonce) to the wrong contact; inband-leak -> Chat + Out(nonce).
+rule IF_k1_alex_oob [color=#1f6fd0]:
+    [ K1Alex(idA, nId, shId), !StepData('Alex', nId, val), ShareOutcome('Alex', shId, 'oob') ]
+  --[ ShareRoute('Alex','oob') ]-> [ Chat('Blake', val) ]
+rule IF_k1_alex_misdeliver [color=#c0392b]:
+    [ K1Alex(idA, nId, shId), !StepData('Alex', nId, val), ShareOutcome('Alex', shId, 'misdeliver') ]
+  --[ ShareRoute('Alex','misdeliver'), MisdeliveredNonce('Alex') ]-> [ Out(val) ]
+rule IF_k1_alex_inband [color=#c0392b]:
+    [ K1Alex(idA, nId, shId), !StepData('Alex', nId, val), ShareOutcome('Alex', shId, 'inband-leak') ]
+  --[ ShareRoute('Alex','inband-leak'), NonceLeaked('Alex') ]-> [ Chat('Blake', val), Out(val) ]
+
+rule IF_k1_blake_oob [color=#1f6fd0]:
+    [ K1Blake(idB, nId, shId), !StepData('Blake', nId, val), ShareOutcome('Blake', shId, 'oob') ]
+  --[ ShareRoute('Blake','oob') ]-> [ Chat('Alex', val) ]
+rule IF_k1_blake_misdeliver [color=#c0392b]:
+    [ K1Blake(idB, nId, shId), !StepData('Blake', nId, val), ShareOutcome('Blake', shId, 'misdeliver') ]
+  --[ ShareRoute('Blake','misdeliver'), MisdeliveredNonce('Blake') ]-> [ Out(val) ]
+rule IF_k1_blake_inband [color=#c0392b]:
+    [ K1Blake(idB, nId, shId), !StepData('Blake', nId, val), ShareOutcome('Blake', shId, 'inband-leak') ]
+  --[ ShareRoute('Blake','inband-leak'), NonceLeaked('Blake') ]-> [ Chat('Alex', val), Out(val) ]
+
+// --- receive the correspondent's nonce from the private chat ---
+rule IF_recv_alex [color=#1f6fd0]:
+    [ !AlexNonce(idA, Na), Chat('Alex', Nb) ] --[ RecvNonce('Alex', Nb) ]-> [ AlexBoth(idA, Na, Nb) ]
+rule IF_recv_blake [color=#1f6fd0]:
+    [ !BlakeNonce(idB, Nb), Chat('Blake', Na) ] --[ RecvNonce('Blake', Na) ]-> [ BlakeBoth(idB, Na, Nb) ]
+
+// --- K3 calculate: the interface DISPLAYS the correct key kdf(Na,Nb); the compute mask commits it
+// (COMPUTE_KEYRESULT adapter -> KeyResult). Secret(sk) is born here (both nonces known). ---
+rule IF_k3_alex [color=#f2994a]:
+    [ AlexBoth(idA, Na, Nb), Fr(~rid) ]
+  --[ PoseK3('Alex'), Secret(kdf(Na, Nb)) ]->
+    [ Prompt('Alex', ~rid, 'compute'), !Demand('Alex', ~rid, 'compute'), !Displayed('Alex', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
+      AlexAwaitKey(idA, ~rid) ]
+rule IF_k3_blake [color=#f2994a]:
+    [ BlakeBoth(idB, Na, Nb), Fr(~rid) ]
+  --[ PoseK3('Blake'), Secret(kdf(Na, Nb)) ]->
+    [ Prompt('Blake', ~rid, 'compute'), !Demand('Blake', ~rid, 'compute'), !Displayed('Blake', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
+      BlakeAwaitKey(idB, ~rid) ]
+
+restriction OncePoseK3: "All p #i #j. PoseK3(p)@i & PoseK3(p)@j ==> #i = #j"
+
+// --- K4 confirm + session: the shutdown compares the COMMITTED key against the interface's DISPLAYED
+// correct key (lesson-19 trap -- never against the human's own commit) -> session on match; abort else. ---
+rule IF_k4_alex_ok [color=#1f6fd0]:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk), !Displayed('Alex', rid, correct) ]
+  --[ KMKeyEq(sk, correct), KeyConfirmed('Alex'), Finish('Alex'), SessionUp('Alex') ]->
+    [ !Session('Alex', idA, sk) ]
+rule IF_k4_alex_abort [color=#1f6fd0]:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk), !Displayed('Alex', rid, correct) ]
+  --[ KMKeyNeq(sk, correct), ShutdownAbort('Alex') ]-> [ ]
+rule IF_k4_blake_ok [color=#1f6fd0]:
+    [ BlakeAwaitKey(idB, rid), KeyResult('Blake', rid, sk), !Displayed('Blake', rid, correct) ]
+  --[ KMKeyEq(sk, correct), KeyConfirmed('Blake'), Finish('Blake'), SessionUp('Blake') ]->
+    [ !Session('Blake', idB, sk) ]
+rule IF_k4_blake_abort [color=#1f6fd0]:
+    [ BlakeAwaitKey(idB, rid), KeyResult('Blake', rid, sk), !Displayed('Blake', rid, correct) ]
+  --[ KMKeyNeq(sk, correct), ShutdownAbort('Blake') ]-> [ ]
+
+restriction KMKeyEqHolds:  "All x y #i. KMKeyEq(x,y)@i ==> x = y"
+restriction KMKeyNeqHolds: "All x #i. KMKeyNeq(x,x)@i ==> F"
+#endif
