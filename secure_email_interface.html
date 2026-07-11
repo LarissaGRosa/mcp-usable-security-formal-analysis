@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure email — annotated interface mockups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<style>
+  :root{
+    --surface-0:#faf9f5; --surface-1:#f1efe8; --surface-2:#ffffff;
+    --border:#d3d1c7; --border-strong:#b4b2a9; --radius:8px;
+    --text-primary:#2c2c2a; --text-secondary:#5f5e5a; --text-muted:#888780;
+    --text-accent:#185fa5; --bg-accent:#e6f1fb;
+    --text-warning:#854f0b; --bg-warning:#faeeda;
+    --text-success:#27500a; --bg-success:#eaf3de;
+    --fill-accent:#185fa5; --on-accent:#ffffff;
+    --font-sans:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  body{max-width:820px;margin:0 auto;padding:44px 24px 80px;background:#fff;
+    font-family:var(--font-sans);color:var(--text-primary);line-height:1.65}
+  h1{font-size:27px;font-weight:600;margin:0 0 4px}
+  .lede{color:var(--text-secondary);font-size:15px;margin:0 0 24px}
+  h2{font-size:20px;font-weight:600;margin:44px 0 12px;padding-bottom:6px;border-bottom:1px solid #e5e3da}
+  p{margin:8px 0}
+  ol.legend{margin:14px 0 0;padding-left:20px;font-size:14px}
+  ol.legend li{margin:5px 0}
+  .note{background:var(--bg-warning);border-left:4px solid #ba7517;padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px;margin:16px 0}
+  .mock{background:var(--surface-1);border-radius:12px;padding:16px;margin:16px 0}
+  input[type=text],input[type=password]{height:36px;border:0.5px solid var(--border);border-radius:var(--radius);padding:0 10px;font-size:14px;background:#fff;color:var(--text-primary);font-family:inherit;box-sizing:border-box}
+  button{height:36px;border:0.5px solid var(--border-strong);background:#fff;border-radius:var(--radius);padding:0 12px;font-size:14px;color:var(--text-primary);cursor:pointer;font-family:inherit}
+  .pin{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--bg-accent);color:var(--text-accent);font-size:11px;font-weight:500;flex:none}
+  .chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface-1);border:0.5px solid var(--border);border-radius:6px;padding:3px 8px;font-size:13px}
+  .row{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:0.5px solid var(--border)}
+  .lbl{font-size:13px;color:var(--text-secondary);width:44px;flex:none}
+  .opt{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);font-size:13px}
+  .scard{background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:var(--radius)}
+  @media print{body{padding:0;max-width:none} h2{page-break-after:avoid} .mock{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<h1>Secure email — annotated interface mockups</h1>
+<p class="lede">Proposed sender and recipient interfaces for a generic secure-webmail, covering all three sending methods. Every numbered marker is an element a user can interact with; the legend follows each mockup.</p>
+
+<div class="note">These are design mockups, not screenshots of a shipping product. They illustrate how the flows and out-of-band steps could be surfaced in a UI.</div>
+
+<h2>1. Sender — secure compose window</h2>
+<p>One composer handles all three methods through the encryption selector. Shown with "Password protected" selected, so the password controls are visible.</p>
+
+<div class="mock">
+<div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden">
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:0.5px solid var(--border);background:var(--surface-1)">
+<span style="font-size:14px;font-weight:500">New message</span>
+<span style="display:flex;align-items:center;gap:8px;color:var(--text-secondary)"><span class="pin">1</span><i class="ti ti-minus"></i><i class="ti ti-arrows-diagonal"></i><i class="ti ti-x"></i></span>
+</div>
+
+<div class="row">
+<span class="pin">2</span><span class="lbl">To</span>
+<div style="flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+<span class="chip">alice@proton.me <i class="ti ti-lock" style="color:var(--text-accent);font-size:14px"></i></span>
+<span class="pin">3</span>
+<span class="chip">bob@company.com <i class="ti ti-lock-open" style="color:var(--text-warning);font-size:14px"></i></span>
+</div>
+<span class="pin">4</span><span style="font-size:13px;color:var(--text-secondary)">Cc Bcc</span>
+</div>
+
+<div class="row">
+<span class="pin">5</span><span class="lbl">Subject</span>
+<input type="text" value="Q3 numbers" style="flex:1" />
+<span style="font-size:11px;color:var(--text-muted);white-space:nowrap"><i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px"></i> not encrypted</span>
+</div>
+
+<div style="padding:10px 14px;border-bottom:0.5px solid var(--border)">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<span class="pin">6</span><span class="lbl" style="width:auto">Encryption</span>
+<button style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-key" style="font-size:15px"></i> Password protected <i class="ti ti-chevron-down" style="font-size:15px"></i></button>
+</div>
+<div style="border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative">
+<span class="pin" style="position:absolute;top:8px;right:8px">7</span>
+<div class="opt"><i class="ti ti-lock-check" style="font-size:18px;color:var(--text-accent)"></i><div><div>End-to-end (OpenPGP)</div><div style="color:var(--text-muted);font-size:12px">key found for alice · not for bob</div></div></div>
+<div class="opt" style="background:var(--bg-accent)"><i class="ti ti-key" style="font-size:18px;color:var(--text-accent)"></i><div><div style="color:var(--text-accent)">Password protected</div><div style="color:var(--text-accent);font-size:12px">works for any recipient</div></div><i class="ti ti-check" style="margin-left:auto;color:var(--text-accent)"></i></div>
+<div class="opt"><i class="ti ti-lock-open" style="font-size:18px;color:var(--text-secondary)"></i><div><div>Standard (TLS only)</div><div style="color:var(--text-muted);font-size:12px">no end-to-end encryption</div></div></div>
+</div>
+</div>
+
+<div style="padding:10px 14px;border-bottom:0.5px solid var(--border);background:var(--surface-1)">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+<span class="pin">8</span><span style="font-size:13px;color:var(--text-secondary);width:120px;flex:none">Message password</span>
+<div style="flex:1;display:flex;align-items:center;gap:6px">
+<input type="password" value="correcthorse" style="flex:1" />
+<button aria-label="Show password" style="width:36px;padding:0"><i class="ti ti-eye"></i></button>
+<span class="pin">9</span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px">
+<span class="pin">10</span><span style="font-size:13px;color:var(--text-secondary);width:120px;flex:none">Hint (optional)</span>
+<input type="text" placeholder="Sent with the email — keep it vague" style="flex:1" />
+</div>
+</div>
+
+<div style="display:flex;align-items:center;gap:20px;padding:10px 14px;border-bottom:0.5px solid var(--border);color:var(--text-secondary);font-size:13px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px"><span class="pin">11</span><i class="ti ti-clock" style="font-size:16px"></i> Expires: 7 days</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span class="pin">12</span><i class="ti ti-paperclip" style="font-size:16px"></i> Attach</span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span class="pin">13</span><i class="ti ti-signature" style="font-size:16px"></i> Sign · attach my key</span>
+</div>
+
+<div style="padding:10px 14px">
+<div style="display:flex;align-items:center;gap:14px;color:var(--text-secondary);border-bottom:0.5px solid var(--border);padding-bottom:8px;margin-bottom:8px">
+<span class="pin">14</span><i class="ti ti-bold"></i><i class="ti ti-italic"></i><i class="ti ti-list"></i><i class="ti ti-link"></i><i class="ti ti-photo"></i></div>
+<div style="min-height:70px;font-size:14px;color:var(--text-primary)">Hi both — attaching the quarter's figures. Password sent by text.</div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:0.5px solid var(--border)">
+<span style="display:inline-flex;align-items:center;gap:8px"><span class="pin">15</span>
+<button style="background:var(--fill-accent);color:var(--on-accent);border:none;display:inline-flex;align-items:center;gap:6px">Send <i class="ti ti-send" style="font-size:15px"></i></button></span>
+<span style="display:inline-flex;align-items:center;gap:8px;color:var(--text-secondary)"><span class="pin">16</span><i class="ti ti-trash" style="font-size:17px"></i></span>
+</div>
+
+</div>
+</div>
+
+<ol class="legend">
+<li><strong>Window controls</strong> — minimize, expand to full screen, close/discard.</li>
+<li><strong>To field</strong> — type or paste addresses; each becomes a removable chip.</li>
+<li><strong>Per-recipient encryption indicator</strong> — the lock on each chip shows that recipient's state: closed lock (alice) = a key is on file, so end-to-end is possible; open amber lock (bob) = no key. This is the cue to choose a password.</li>
+<li><strong>Cc/Bcc toggle</strong> — reveals the carbon-copy fields.</li>
+<li><strong>Subject field</strong> — with the standing reminder that the subject is never encrypted.</li>
+<li><strong>Encryption-mode selector</strong> — the main control; opens the method menu.</li>
+<li><strong>Encryption menu</strong> — the three methods, each showing whether it's usable for the current recipients; the selected one is checked.</li>
+<li><strong>Message password</strong> — the passphrase protecting the message in password mode.</li>
+<li><strong>Show/hide password</strong> — reveals the typed password to check it.</li>
+<li><strong>Hint field</strong> — travels inside the email, so keep it vague.</li>
+<li><strong>Expiration</strong> — sets a self-destruct timer.</li>
+<li><strong>Attach</strong> — add files, encrypted with the body.</li>
+<li><strong>Sign · attach my key</strong> — digitally sign, and/or include your public key so replies can be encrypted back.</li>
+<li><strong>Body editor and toolbar</strong> — the message content.</li>
+<li><strong>Send</strong> — dispatches using the chosen encryption.</li>
+<li><strong>Discard</strong> — deletes the draft.</li>
+</ol>
+
+<h2>2. Recipient — password-protected secure page</h2>
+<p>What a keyless recipient sees from the link. The top card is the locked state shown first; the lower card is what appears once the password is accepted.</p>
+
+<div class="mock">
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 2px">
+<span style="display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500"><i class="ti ti-shield-lock" style="font-size:18px;color:var(--text-accent)"></i> SecureMail</span>
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary)"><span class="pin">9</span><i class="ti ti-world" style="font-size:15px"></i> English <i class="ti ti-chevron-down" style="font-size:14px"></i></span>
+</div>
+
+<div class="scard">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+<div style="width:36px;height:36px;border-radius:50%;background:var(--bg-accent);display:flex;align-items:center;justify-content:center;color:var(--text-accent);font-weight:500;font-size:13px">A</div>
+<div><div style="font-size:14px;font-weight:500">alice@proton.me</div><div style="font-size:12px;color:var(--text-secondary)">sent you an encrypted message</div></div>
+</div>
+<div style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-warning);background:var(--bg-warning);padding:4px 10px;border-radius:var(--radius);margin:8px 0 14px"><span class="pin">8</span><i class="ti ti-clock" style="font-size:14px"></i> Expires in 6 days</div>
+
+<div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">Enter the password to read this message</div>
+<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+<span class="pin">1</span>
+<input type="password" value="correcthorse" style="flex:1" />
+<button aria-label="Show password" style="width:36px;padding:0"><i class="ti ti-eye"></i></button>
+<span class="pin">2</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-accent)"><span class="pin">3</span> Show hint</span>
+<span style="display:inline-flex;align-items:center;gap:8px"><span class="pin">4</span><button style="background:var(--fill-accent);color:var(--on-accent);border:none;display:inline-flex;align-items:center;gap:6px">Unlock <i class="ti ti-lock-open" style="font-size:15px"></i></button></span>
+</div>
+</div>
+
+<div class="scard">
+<div style="font-size:14px;color:var(--text-primary);padding-bottom:12px;border-bottom:0.5px solid var(--border);margin-bottom:12px">Hi both — attaching the quarter's figures. Password sent by text.</div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+<span class="pin">5</span>
+<span style="display:inline-flex;align-items:center;gap:8px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-size:13px"><i class="ti ti-file-spreadsheet" style="font-size:18px;color:var(--text-secondary)"></i> Q3-figures.xlsx <i class="ti ti-download" style="font-size:16px;color:var(--text-accent)"></i></span>
+</div>
+<div style="display:flex;align-items:flex-start;gap:8px">
+<span class="pin">6</span>
+<div style="flex:1;border:0.5px solid var(--border);border-radius:var(--radius);padding:10px;min-height:56px;font-size:13px;color:var(--text-muted)">Write a secure reply…</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+<span style="font-size:12px;color:var(--text-secondary)"><i class="ti ti-lock" style="font-size:13px;vertical-align:-2px"></i> Reply is encrypted back to alice</span>
+<span style="display:inline-flex;align-items:center;gap:8px"><span class="pin">7</span><button style="display:inline-flex;align-items:center;gap:6px">Send reply <i class="ti ti-send" style="font-size:15px"></i></button></span>
+</div>
+</div>
+
+</div>
+
+<ol class="legend">
+<li><strong>Password field</strong> — the passphrase shared out-of-band.</li>
+<li><strong>Show/hide password</strong> — reveals it to check for typos.</li>
+<li><strong>Show hint</strong> — reveals the vague hint set in the composer.</li>
+<li><strong>Unlock</strong> — decrypts and opens the message.</li>
+<li><strong>Download attachment</strong> — pulls the encrypted file, decrypted locally on this page.</li>
+<li><strong>Reply box</strong> — compose a response.</li>
+<li><strong>Send reply</strong> — encrypted straight back to the sender, staying on the secure channel.</li>
+<li><strong>Expiration notice</strong> — time before the message self-destructs (informational).</li>
+<li><strong>Language selector</strong> — switches the page language for any recipient.</li>
+</ol>
+
+<h2>3. Recipient — end-to-end message in the inbox</h2>
+<p>A recipient who has keys never sees a gate — the message arrives decrypted. The interactions are about verifying trust and replying.</p>
+
+<div class="mock">
+<div style="background:var(--surface-2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden">
+
+<div style="padding:14px 16px;border-bottom:0.5px solid var(--border)">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+<span style="font-size:16px;font-weight:500">Q3 numbers</span>
+<span style="display:inline-flex;align-items:center;gap:12px;color:var(--text-secondary)"><span class="pin">8</span><i class="ti ti-dots"></i></span>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<span class="pin">1</span>
+<span class="badge" style="background:var(--bg-accent);color:var(--text-accent)"><i class="ti ti-lock" style="font-size:14px"></i> End-to-end encrypted</span>
+<span class="pin">2</span>
+<span class="badge" style="background:var(--bg-success);color:var(--text-success)"><i class="ti ti-rosette-discount-check" style="font-size:14px"></i> Signature verified</span>
+</div>
+</div>
+
+<div style="padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:10px">
+<div style="width:38px;height:38px;border-radius:50%;background:var(--bg-accent);display:flex;align-items:center;justify-content:center;color:var(--text-accent);font-weight:500;font-size:14px">A</div>
+<div style="flex:1"><div style="font-size:14px;font-weight:500">Alice Nguyen</div><div style="font-size:12px;color:var(--text-secondary)">alice@proton.me · to me</div></div>
+<span class="pin">3</span>
+<span class="badge" style="background:var(--surface-1);color:var(--text-secondary);border:0.5px solid var(--border)"><i class="ti ti-key" style="font-size:14px"></i> Trusted key</span>
+</div>
+
+<div style="padding:16px;font-size:14px;line-height:1.7;display:flex;gap:8px">
+<span class="pin">4</span>
+<div>Hi — here are the quarter's figures, encrypted to your key. Let me know if the margins line up with your model.</div>
+</div>
+
+<div style="padding:0 16px 14px;display:flex;align-items:center;gap:8px">
+<span class="pin">5</span>
+<span style="display:inline-flex;align-items:center;gap:8px;border:0.5px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-size:13px"><i class="ti ti-file-lock" style="font-size:18px;color:var(--text-secondary)"></i> Q3-figures.xlsx <span style="color:var(--text-muted);font-size:12px">· encrypted</span> <i class="ti ti-download" style="font-size:16px;color:var(--text-accent)"></i></span>
+</div>
+
+<div style="padding:12px 16px;border-top:0.5px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px"><span class="pin">6</span><button style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-arrow-back-up" style="font-size:15px"></i> Reply</button></span>
+<span style="display:inline-flex;align-items:center;gap:6px"><span class="pin">7</span><button style="display:inline-flex;align-items:center;gap:6px"><i class="ti ti-arrow-forward-up" style="font-size:15px"></i> Forward</button></span>
+<span style="margin-left:auto;font-size:12px;color:var(--text-secondary)"><i class="ti ti-lock" style="font-size:13px;vertical-align:-2px"></i> Replies stay encrypted</span>
+</div>
+
+</div>
+</div>
+
+<ol class="legend">
+<li><strong>Encryption badge</strong> — tap for encryption details (cipher, that it was end-to-end).</li>
+<li><strong>Signature-verified badge</strong> — tap to see which key signed it and whether it's confirmed as the sender's.</li>
+<li><strong>Trusted-key indicator</strong> — the sender's key is on file and verified; tapping opens the key/fingerprint to check or re-verify.</li>
+<li><strong>Message body</strong> — decrypted automatically with the reader's private key.</li>
+<li><strong>Encrypted attachment</strong> — downloads and decrypts locally; the lock glyph marks it encrypted at rest.</li>
+<li><strong>Reply</strong> — automatically encrypted back to the sender.</li>
+<li><strong>Forward</strong> — re-encrypts to the new recipient's key if one exists.</li>
+<li><strong>More actions</strong> — overflow menu (view original/headers, block sender, report).</li>
+</ol>
+
+<h2>Design notes</h2>
+<ul>
+  <li>The most important control is the <strong>per-recipient lock indicator</strong> (sender marker 3): it drives the whole decision, signalling when to switch from end-to-end to a password.</li>
+  <li>The recipient experience splits by method: password recipients get a self-contained web page where the password is the only gate; key-holding recipients never see a gate and instead get <strong>trust signals</strong> (badges) to confirm authenticity.</li>
+  <li>The out-of-band steps stay out of these screens by design: the password never appears in the UI you send, and key verification happens through the key/fingerprint view (inbox marker 3), not inline.</li>
+</ul>
+
+</body>
+</html>
