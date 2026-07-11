@@ -227,3 +227,49 @@ rule Seed_careless_skipcheck [color=#9b51e0]:
 restriction OnceCarelessSkipcheck:
   "All #i #j. SeedCarelessSkipcheck()@i & SeedCarelessSkipcheck()@j ==> #i = #j"
 #endif
+
+#ifdef OUTCOME_PREMATURE
+// ===== opt-in: the generic OUT-OF-ORDER lever (mirrors OUTCOME_DEGRADED_CLICK). A degraded (non-
+// Attentive, non-Fearful) authorize may fire BEFORE its upstream check completes. These masks get an
+// extra 'premature' outcome whose grant emits GrantedUnchecked (NOT Granted), so the ONLY effect rule
+// that can consume it is the CEREMONY's no-verify-join path -- that ceremony rule is where "the order
+// was violated" gets its meaning (Out(m) / unsafe session). Core is blind to what the grant waited for.
+// Attentive has no 'premature' row, so it can never take the premature route (its grant emits Granted).
+rule Seed_premature [color=#9b51e0]:
+    [ ]
+  --[ SeedPremature() ]->
+    [ !OutcomePolicy('Busy',      'authorize', 'premature'),
+      !OutcomePolicy('Habituated','authorize', 'premature'),
+      !OutcomePolicy('Naive',     'authorize', 'premature'),
+      !OutcomePolicy('Careless',  'authorize', 'premature') ]
+
+restriction OncePremature:
+  "All #i #j. SeedPremature()@i & SeedPremature()@j ==> #i = #j"
+
+rule Authorize_premature [color=#27ae60]:
+    [ !Prompt(P, aid, 'authorize'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'authorize', 'premature') ]
+  --[ Authorize(P, aid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), PrematureGrant(P, aid), Answered(aid) ]->
+    [ GrantedUnchecked(P, aid) ]
+#endif
+
+#ifdef OUTCOME_CARELESS_MISROUTE
+// ===== opt-in: the routing analog of the premature lever, for DECIDE. A Careless/Habituated decide may
+// pick the WRONG ROUTE instead of safe-fail stalling: it advances (DecisionDone) but also emits a generic
+// DecisionMisrouted(P,did) fact the CEREMONY's effect rule consumes to route the wrong consequence
+// (Forward to a keyless third party / reply via regular mail / TLS-only send). Core stays blind to what
+// the wrong route IS. Needed because Careless 'fatigue' is a safe-fail stall -- it cannot express the
+// mock's C7 Forward mistake or the plain-send default. =====
+rule Seed_careless_misroute [color=#9b51e0]:
+    [ ]
+  --[ SeedCarelessMisroute() ]->
+    [ !OutcomePolicy('Careless',  'decide', 'misroute'),
+      !OutcomePolicy('Habituated','decide', 'misroute') ]
+
+restriction OnceCarelessMisroute:
+  "All #i #j. SeedCarelessMisroute()@i & SeedCarelessMisroute()@j ==> #i = #j"
+
+rule Decide_misroute [color=#27ae60]:
+    [ !Prompt(P, did, 'decide'), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'decide', 'misroute') ]
+  --[ Confirm(P, did, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Misroute(P, did), Handled(P, did), Answered(did) ]->
+    [ DecisionDone(P, did), DecisionMisrouted(P, did) ]
+#endif

@@ -7,6 +7,8 @@
   Outcome vocabulary (uniform): unsafe = Slip / Mistake / AutoApprove / LeakPw / MisdeliveredPw ;
   safe-fail = Timeout / Abort ; onsets = Load / TimePressure / Abstraction / Habituate / AlertVolume
   / SecurityAnxiety / Distract / RepeatedFailure ; degradation = SetMask/RespMask(p,m), m!='Attentive'.
+  Full-interface additions (RELAYER): unsafe/order = TranscribeLeak (field export) / PrematureGrant
+  (out-of-order authorize) / Misroute (wrong-route decide) -- each routed to Out by a CEREMONY effect rule.
 */
 
 #ifdef PROPERTIES
@@ -25,6 +27,13 @@ lemma UP_degradation_requires_targeting:
   all-traces
   "All p m #i. SetMask(p, m)@i & not(m = 'Attentive')
      ==> (Ex #s. StressOn(p)@s & #s < #i)"
+
+// Order-violation soundness: a premature (out-of-order) grant only occurs for a party whose mask was
+// degraded first -- the out-of-order route is never available to an Attentive human (OUTCOME_PREMATURE).
+lemma UP_premature_requires_degrade:
+  all-traces
+  "All p a #i. PrematureGrant(p, a)@i
+     ==> (Ex m #j. SetMask(p, m)@j & not(m = 'Attentive') & #j < #i)"
 #endif
 
 /*

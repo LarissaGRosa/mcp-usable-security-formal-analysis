@@ -110,6 +110,23 @@ protocol (a wrong key, an approval that gates a signature), consume the behaviou
 effect adapter** (see the `COMPUTE_KEYRESULT` / `MASK_COMPARE_KEYCHECKED` blocks and the
 `Share_*_effect` rules in `secure_email/interface.spthy`).
 
+**Screen-posing pattern (one rule per screen).** When a *screen* shows several co-present controls at
+once, pose ALL of that screen's `!Prompt`/`!Displayed` from ONE interface rule off ONE shallow source
+(the ceremony's init/session fact), once-bounded via a `Pose<screen>` action + a `restriction`
+(`OncePose<screen>`), exactly as `IF_verify_fp`/`OncePoseVerify` does. Rationale: σ₂'s two-`!Prompt`
+source product then stays a product of *shallow* sources (no blow-up), and co-presence becomes real
+instead of stubbed. A control that no answer drives is posed **exposure-only** (counted by density, never
+performed — lesson 15a/15b). The mask commits `!StepData`; the screen's **effect** rule joins the
+committed data *in the ceremony's order* (address before send, verify before send, unlock before reply).
+
+**Order & route levers.** `OUTCOME_PREMATURE` (core/masks.spthy) lets a degraded authorize emit
+`GrantedUnchecked` instead of `Granted`; the ceremony adds ONE effect rule that consumes
+`GrantedUnchecked` *without* its upstream verify join and routes the consequence (`Out(m)` / unsafe
+session) — that rule is where "the order was violated" gets meaning (`UP_premature_requires_degrade`
+holds it to a prior degrade). `OUTCOME_CARELESS_MISROUTE` is the analog for `decide`: it emits
+`DecisionMisrouted`, and the ceremony effect rule says what the wrong route is. Keep the *effect* in the
+ceremony — core only provides the lever (the step-10 `grep` over `core/` keeps this honest).
+
 ## 4. Step-by-step: a new ceremony from scratch
 
 ```mermaid
