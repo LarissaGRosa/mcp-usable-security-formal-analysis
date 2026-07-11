@@ -17,6 +17,15 @@
 #define OUTCOME_DEGRADED_CLICK
 #define LEXICON_DEFAULT
 
+// The legacy variant stresses BOTH parties (S0-S7 behaviour). A full-interface (IF_SCREENS) profile
+// picks STRESS_ALEX / STRESS_BLAKE itself -- stressing ONE party keeps the two-party screen surface
+// tractable (the unstressed party's degraded rules are pruned from precomputation).
+#ifdef IF_SCREENS
+#else
+#define STRESS_ALEX
+#define STRESS_BLAKE
+#endif
+
 #include "../../core/framework.spthy"
 #include "protocol.spthy"
 #include "../../core/demands.spthy"

@@ -1,9 +1,11 @@
 /*
-  sender_screens.spthy -- the FULL-INTERFACE Alex sender (RELAYER). Real co-present controls replace the
-  ambient stubs + the legacy pick/verify/send rules. Included by protocol.spthy ONLY when IF_SCREENS is
-  armed. See secure_email/INTERFACE_MAP.md. A profile that arms IF_SCREENS ALSO arms MASK_TRANSCRIBE /
-  MASK_COMPUTE / MASK_DECIDE (MASK_COMPARE / MASK_COMPARE_KEYCHECKED / MASK_SHARE / MASK_AUTHORIZE are
-  constant in base.spthy).
+  sender_screens.spthy -- the FULL-INTERFACE flow (RELAYER): Alex Screen A (compose) + Blake Screen B
+  (password page) + Screen C (inbox). Real co-present controls replace the ambient stubs + the legacy
+  pick/verify/send + Blake receiver rules. Included by protocol.spthy ONLY when IF_SCREENS is armed. See
+  secure_email/INTERFACE_MAP.md. A profile that arms IF_SCREENS ALSO arms MASK_TRANSCRIBE / MASK_COMPUTE /
+  MASK_DECIDE / MASK_CONFIRM (MASK_COMPARE / MASK_COMPARE_KEYCHECKED / MASK_SHARE / MASK_AUTHORIZE are
+  constant in base.spthy), and picks STRESS_ALEX or STRESS_BLAKE -- stressing ONE party keeps the two-
+  party surface within the prover budget (the unstressed party's degraded rules are pruned).
 
   TRACTABILITY (prover budget <2min, no swap). Mirrors the legacy sender's shape so the sources stay as
   shallow as legacy:
@@ -132,3 +134,74 @@ rule IF_subject_leak [color=#c0392b]:
     [ SentMsg(idA, m, subjId), TranscribeLeaked('Alex', subjId, leaked) ]
   --[ SubjectLeak('Alex'), MisdirectedTo('Alex','subject') ]->
     [ Out(m) ]
+
+// ============================================================================================
+// BLAKE recipient screens (Screen B password page, Screen C inbox). Same tractability discipline as the
+// sender: shallow persistent anchor per screen, single-source joins, the single sigma2 !Copresent marker.
+// A screens profile that stresses Blake ALSO arms MASK_CONFIRM (Blake's link-confirm / trusted-key).
+// ============================================================================================
+
+// ---- Screen C: recipient end-to-end inbox (Blake, PGP). Trusted-key compare (C3) + decrypt authorize
+// + Reply/Forward decide (C6/C7). Blake publishes his key here. ----
+rule IF_screen_blake_pgp [color=#f2994a]:
+    [ BlakeInit(idB), Fr(~vid), Fr(~decId), Fr(~fwdId), Fr(~sk) ]
+  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
+    [ Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <'AliceKey', 'AliceKey'>),
+      Prompt('Blake', ~decId, 'authorize'), !Demand('Blake', ~decId, 'authorize'),
+      Prompt('Blake', ~fwdId, 'decide'),    !Demand('Blake', ~fwdId, 'decide'),
+      !Copresent('Blake'),
+      !BlakePgpScreen(idB, ~decId, ~fwdId) ]
+
+restriction OncePoseBlakePgp:
+  "All p #i #j. PoseBlakePgp(p)@i & PoseBlakePgp(p)@j ==> #i = #j"
+
+// decrypt (authorize) gates the read; a Fearful freeze on the authorize = the guide's abandonment case
+// (safe-fail -- no Read). Reading holds m for a possible forward.
+rule IF_blake_decrypt [color=#1f6fd0]:
+    [ !BlakePgpScreen(idB, decId, fwdId), Granted('Blake', decId), Mailbox('Blake', m) ]
+  --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
+    [ BlakeHasMsg(idB, m) ]
+
+// Forward MISROUTE (OUTCOME_CARELESS_MISROUTE): Forward to a keyless third party re-sends m in the clear
+// -> ForwardedOutside -> Out(m). The recipient-side breach of "only Alex and Blake know m" even when
+// every sender step was perfect.
+#ifdef OUTCOME_CARELESS_MISROUTE
+rule IF_blake_forward_misroute [color=#c0392b]:
+    [ BlakeHasMsg(idB, m), DecisionMisrouted('Blake', fwdId) ]
+  --[ ForwardedOutside('Blake'), MisdirectedTo('Blake','keyless-third-party') ]->
+    [ Out(m) ]
+#endif
+
+// ---- Screen B: recipient password page (Blake, PW). Reached via the mailed link, so a link-confirm
+// (<claimed-origin, expected-origin> -- the guide's "can resemble phishing") guards entry. pw-entry
+// (transcribe) + Unlock (authorize). ----
+rule IF_screen_blake_pw [color=#f2994a]:
+    [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId) ]
+  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake') ]->
+    [ Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <'GenuinePage', 'GenuinePage'>),
+      Prompt('Blake', ~entId, 'transcribe'), !Demand('Blake', ~entId, 'transcribe'), !Displayed('Blake', ~entId, 'oob-pw'),
+      Prompt('Blake', ~unlId, 'authorize'),  !Demand('Blake', ~unlId, 'authorize'),
+      !Copresent('Blake'),
+      !BlakePwScreen(idB, ~cId, ~unlId) ]
+
+restriction OncePoseBlakePw:
+  "All p #i #j. PoseBlakePw(p)@i & PoseBlakePw(p)@j ==> #i = #j"
+
+// legit: link-confirm verified (claimed = 'GenuinePage') + Unlock granted -> read m, unlock pw.
+rule IF_blake_pw_unlock [color=#1f6fd0]:
+    [ !BlakePwScreen(idB, cId, unlId), Confirmed('Blake', cId, mask),
+      Granted('Blake', unlId), Mailbox('Blake', m), OobPw('Blake', pw) ]
+  --[ UIStep('Blake','unlock'), Read('Blake', m), ReadVia('Blake','PW'), Unlocked('Blake', pw) ]->
+    [ ]
+
+// impostor: a credulous link-confirm (AutoApprove) accepted an impostor page -> Blake enters his pw
+// there -> the impostor learns it -> Out(pw). PwEnteredAtImpostor is the named recipient-side breach.
+rule IF_blake_pw_impostor [color=#c0392b]:
+    [ !BlakePwScreen(idB, cId, unlId), OobPw('Blake', pw) ]
+  --[ PwEnteredAtImpostor('Blake'), AutoApproveGuard('Blake', cId) ]->
+    [ Out(pw) ]
+
+// the impostor route only fires when the link-confirm was AUTO-APPROVED (credulous) -- Attentive verify
+// catches the phishing page. (Guard restriction on the action, so no extra fact join.)
+restriction ImpostorRequiresAutoApprove:
+  "All p c #i. AutoApproveGuard(p, c)@i ==> (Ex #j. AutoApprove(p, c)@j)"

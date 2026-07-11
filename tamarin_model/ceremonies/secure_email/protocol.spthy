@@ -1,10 +1,11 @@
 /*
   protocol.spthy -- the secure_email ceremony layer (wire + UI prompts). Holds the rules SHARED by both
-  senders (participants, the recipient/Blake receiver rules, stress targeting, NeqRecipient) and then
-  conditionally includes ONE sender:
+  variants (participants, stress targeting, NeqRecipient) and then conditionally includes ONE full flow
+  (Alex sender + Blake recipient):
 
-     #ifdef IF_SCREENS  ->  sender_screens.spthy   (full-interface Screen A -- RELAYER)
-     #else              ->  sender_legacy.spthy    (method choice + ambient surfaces + pick/verify/send)
+     #ifdef IF_SCREENS  ->  sender_screens.spthy   (full-interface Screens A/B/C -- RELAYER)
+     #else              ->  sender_legacy.spthy    (method choice + ambient surfaces + pick/verify/send
+                                                    + the legacy Blake receiver rules)
 
   The sender is SPLIT into two files (rather than gated with a nested #ifdef here) because tamarin's
   preprocessor cannot skip a nested #ifdef: the legacy sender's inner #ifdef SIGMA* blocks would break
@@ -27,43 +28,30 @@ rule P_init_alex [color=#1f6fd0]:
 rule P_init_blake [color=#1f6fd0]:
     [ Fr(~idB) ] --[ Start('Blake') ]-> [ BlakeInit(~idB), !Party('Blake', ~idB) ]
 
-// shared by BOTH senders: a delivered/addressed recipient that is not the correspondent is a misdirect.
+// shared by BOTH variants: a delivered/addressed recipient that is not the correspondent is a misdirect.
 restriction NeqRecipient:
   "All r #i. Neq(r, 'Blake')@i ==> not (r = 'Blake')"
 
-// ===================== PGP pathway (Blake recipient) =====================
-rule IF_blake_pgp_setup [color=#f2994a]:
-    [ BlakeInit(idB), Fr(~sk) ]
-  --[ BranchB('Blake','PGP'), UIStep('Blake','btn_publish_key'),
-      KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake') ]->
-    [ BlakeReadyPGP(idB) ]
-
-rule IF_btn_decrypt [color=#1f6fd0]:
-    [ BlakeReadyPGP(idB), Mailbox('Blake', m) ]
-  --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
-    [ ]
-
-// ===================== password pathway (Blake recipient) =====================
-rule IF_blake_pw_inbox [color=#f2994a]:
-    [ BlakeInit(idB) ] --[ BranchB('Blake','PW') ]-> [ BlakeInboxPW(idB) ]
-
-rule IF_pw_entry [color=#1f6fd0]:
-    [ BlakeInboxPW(idB), Mailbox('Blake', m), OobPw('Blake', pw) ]
-  --[ UIStep('Blake','pw_entry'), Read('Blake', m), ReadVia('Blake','PW'), Unlocked('Blake', pw) ]->
-    [ ]
-
 // ===================== stress targeting =====================
+// Gated per party (STRESS_ALEX / STRESS_BLAKE) so a profile can stress ONE party: an unstressed party
+// stays Attentive, so ITS degraded rules are unreachable and get PRUNED from the source precomputation
+// (keeps the two-party full-interface surface within the prover budget). base.spthy defines BOTH for the
+// legacy variant (preserving S0-S7 behaviour); screens profiles pick.
+#ifdef STRESS_ALEX
 rule Enable_Stress_Alex [color=#9b51e0]:
     [ !Party('Alex', id) ] --[ StressOn('Alex') ]-> [ !StressEnable('Alex') ]
 
 restriction OnceStressAlex:
   "All #i #j. StressOn('Alex')@i & StressOn('Alex')@j ==> #i = #j"
+#endif
 
+#ifdef STRESS_BLAKE
 rule Enable_Stress_Blake [color=#9b51e0]:
     [ !Party('Blake', id) ] --[ StressOn('Blake') ]-> [ !StressEnable('Blake') ]
 
 restriction OnceStressBlake:
   "All #i #j. StressOn('Blake')@i & StressOn('Blake')@j ==> #i = #j"
+#endif
 
 // ===================== sender selection (full-interface screens vs legacy) =====================
 #ifdef IF_SCREENS

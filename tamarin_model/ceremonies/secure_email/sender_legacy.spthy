@@ -139,3 +139,23 @@ rule PW_deliver_inband [color=#c0392b]:
     [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'inband-leak') ]
   --[ ShareRoute('Alex','inband-leak') ]->
     [ Mailbox('Blake', m), OobPw('Blake', pw), Out(m) ]
+
+// ===================== Blake recipient (legacy, single-step receivers) =====================
+rule IF_blake_pgp_setup [color=#f2994a]:
+    [ BlakeInit(idB), Fr(~sk) ]
+  --[ BranchB('Blake','PGP'), UIStep('Blake','btn_publish_key'),
+      KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake') ]->
+    [ BlakeReadyPGP(idB) ]
+
+rule IF_btn_decrypt [color=#1f6fd0]:
+    [ BlakeReadyPGP(idB), Mailbox('Blake', m) ]
+  --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
+    [ ]
+
+rule IF_blake_pw_inbox [color=#f2994a]:
+    [ BlakeInit(idB) ] --[ BranchB('Blake','PW') ]-> [ BlakeInboxPW(idB) ]
+
+rule IF_pw_entry [color=#1f6fd0]:
+    [ BlakeInboxPW(idB), Mailbox('Blake', m), OobPw('Blake', pw) ]
+  --[ UIStep('Blake','pw_entry'), Read('Blake', m), ReadVia('Blake','PW'), Unlocked('Blake', pw) ]->
+    [ ]
