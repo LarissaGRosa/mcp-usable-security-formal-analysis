@@ -1,0 +1,131 @@
+/*
+  sender_legacy.spthy -- the LEGACY Alex sender (method choice + ambient load surfaces + pick/verify/
+  send). Included by protocol.spthy ONLY when IF_SCREENS is NOT armed (the #else branch). The full-
+  interface replacement is sender_screens.spthy. Retired outright in step 10.
+
+  NOTE: this file is textually inserted only in the TAKEN #else branch, so its inner #ifdef SIGMA*
+  blocks are never "skipped through" by the preprocessor (tamarin cannot skip nested #ifdef) -- the
+  reason the sender is split into two files rather than gated with a nested #ifdef in protocol.spthy.
+*/
+
+// ===================== method choice (Alex) -> persistent session =====================
+rule IF_pick_pgp [color=#f2994a]:
+    [ AlexInit(idA), Fr(~sk) ]
+  --[ Branch('Alex','PGP'), UIStep('Alex','btn_generate_keypair'),
+      KeyGenerated('Alex'), OwnSkGen('Alex', ~sk) ]->
+    [ !AlexSession('Alex', idA, 'PGP') ]
+
+rule IF_pick_pw [color=#f2994a]:
+    [ AlexInit(idA) ] --[ Branch('Alex','PW') ]-> [ !AlexSession('Alex', idA, 'PW') ]
+
+// ===================== ambient cognitive-load surface (SELECTIVE) =====================
+// Each block is posed ONLY when the profile arms the detector that consumes it (lesson 15b). Bounded +
+// once per party (lesson 5); posed off the shallow !StressEnable. Never PERFORMED -- only the
+// compare / authorize / share steps below are.
+
+#ifdef SIGMA8_HABITUATION
+rule IF_confirm_surface [color=#f2994a]:
+    [ !StressEnable(P), Fr(~a), Fr(~b) ]
+  --[ UIStep(P,'confirm_dialog'), SeedConfirm(P) ]->
+    [ Prompt(P, ~a, 'confirm'), !Demand(P, ~a, 'confirm'), Prompt(P, ~b, 'confirm'), !Demand(P, ~b, 'confirm') ]
+
+restriction OnceConfirmSurface:
+  "All p #i #j. SeedConfirm(p)@i & SeedConfirm(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA9_ALERTVOLUME
+rule IF_decide_surface [color=#f2994a]:
+    [ !StressEnable(P), Fr(~a), Fr(~b), Fr(~c) ]
+  --[ UIStep(P,'method_toggle'), SeedDecide(P) ]->
+    [ Prompt(P, ~a, 'decide'), !Demand(P, ~a, 'decide'), Prompt(P, ~b, 'decide'), !Demand(P, ~b, 'decide'), Prompt(P, ~c, 'decide'), !Demand(P, ~c, 'decide') ]
+
+restriction OnceDecideSurface:
+  "All p #i #j. SeedDecide(p)@i & SeedDecide(p)@j ==> #i = #j"
+#endif
+
+#ifdef SIGMA1_LOAD
+rule IF_compute_surface_load [color=#f2994a]:
+    [ !StressEnable(P), Fr(~c) ] --[ UIStep(P,'set_passphrase'), SeedCompute(P) ]->
+    [ Prompt(P, ~c, 'compute'), !Demand(P, ~c, 'compute'), !UnderDeadline(~c) ]
+#endif
+
+#ifdef SIGMA3_DEADLINE
+rule IF_compute_surface_deadline [color=#f2994a]:
+    [ !StressEnable(P), Fr(~c) ] --[ UIStep(P,'set_passphrase'), SeedCompute(P) ]->
+    [ Prompt(P, ~c, 'compute'), !Demand(P, ~c, 'compute'), !UnderDeadline(~c) ]
+#endif
+
+restriction OnceComputeSurface:
+  "All p #i #j. SeedCompute(p)@i & SeedCompute(p)@j ==> #i = #j"
+
+// ===================== PGP pathway (Alex sender) =====================
+// ONE verify rule, posed off the shallow !AlexSession (lesson: keep EVERY prompt's source shallow so
+// sigma2's two-!Prompt source PRODUCT stays small). The offered fingerprint is adversary-mediated
+// In(offered); the reference is the correspondent constant 'Blake'. Attentive matches offered = 'Blake'
+// (genuine); a credulous mask accepts a substitute -> Mistake. fetch + verify are one screen.
+rule IF_verify_fp [color=#f2994a]:
+    [ !AlexSession('Alex', idA, 'PGP'), In(offered), Fr(~vid) ]
+  --[ UIStep('Alex','btn_fetch_key'), UIStep('Alex','btn_verify_fp'),
+      KeyArrived('Alex'), PoseVerify('Alex') ]->
+    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
+      AlexVerifying(idA, ~vid) ]
+
+restriction OncePoseVerify:
+  "All p #i #j. PoseVerify(p)@i & PoseVerify(p)@j ==> #i = #j"
+
+// the authorize prompt is ALSO posed off the shallow !AlexSession (not off the compare state); the send
+// EFFECT below joins the compare result. Effect rules are not !Prompt producers, so the deep joins do
+// not enter sigma2's source product.
+rule IF_btn_send_pgp [color=#f2994a]:
+    [ !AlexSession('Alex', idA, 'PGP'), Fr(~aid) ]
+  --[ UIStep('Alex','btn_send'), PoseSendPgp('Alex') ]->
+    [ Prompt('Alex', ~aid, 'authorize'), !Demand('Alex', ~aid, 'authorize'), AuthPendingPGP(idA, ~aid) ]
+
+restriction OncePoseSendPgp:
+  "All p #i #j. PoseSendPgp(p)@i & PoseSendPgp(p)@j ==> #i = #j"
+
+// compare behaviour (core) commits the accepted recipient in !StepData; adapter -> !KeyChecked. The send
+// joins authorize (Granted) + compare (KeyChecked + committed recipient) and routes by the recipient:
+// 'Blake' -> PRIVATE delivery; any other -> the message left to a non-correspondent (Out).
+rule IF_send_pgp_good [color=#1f6fd0]:
+    [ AuthPendingPGP(idA, aid), Granted('Alex', aid),
+      AlexVerifying(idA, vid), !KeyChecked('Alex', vid), !StepData('Alex', vid, 'Blake'), Fr(~m) ]
+  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, 'Blake') ]->
+    [ Mailbox('Blake', ~m) ]
+
+rule IF_send_pgp_leak [color=#c0392b]:
+    [ AuthPendingPGP(idA, aid), Granted('Alex', aid),
+      AlexVerifying(idA, vid), !KeyChecked('Alex', vid), !StepData('Alex', vid, rcpt), Fr(~m) ]
+  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, rcpt),
+      Neq(rcpt, 'Blake'), MisdirectedTo('Alex', rcpt) ]->
+    [ Out(~m) ]
+
+// ===================== password pathway (Alex sender) =====================
+// ADDRESS & SEND: the share prompt is the human's addressing decision, posed off the shallow
+// !AlexSession (the passphrase is minted here). The share behaviour's outcome (oob / misdeliver /
+// inband-leak) is the mask's response, routing the envelope below. (The 'compute' cognitive load for the
+// passphrase lives on the ambient load surface, gated by sigma1 / sigma3.)
+rule IF_btn_send_pw [color=#f2994a]:
+    [ !AlexSession('Alex', idA, 'PW'), Fr(~m), Fr(~pw), Fr(~rid) ]
+  --[ UIStep('Alex','btn_send'), Send('Alex','PW', ~m), Secret(~m),
+      PwCreated(~pw), PoseSendPw('Alex') ]->
+    [ Prompt('Alex', ~rid, 'share'), !Demand('Alex', ~rid, 'share'), !Displayed('Alex', ~rid, <'Blake','Blake', ~pw>),
+      Envelope(idA, ~rid, ~m, ~pw) ]
+
+restriction OncePoseSendPw:
+  "All p #i #j. PoseSendPw(p)@i & PoseSendPw(p)@j ==> #i = #j"
+
+rule PW_deliver_oob [color=#1f6fd0]:
+    [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'oob') ]
+  --[ ShareRoute('Alex','oob') ]->
+    [ Mailbox('Blake', m), OobPw('Blake', pw) ]
+
+rule PW_deliver_misdeliver [color=#c0392b]:
+    [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'misdeliver') ]
+  --[ ShareRoute('Alex','misdeliver'), MisdirectedTo('Alex','wrong-contact') ]->
+    [ Out(m) ]
+
+rule PW_deliver_inband [color=#c0392b]:
+    [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'inband-leak') ]
+  --[ ShareRoute('Alex','inband-leak') ]->
+    [ Mailbox('Blake', m), OobPw('Blake', pw), Out(m) ]

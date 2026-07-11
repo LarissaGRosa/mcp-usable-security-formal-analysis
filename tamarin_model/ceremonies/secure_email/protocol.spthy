@@ -1,27 +1,23 @@
 /*
-  protocol.spthy -- the secure_email ceremony layer (wire + UI prompts), one merged file.
+  protocol.spthy -- the secure_email ceremony layer (wire + UI prompts). Holds the rules SHARED by both
+  senders (participants, the recipient/Blake receiver rules, stress targeting, NeqRecipient) and then
+  conditionally includes ONE sender:
+
+     #ifdef IF_SCREENS  ->  sender_screens.spthy   (full-interface Screen A -- RELAYER)
+     #else              ->  sender_legacy.spthy    (method choice + ambient surfaces + pick/verify/send)
+
+  The sender is SPLIT into two files (rather than gated with a nested #ifdef here) because tamarin's
+  preprocessor cannot skip a nested #ifdef: the legacy sender's inner #ifdef SIGMA* blocks would break
+  the skip. A conditionally-INCLUDED file is only inserted in the TAKEN branch, so its inner #ifdefs are
+  always processed in an entered context (never skipped through). Retired to a single file in step 10.
 
   SIMPLIFIED MODEL (2026-07-10) -- built to isolate the stressor machinery as the ONLY route to a breach:
-
     * Out() means "information left the secure email boundary" and fires ONLY on a HUMAN MISTAKE made
       through a mask. Correct email is delivered on a PRIVATE Mailbox, the passphrase on a private OobPw.
-      The only Out() emissions are: IF_send_pgp_leak (a credulous fingerprint COMPARE sent the message to
-      a non-correspondent), PW_deliver_misdeliver (address/send to the wrong contact), PW_deliver_inband
-      (passphrase leaked in-band; Blake still reads -> silent).
-
-    * Alex and Blake are each initiated ONCE; every human step is once-bounded (lesson 5: an unbounded,
-      In-driven step never terminates).
-
-    * CRYPTO is ABSTRACTED (as in alex_blake_kdf). The fingerprint offered to Alex is ADVERSARY-MEDIATED
-      In(offered); the OOB reference is the correspondent identity. Attentive PERFORMS the check (matches
-      offered = reference); a credulous mask accepts a substitute. Tamperedness is DERIVED from the
-      committed recipient (= 'Blake' -> genuine; else -> mistake) -- NOT a genuine/tampered rule branch
-      (lesson 14: verdicts are derived, not produced), so the all-traces search stays small.
-
-    * Every UI prompt hangs off the persistent !AlexSession (shallow source); the ambient load prompts
-      are posed SELECTIVELY, only for the density detectors a profile arms (lesson 15b: an unread prompt
-      is pure branching). Addressing a recipient is a HUMAN ACTION (the compare picks the keyholder, the
-      share picks the contact); a degraded mask's response misdirects the message.
+    * Alex and Blake are each initiated ONCE; every human step is once-bounded (lesson 5).
+    * CRYPTO is ABSTRACTED. The fingerprint offered to Alex is ADVERSARY-MEDIATED In(offered); the OOB
+      reference is the correspondent identity. Tamperedness is DERIVED from the committed recipient
+      (= 'Blake' -> genuine; else -> mistake), not a genuine/tampered rule branch (lesson 14).
 */
 
 // ===================== participants (each initiated ONCE) =====================
@@ -31,98 +27,7 @@ rule P_init_alex [color=#1f6fd0]:
 rule P_init_blake [color=#1f6fd0]:
     [ Fr(~idB) ] --[ Start('Blake') ]-> [ BlakeInit(~idB), !Party('Blake', ~idB) ]
 
-// ===================== method choice (Alex) -> persistent session =====================
-rule IF_pick_pgp [color=#f2994a]:
-    [ AlexInit(idA), Fr(~sk) ]
-  --[ Branch('Alex','PGP'), UIStep('Alex','btn_generate_keypair'),
-      KeyGenerated('Alex'), OwnSkGen('Alex', ~sk) ]->
-    [ !AlexSession('Alex', idA, 'PGP') ]
-
-rule IF_pick_pw [color=#f2994a]:
-    [ AlexInit(idA) ] --[ Branch('Alex','PW') ]-> [ !AlexSession('Alex', idA, 'PW') ]
-
-// ===================== ambient cognitive-load surface (SELECTIVE) =====================
-// Each block is posed ONLY when the profile arms the detector that consumes it (lesson 15b). Bounded +
-// once per party (lesson 5); posed off the shallow !StressEnable. Never PERFORMED -- only the
-// compare / authorize / share steps below are.
-
-#ifdef SIGMA8_HABITUATION
-rule IF_confirm_surface [color=#f2994a]:
-    [ !StressEnable(P), Fr(~a), Fr(~b) ]
-  --[ UIStep(P,'confirm_dialog'), SeedConfirm(P) ]->
-    [ !Prompt(P, ~a, 'confirm'), !Prompt(P, ~b, 'confirm') ]
-
-restriction OnceConfirmSurface:
-  "All p #i #j. SeedConfirm(p)@i & SeedConfirm(p)@j ==> #i = #j"
-#endif
-
-#ifdef SIGMA9_ALERTVOLUME
-rule IF_decide_surface [color=#f2994a]:
-    [ !StressEnable(P), Fr(~a), Fr(~b), Fr(~c) ]
-  --[ UIStep(P,'method_toggle'), SeedDecide(P) ]->
-    [ !Prompt(P, ~a, 'decide'), !Prompt(P, ~b, 'decide'), !Prompt(P, ~c, 'decide') ]
-
-restriction OnceDecideSurface:
-  "All p #i #j. SeedDecide(p)@i & SeedDecide(p)@j ==> #i = #j"
-#endif
-
-#ifdef SIGMA1_LOAD
-rule IF_compute_surface_load [color=#f2994a]:
-    [ !StressEnable(P), Fr(~c) ] --[ UIStep(P,'set_passphrase'), SeedCompute(P) ]->
-    [ !Prompt(P, ~c, 'compute'), !UnderDeadline(~c) ]
-#endif
-
-#ifdef SIGMA3_DEADLINE
-rule IF_compute_surface_deadline [color=#f2994a]:
-    [ !StressEnable(P), Fr(~c) ] --[ UIStep(P,'set_passphrase'), SeedCompute(P) ]->
-    [ !Prompt(P, ~c, 'compute'), !UnderDeadline(~c) ]
-#endif
-
-restriction OnceComputeSurface:
-  "All p #i #j. SeedCompute(p)@i & SeedCompute(p)@j ==> #i = #j"
-
-// ===================== PGP pathway (Alex sender) =====================
-// ONE verify rule, posed off the shallow !AlexSession (lesson: keep EVERY prompt's source shallow so
-// sigma2's two-!Prompt source PRODUCT stays small). The offered fingerprint is adversary-mediated
-// In(offered); the reference is the correspondent constant 'Blake'. Attentive matches offered = 'Blake'
-// (genuine); a credulous mask accepts a substitute -> Mistake. fetch + verify are one screen.
-rule IF_verify_fp [color=#f2994a]:
-    [ !AlexSession('Alex', idA, 'PGP'), In(offered), Fr(~vid) ]
-  --[ UIStep('Alex','btn_fetch_key'), UIStep('Alex','btn_verify_fp'),
-      KeyArrived('Alex'), PoseVerify('Alex') ]->
-    [ !Prompt('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
-      AlexVerifying(idA, ~vid) ]
-
-restriction OncePoseVerify:
-  "All p #i #j. PoseVerify(p)@i & PoseVerify(p)@j ==> #i = #j"
-
-// the authorize prompt is ALSO posed off the shallow !AlexSession (not off the compare state); the send
-// EFFECT below joins the compare result. Effect rules are not !Prompt producers, so the deep joins do
-// not enter sigma2's source product.
-rule IF_btn_send_pgp [color=#f2994a]:
-    [ !AlexSession('Alex', idA, 'PGP'), Fr(~aid) ]
-  --[ UIStep('Alex','btn_send'), PoseSendPgp('Alex') ]->
-    [ !Prompt('Alex', ~aid, 'authorize'), AuthPendingPGP(idA, ~aid) ]
-
-restriction OncePoseSendPgp:
-  "All p #i #j. PoseSendPgp(p)@i & PoseSendPgp(p)@j ==> #i = #j"
-
-// compare behaviour (core) commits the accepted recipient in !StepData; adapter -> !KeyChecked. The send
-// joins authorize (Granted) + compare (KeyChecked + committed recipient) and routes by the recipient:
-// 'Blake' -> PRIVATE delivery; any other -> the message left to a non-correspondent (Out).
-rule IF_send_pgp_good [color=#1f6fd0]:
-    [ AuthPendingPGP(idA, aid), Granted('Alex', aid),
-      AlexVerifying(idA, vid), !KeyChecked('Alex', vid), !StepData('Alex', vid, 'Blake'), Fr(~m) ]
-  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, 'Blake') ]->
-    [ Mailbox('Blake', ~m) ]
-
-rule IF_send_pgp_leak [color=#c0392b]:
-    [ AuthPendingPGP(idA, aid), Granted('Alex', aid),
-      AlexVerifying(idA, vid), !KeyChecked('Alex', vid), !StepData('Alex', vid, rcpt), Fr(~m) ]
-  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, rcpt),
-      Neq(rcpt, 'Blake'), MisdirectedTo('Alex', rcpt) ]->
-    [ Out(~m) ]
-
+// shared by BOTH senders: a delivered/addressed recipient that is not the correspondent is a misdirect.
 restriction NeqRecipient:
   "All r #i. Neq(r, 'Blake')@i ==> not (r = 'Blake')"
 
@@ -137,36 +42,6 @@ rule IF_btn_decrypt [color=#1f6fd0]:
     [ BlakeReadyPGP(idB), Mailbox('Blake', m) ]
   --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
     [ ]
-
-// ===================== password pathway (Alex sender) =====================
-// ADDRESS & SEND: the share prompt is the human's addressing decision, posed off the shallow
-// !AlexSession (the passphrase is minted here). The share behaviour's outcome (oob / misdeliver /
-// inband-leak) is the mask's response, routing the envelope below. (The 'compute' cognitive load for the
-// passphrase lives on the ambient load surface, gated by sigma1 / sigma3.)
-rule IF_btn_send_pw [color=#f2994a]:
-    [ !AlexSession('Alex', idA, 'PW'), Fr(~m), Fr(~pw), Fr(~rid) ]
-  --[ UIStep('Alex','btn_send'), Send('Alex','PW', ~m), Secret(~m),
-      PwCreated(~pw), PoseSendPw('Alex') ]->
-    [ !Prompt('Alex', ~rid, 'share'), !Displayed('Alex', ~rid, <'Blake','Blake', ~pw>),
-      Envelope(idA, ~rid, ~m, ~pw) ]
-
-restriction OncePoseSendPw:
-  "All p #i #j. PoseSendPw(p)@i & PoseSendPw(p)@j ==> #i = #j"
-
-rule PW_deliver_oob [color=#1f6fd0]:
-    [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'oob') ]
-  --[ ShareRoute('Alex','oob') ]->
-    [ Mailbox('Blake', m), OobPw('Blake', pw) ]
-
-rule PW_deliver_misdeliver [color=#c0392b]:
-    [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'misdeliver') ]
-  --[ ShareRoute('Alex','misdeliver'), MisdirectedTo('Alex','wrong-contact') ]->
-    [ Out(m) ]
-
-rule PW_deliver_inband [color=#c0392b]:
-    [ Envelope(idA, rid, m, pw), ShareOutcome('Alex', rid, 'inband-leak') ]
-  --[ ShareRoute('Alex','inband-leak') ]->
-    [ Mailbox('Blake', m), OobPw('Blake', pw), Out(m) ]
 
 // ===================== password pathway (Blake recipient) =====================
 rule IF_blake_pw_inbox [color=#f2994a]:
@@ -189,3 +64,10 @@ rule Enable_Stress_Blake [color=#9b51e0]:
 
 restriction OnceStressBlake:
   "All #i #j. StressOn('Blake')@i & StressOn('Blake')@j ==> #i = #j"
+
+// ===================== sender selection (full-interface screens vs legacy) =====================
+#ifdef IF_SCREENS
+#include "sender_screens.spthy"
+#else
+#include "sender_legacy.spthy"
+#endif

@@ -112,7 +112,7 @@ rule UI_policy_prompt:
     [ !Party('Alex', idA), Fr(~pid) ]
   --[ PolicyPrompt('Alex', ~pid) ]->
     [ PolicyPending(idA, ~pid),
-      !Prompt('Alex', ~pid, 'set-policy') ]
+      Prompt('Alex', ~pid, 'set-policy'), !Demand('Alex', ~pid, 'set-policy') ]
 
 restriction OnePolicyPromptPerParty:
   "All p pid1 pid2 #i #j. PolicyPrompt(p, pid1)@i & PolicyPrompt(p, pid2)@j ==> #i = #j"
@@ -128,13 +128,13 @@ rule A_finish_policy:
 rule UI_verify_genuine:
     [ !Session('Alex', idA, sk), Fr(~vid) ]
   --[ VerifyPrompt('Alex', ~vid, 'genuine') ]->
-    [ !Prompt('Alex', ~vid, 'compare'),
+    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'),
       !Displayed('Alex', ~vid, <~vid, ~vid>) ]
 
 rule UI_verify_tampered:
     [ !Session('Alex', idA, sk), In(vid), Fr(~ref) ]
   --[ VerifyPrompt('Alex', vid, 'tampered'), Tampered(vid) ]->
-    [ !Prompt('Alex', vid, 'compare'),
+    [ Prompt('Alex', vid, 'compare'), !Demand('Alex', vid, 'compare'),
       !Displayed('Alex', vid, <vid, ~ref>) ]
 #endif
 
@@ -143,7 +143,7 @@ rule UI_verify_tampered:
 rule UI_authorize_request:
     [ !Session('Alex', idA, sk), Fr(~aid) ]
   --[ AuthPrompt('Alex', ~aid) ]->
-    [ !Prompt('Alex', ~aid, 'authorize') ]
+    [ Prompt('Alex', ~aid, 'authorize'), !Demand('Alex', ~aid, 'authorize') ]
 #endif
 
 #ifdef UI_APPROVE
@@ -151,13 +151,13 @@ rule UI_authorize_request:
 rule UI_issue_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
-    [ !Prompt('Alex', ~pid, 'confirm'),
+    [ Prompt('Alex', ~pid, 'confirm'), !Demand('Alex', ~pid, 'confirm'),
       !Displayed('Alex', ~pid, <~pid, ~pid>) ]
 
 rule UI_inject_prompt:
     [ !Session('Alex', idA, sk), In(pid), Fr(~own) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid) ]->
-    [ !Prompt('Alex', pid, 'confirm'),
+    [ Prompt('Alex', pid, 'confirm'), !Demand('Alex', pid, 'confirm'),
       !Displayed('Alex', pid, <pid, ~own>) ]
 #endif
 
@@ -166,13 +166,13 @@ rule UI_inject_prompt:
 rule UI_self_prompt:
     [ !Session('Alex', idA, sk), Fr(~pid) ]
   --[ PromptShown('Alex', ~pid, 'self') ]->
-    [ !Prompt('Alex', ~pid, 'confirm'),
+    [ Prompt('Alex', ~pid, 'confirm'), !Demand('Alex', ~pid, 'confirm'),
       !Displayed('Alex', ~pid, <~pid, ~pid>) ]
 
 rule UI_inject_shutout:
     [ !Session('Alex', idA, sk), In(pid), Fr(~own) ]
   --[ PromptShown('Alex', pid, 'injected'), Injected(pid), Shutout(pid) ]->
-    [ !Prompt('Alex', pid, 'confirm'),
+    [ Prompt('Alex', pid, 'confirm'), !Demand('Alex', pid, 'confirm'),
       !Displayed('Alex', pid, <pid, ~own>) ]
 #endif
 
@@ -220,28 +220,28 @@ rule Pose_kdf:
     [ OpToken(idA), Fr(~rid), Fr(~Na), In(Nb) ]
   --[ PoseOp('Alex', 'kdf') ]->
     [ Pending(idA, ~rid),
-      !Prompt('Alex', ~rid, 'compute'),
+      Prompt('Alex', ~rid, 'compute'), !Demand('Alex', ~rid, 'compute'),
       !Displayed('Alex', ~rid, kdf(~Na, Nb)) ]
 
 rule Pose_verify_genuine:
     [ OpToken(idA), Fr(~vid) ]
   --[ PoseOp('Alex', 'verify'), GenuineFp('Alex', ~vid) ]->
     [ Pending(idA, ~vid),
-      !Prompt('Alex', ~vid, 'compare'),
+      Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'),
       !Displayed('Alex', ~vid, <~vid, ~vid>) ]
 
 rule Pose_verify_tampered:
     [ OpToken(idA), Fr(~vid), In(x) ]
   --[ PoseOp('Alex', 'verify'), TamperedFp('Alex', ~vid) ]->
     [ Pending(idA, ~vid),
-      !Prompt('Alex', ~vid, 'compare'),
+      Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'),
       !Displayed('Alex', ~vid, <x, ~vid>) ]
 
 rule Pose_decision:
     [ DecToken(idA), Fr(~did) ]
   --[ PoseDecision('Alex', ~did) ]->
     [ DecPending(idA, ~did),
-      !Prompt('Alex', ~did, 'decide') ]
+      Prompt('Alex', ~did, 'decide'), !Demand('Alex', ~did, 'decide') ]
 
 rule Finish_op:
     [ Pending(idA, rid), OpResult('Alex', rid, m) ]
@@ -263,7 +263,7 @@ rule Finish_decision:
 rule IF_calc_alex [color=#f2994a]:
     [ AlexHasNonces(idA, <Na, Nb>), Fr(~rid) ]
   --[ UIStep('Alex', 'calc_sk') ]->
-    [ !Prompt('Alex', ~rid, 'compute'),
+    [ Prompt('Alex', ~rid, 'compute'), !Demand('Alex', ~rid, 'compute'),
       !Displayed('Alex', ~rid, kdf(Na, Nb)),
       !UnderDeadline(~rid),
       AlexAwaitKey(idA, ~rid) ]
@@ -273,7 +273,7 @@ rule IF_calc_alex [color=#f2994a]:
 rule IF_calc_blake [color=#f2994a]:
     [ BlakeHasNonces(idB, <Na, Nb>), Fr(~rid) ]
   --[ UIStep('Blake', 'calc_sk') ]->
-    [ !Prompt('Blake', ~rid, 'compute'),
+    [ Prompt('Blake', ~rid, 'compute'), !Demand('Blake', ~rid, 'compute'),
       !Displayed('Blake', ~rid, kdf(Na, Nb)),
       !UnderDeadline(~rid),
       BlakeAwaitKey(idB, ~rid) ]
@@ -283,12 +283,12 @@ rule IF_calc_blake [color=#f2994a]:
 rule IF_nonce_ack_alex [color=#f2994a]:
     [ !NoncesSeen('Alex', idA, <Na, Nb>), Fr(~pid) ]
   --[ UIStep('Alex', 'nonce_ack'), NonceAck('Alex') ]->
-    [ !Prompt('Alex', ~pid, 'confirm'), !Displayed('Alex', ~pid, <Nb, Nb>) ]
+    [ Prompt('Alex', ~pid, 'confirm'), !Demand('Alex', ~pid, 'confirm'), !Displayed('Alex', ~pid, <Nb, Nb>) ]
 
 rule IF_nonce_ack_blake [color=#f2994a]:
     [ !NoncesSeen('Blake', idB, <Na, Nb>), Fr(~pid) ]
   --[ UIStep('Blake', 'nonce_ack'), NonceAck('Blake') ]->
-    [ !Prompt('Blake', ~pid, 'confirm'), !Displayed('Blake', ~pid, <Na, Na>) ]
+    [ Prompt('Blake', ~pid, 'confirm'), !Demand('Blake', ~pid, 'confirm'), !Displayed('Blake', ~pid, <Na, Na>) ]
 
 restriction OnceNonceAckPerParty:
   "All p #i #j. NonceAck(p)@i & NonceAck(p)@j ==> #i = #j"
