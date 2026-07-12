@@ -1,0 +1,57 @@
+theory SecureEmail_S8_Transcribe
+begin
+
+/*
+  S8 -- the TRANSCRIBE-LEAK profile (NEW with the full interface). Screen A's To (A2) and subject (A5)
+  are real 'med' text fields; the subject carries the guide's standing "not encrypted" warning, and a
+  CARELESS entry EXPORTS it -- the message's cleartext metadata leaks at send even though every crypto
+  step was perfect (SubjectLeak -> Out(m)). This is the route the old model had no vocabulary for.
+
+  Arms sigma2 (Careless) + STRESS_ALEX. The companion slip story (a BUSY entry SLIPS instead, raising
+  !Failed) is S9_transcribe_slip -- they are SPLIT because the two together need two masks (Busy AND
+  Careless) on the full screens, which overruns the prover budget. Splitting per story is the plan's own
+  fallback ("split rather than raise the timeout").
+  Run: check.py --prove ceremonies/secure_email/S8_transcribe.spthy
+*/
+
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_CARELESS_MISROUTE
+
+#include "base.spthy"
+
+// ---- onset coverage (lesson 16) ----
+lemma S8_distract_onset:
+  exists-trace "Ex #i. Distract('Alex')@i"
+
+// ---- the headline: a Careless SUBJECT transcribe exports the subject -> Out(m) at send ----
+lemma S8_subject_leak_chain:
+  exists-trace "Ex #i. SubjectLeak('Alex')@i"
+
+// the TLS misroute: a Careless encryption-selector decide drops to "Standard (TLS only)" -- a NAMED
+// unsafe outcome (PlaintextAtProvider), NOT an Out, so it never yields K(m). An RFC lemma forbids it.
+lemma S8_tls_misroute_chain:
+  exists-trace "Ex m #i. PlaintextAtProvider(m)@i"
+
+// ---- (S) T6: only the correspondents know m -- consumes the H_leak_routes [reuse] boundary list ----
+lemma S8_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+
+lemma S8_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+// ---- (C) T5 (fallback form -- onset conjunct dropped so the search does not wander; the onset is
+// covered above and cleanliness comes from T6) ----
+lemma S8_completes:
+  exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+
+end

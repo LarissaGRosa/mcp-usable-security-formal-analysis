@@ -2,14 +2,22 @@ theory SecureEmail_S0_Baseline
 begin
 
 /*
-  S0 -- BASELINE: the full five-layer pipeline with NO stressor. Every prompt is answered Attentively,
-  both methods (PGP / password) deliver end to end, and secrecy is absolute. The Eve endpoint + open
-  mail channel are present, but an Attentive recipient's share check defeats the emergent phish.
-  Arms: (nothing) -- no stressor.  Run: check.py --prove ceremonies/secure_email/S0_baseline.spthy
+  S0 -- BASELINE (full-interface screens, NO stressor). Every co-present control on Screens A/B/C is
+  answered Attentively: both pathways (PGP / password) deliver end to end, the response ORDER is
+  respected (address before send, verify before send, unlock before read), and secrecy is absolute.
+  Arms: IF_SCREENS + the four screen action classes; no stressor, so no party is even stress-enabled.
+  Run: check.py --prove ceremonies/secure_email/S0_baseline.spthy
 */
+
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
 
 #include "base.spthy"
 
+// (C) both pathways complete end to end through the real screens.
 lemma S0_happy_pgp:
   exists-trace
   "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
@@ -19,10 +27,14 @@ lemma S0_happy_pw:
   "Ex m link #s #u #r.
      Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
 
-// no stressor -> no SetMask -> no degraded row can fire -> the secret NEVER leaks,
-// even with Eve's password-request mail and the DY-controlled keyserver in play.
+// (S) no stressor -> no SetMask -> no degraded row can fire -> the secret NEVER leaks.
 lemma S0_secrecy_absolute:
   all-traces
   "All m #s. Secret(m)@s ==> not (Ex #k. K(m)@k)"
+
+// only the correspondent ever reads the message.
+lemma S0_read_only_blake:
+  all-traces
+  "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
 end

@@ -184,7 +184,12 @@ rule IF_blake_forward_misroute [color=#c0392b]:
 
 // ---- Screen B: recipient password page (Blake, PW). Reached via the mailed link, so a link-confirm
 // (<claimed-origin, expected-origin> -- the guide's "can resemble phishing") guards entry. pw-entry
-// (transcribe) + Unlock (authorize). ----
+// (transcribe) + Unlock (authorize).
+// Gated on MASK_CONFIRM: the whole screen HANGS on the link-confirm (unlock consumes Confirmed, the
+// impostor route consumes AutoApprove). A profile that does not perform the confirm class would leave
+// Confirmed with no producer -- a well-formedness failure, and an unsolvable premise the search wanders
+// on. Such a profile simply runs the PGP pathway (Screen C) instead. ----
+#ifdef MASK_CONFIRM
 rule IF_screen_blake_pw [color=#f2994a]:
     [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId) ]
   --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake') ]->
@@ -217,3 +222,5 @@ rule IF_blake_pw_impostor [color=#c0392b]:
 // catches the phishing page. (Guard restriction on the action, so no extra fact join.)
 restriction ImpostorRequiresAutoApprove:
   "All p c #i. AutoApproveGuard(p, c)@i ==> (Ex #j. AutoApprove(p, c)@j)"
+#endif
+// ifdef MASK_CONFIRM (Blake's Screen B)
