@@ -160,4 +160,3 @@ search. Break any of them and the theory stops proving.
 - [`INTERFACE_MAP.md`](INTERFACE_MAP.md) — the screen/control inventory (design), with an as-built caveat.
 - [`../../docs/DIVERGENCES.md`](../../docs/DIVERGENCES.md) — **where the build departed from the plan, why,
   and what is weaker as a result.** Read this before citing the model.
-- [`../../docs/RFC_GUIDANCE.md`](../../docs/RFC_GUIDANCE.md) — the generated, proof-backed requirements.

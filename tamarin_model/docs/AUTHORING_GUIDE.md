@@ -2,10 +2,9 @@
 
 This is the **start-here** guide: how to take a ceremony (your protocol + the human steps in it) and use
 the core elements and tools to get **machine-checked usability-security findings** and **RFC-ready
-requirements**. It ties together the deeper docs — [`AGNOSTIC_STRESSOR_INTERFACE.md`](docs/AGNOSTIC_STRESSOR_INTERFACE.md)
-(how stressors are collected), [`AGNOSTIC_MASKS.md`](docs/AGNOSTIC_MASKS.md) (how the human responds),
-[`STRESSORS.md`](STRESSORS.md), [`CALIBRATION.md`](docs/CALIBRATION.md), [`TERMINATION.md`](TERMINATION.md),
-[`INCIDENTS.md`](docs/INCIDENTS.md).
+requirements**. The layer-by-layer reference (the prompt/perform seam, every stressor detector, every
+mask behaviour, demand calibration) is [`MODEL.md`](MODEL.md); the overview is the
+[`README`](../README.md).
 
 ## 1. The picture
 
@@ -54,9 +53,8 @@ flowchart TB
     MIT["knobs.spthy / properties.spthy"]
   end
   subgraph TOOLS["tools/"]
-    SA["step_analyzer.py<br/>propose !Prompt"]
     CK["check.py --prove<br/>verify lemmas"]
-    RG["rfc_gen.py<br/>→ RFC_GUIDANCE.md"]
+    TE["trace_explainer.py<br/>narrate + illustrate a trace"]
   end
   P --> ST
   ST -->|!Prompt read by| DET
@@ -67,9 +65,8 @@ flowchart TB
   GATE --> BEH
   BEH -->|committed !StepData / outcome| EA
   EA --> P
-  SA -.proposes.-> ST
   LM --> CK
-  CK --> RG
+  CK --> TE
 ```
 
 ## 2. The core elements you compose
@@ -131,13 +128,13 @@ ceremony — core only provides the lever (the step-10 `grep` over `core/` keeps
 
 ```mermaid
 flowchart LR
-  A["1. Write the protocol<br/>(rules with the human's steps)"] --> B["2. Pose interface prompts<br/>!Prompt + !Displayed<br/>(step_analyzer.py proposes)"]
+  A["1. Write the protocol<br/>(rules with the human's steps)"] --> B["2. Pose interface prompts<br/>!Prompt + !Displayed"]
   B --> C["3. Include the human layer<br/>framework + demands + masks + stressors"]
   C --> D["4. Add effect adapters<br/>if a step gates the protocol"]
   D --> E["5. Pick an interface / population<br/>(swap the demand profile)"]
   E --> F["6. Instantiate property templates<br/>(core/properties.spthy)"]
   F --> G["7. check.py --prove<br/>iterate until green"]
-  G --> H["8. rfc_gen.py<br/>→ RFC_GUIDANCE.md"]
+  G --> H["8. trace_explainer.py<br/>narrate + illustrate the chains"]
 ```
 
 **Skeleton entry theory** (copy, fill the protocol + lemmas):
@@ -184,7 +181,7 @@ end
 each profile a `#define` list + `#include "base.spthy"` + its lemmas, as the two shipped ceremonies do.)
 
 Then: `python3 .claude/skills/model-tamarin/check.py --prove tamarin_model/ceremonies/myceremony/MyCeremony.spthy`.
-If `P3`-style worst cases stop terminating, see [`TERMINATION.md`](TERMINATION.md) (narrow the enabled set).
+If `P3`-style worst cases stop terminating, see §9 below (narrow the enabled set).
 
 ## 5. The lever — one mechanism, four views
 
@@ -209,7 +206,7 @@ flowchart LR
 
 ## 6. What you can find
 
-The model answers these questions, each as a lemma you prove (and a row in `RFC_GUIDANCE.md`):
+The model answers these questions, each as a lemma you prove:
 
 ```mermaid
 flowchart TD
@@ -233,30 +230,32 @@ Concretely, the model lets you find:
 - **Attribution** — every breach/degradation traces to a named stressor + step + party, not "user error"
   (`*_requires_*`, `UP_degradation_is_attributable`).
 - **Which lever fixes it** — a reachable/unreachable proof *pair* across interface or mitigation variants
-  yields a normative `MUST`/`SHOULD` (the whole of `RFC_GUIDANCE.md`).
+  yields a normative `MUST`/`SHOULD`.
 - **Adversary-weaponisable stressors** — which degradations an attacker can *induce* (prompt-bombing,
   injected urgency), hence must be defended (#6, `P8_adversary`).
 - **Population scope** — is a ceremony safe only for experts? (#4, `P9_population`).
 - **Belief/phishing gaps** — can an Attentive user be made to act on a false belief? (#5; the belief-state
   layer's worked example was retired 2026-07-09, design in git history — see ROADMAP #5).
-- **What the analysis assumed** — every requirement is traced to named lemmas in named profiles and to a
-  real incident ([`INCIDENTS.md`](docs/INCIDENTS.md)); recalibrate a demand level and re-prove to test
-  sensitivity ([`CALIBRATION.md`](docs/CALIBRATION.md)).
+- **What the analysis assumed** — every requirement is traced to named lemmas in named profiles;
+  recalibrate a demand level and re-prove to test sensitivity ([`MODEL.md`](MODEL.md) §5).
 
 ## 7. The toolchain
 
 ```mermaid
 flowchart LR
-  C["ceremony .spthy<br/>(protocol + !Prompt)"] -->|step_analyzer.py| C2["proposed !Prompt / lexicon<br/>(you confirm)"]
-  C2 --> CK["check.py --prove<br/>per profile"]
-  CK -->|verified lemmas| M["tools/rfc_requirements.json<br/>(risk lemma + fix lemma + lever)"]
-  M -->|rfc_gen.py| R["RFC_GUIDANCE.md<br/>normative MUST/SHOULD, each proof-backed"]
+  C["ceremony .spthy<br/>(protocol + !Prompt)"] --> CK["check.py --prove<br/>per profile"]
+  CK -->|found trace| TE["trace_explainer.py<br/>mask narrative + illustration"]
 ```
 
-- `python3 tamarin_model/tools/step_analyzer.py <protocol.spthy>` — propose `!Prompt` annotations (the
-  tool still prints `!Step`; treat its suggestions as the interface `!Prompt` to pose).
 - `python3 .claude/skills/model-tamarin/check.py --prove <profile.spthy>` — verify a profile's lemmas.
-- `python3 tamarin_model/tools/rfc_gen.py` — re-prove the manifest's pairs, emit `RFC_GUIDANCE.md`.
+- `python3 tamarin_model/tools/trace_explainer.py <profile.spthy> --lemma <name>` — prove one lemma,
+  capture its found trace (exists-trace verified, or an all-traces counterexample) and narrate it in
+  mask terms: what pushed the mask (`SetMask` + the detector's trigger facts), how the masked human
+  performed each prompt (displayed vs committed `!StepData`, outcome labels, the Attentive-deviation
+  marker), and the effects (which ceremony rules consumed the commit, what reached `Out`/the adversary).
+  Ceremony-agnostic: keys only on `core/` facts. `--json <file>` re-explains a saved `--output-json`
+  trace; `--illustrate <out.md>` also writes a Markdown report opening with a mermaid sequence diagram
+  of the trace (interface / human / ceremony / adversary lanes; renders in the VS Code preview).
 - `tamarin-prover interactive <ceremony-dir> --port=3001` — browse/step proofs in the GUI (run one server
   per ceremony directory so `#include`s resolve).
 
@@ -264,13 +263,13 @@ flowchart LR
 
 - [ ] Protocol + interface rules written; each human step is POSED as `!Prompt(P,pid,action)`
       (+ `!Displayed(P,pid,shown)` for a performed step). The mask performs it and commits `!StepData`.
-- [ ] `step_analyzer.py` proposals reviewed (no human step missed).
+- [ ] Every human step in the protocol is posed by an interface rule (no human step missed).
 - [ ] Human layer selected: `#include core/framework` (always) + `#define` the `MASK_*` classes, the
       `SIGMA*` detectors, and one demand profile (`LEXICON_DEFAULT` or an interface/population) + a stress-enable.
 - [ ] Effect adapter added wherever a human outcome must drive the protocol.
 - [ ] Property templates instantiated (reachability + attribution + the lever pair).
-- [ ] `check.py --prove` green for every profile (see `TERMINATION.md` if it stalls).
-- [ ] Requirement(s) added to `tools/rfc_requirements.json`; `rfc_gen.py` regenerated.
+- [ ] `check.py --prove` green for every profile (see §9 if it stalls).
+- [ ] Headline chains explained/illustrated with `trace_explainer.py` (the trace tells the intended story).
 
 ## 8b. The agnosticism audit (mechanical — run it before every commit to `core/`)
 
@@ -289,9 +288,39 @@ grep -rl "#define OUTCOME_PREMATURE" tamarin_model/ceremonies/*/   # both ceremo
 Single-ceremony flags are allowed but must be *deliberate*: `MASK_POLICY`, `SIGMA_INDUCED_TIME`,
 `MASK_COMPARE_VERIFYDONE` (kdf-only); `SIGMA_CUE`, `OUTCOME_CARELESS_MISROUTE`,
 `OUTCOME_HABITUATED_CLICKTHROUGH`, `OUTCOME_CARELESS_SKIPCHECK` (secure_email-only). **`SIGMA9_ALERTVOLUME`
-is currently kdf-only and that is a GAP, not a decision** — see `docs/DIVERGENCES.md`.
+is currently kdf-only and that is a GAP, not a decision** — see [`DIVERGENCES.md`](DIVERGENCES.md).
 
 The rule that makes this work: **core provides the LEVER, the ceremony provides the EFFECT.** Core's
 `OUTCOME_PREMATURE` emits `GrantedUnchecked` and knows nothing about what the grant was waiting for; each
 ceremony writes the one effect rule that consumes it (`SendPremature` / `SessionUnconfirmed`). That is why
 the same core lever yields an RFC requirement in two unrelated ceremonies.
+
+## 9. Termination & scale playbook
+
+Attaching the human layer to a real protocol is cheap by design — the risk at scale is state-space
+explosion in Tamarin's backward search (masks × stressors × phases × parties). Every profile must
+prove within the **3-minute budget**, run capped (the box has no swap — a runaway proof OOM-freezes
+it):
+
+```bash
+MAUDE_LIB=/usr/share/maude python3 .claude/skills/model-tamarin/check.py \
+    --prove --timeout 178 <profile.spthy> -- +RTS -M6G -RTS
+```
+
+A timeout is a MODELLING gate, not a knob to raise. The levers, each used in this model (details and
+rationale: [`MODEL.md`](MODEL.md) §7):
+
+| Lever | Why |
+|---|---|
+| one instance per human; one onset per detector per party; one `SetMask` per mask | persistent triggers re-fire forever without the bound (the bound is a semantic no-op) |
+| pushed `!EffectiveMask` — no compose/read-back | keeps the mask's source graph acyclic |
+| density as screen markers (`!Copresent`) + groundedness lemmas | "any k of N prompts" is O(N^k) in source saturation |
+| gate the PATHWAY per profile (e.g. `PATH_PGP` xor `PATH_PW`) | halves the surface — stressor trios went >3 min → 13 s |
+| exposure-only prompts; don't arm behaviours whose answers drive nothing | every human-gated crossing multiplies the all-traces search |
+| `[reuse]` helpers for K-facts; per-lemma `[heuristic=C]` | prove the expensive adversary-knowledge story once |
+| never prove both attribution AND attentive-keeps-secret | exact contrapositives — one proof suffices |
+
+When a worst-case profile stops terminating: stress ONE party, drop a phase/pathway flag the property
+under test does not need, cap the armed `SIGMA*` set, or split into per-phase profiles. Two honest
+limits: the analysis is possibilistic (reachable, not likely), and unbounded prompt-flooding must be
+modelled with a fixed small k (document the cap).

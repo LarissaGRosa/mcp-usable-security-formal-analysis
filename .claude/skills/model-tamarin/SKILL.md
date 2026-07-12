@@ -349,7 +349,7 @@ Other knobs: `-c/--open-chains` (default 10), `-s/--saturation` (default 5),
 ## Ceremony-Mask model (this repo)
 
 The `tamarin_model/` tree implements a **human-factors layer** on top of security ceremonies. When
-authoring or debugging here, read [`tamarin_model/AUTHORING_GUIDE.md`](../../tamarin_model/AUTHORING_GUIDE.md)
+authoring or debugging here, read [`tamarin_model/docs/AUTHORING_GUIDE.md`](../../tamarin_model/docs/AUTHORING_GUIDE.md)
 first.
 
 **Semantic model (prompt/perform).** The interface **poses** `!Prompt(P,pid,action)` and
