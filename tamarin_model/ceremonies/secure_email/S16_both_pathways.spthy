@@ -1,0 +1,71 @@
+theory SecureEmail_S16_BothPathways
+begin
+
+/*
+  S16 -- BOTH PATHWAYS, STRESSED. Closes DIVERGENCES B2.
+
+  Every other stressed profile gates a SINGLE pathway (PATH_PGP xor PATH_PW), because with both compiled
+  in, each profile hauled the whole two-pathway/two-party surface and only one stressor fitted in the
+  budget. The consequence was that the plan's picture -- ONE theory holding both methods, with a DEGRADED
+  human choosing between them -- was never actually realised: only the stressor-free S0 saw both.
+
+  That ceiling was lifted by the lemma-spine work (cheap structural [reuse] helpers first; heuristic=I on
+  the K(m) boundary list). So this profile arms BOTH pathways AND a stressor, and asks the question the
+  gating made unaskable: with Alex CARELESS (sigma2), does the choice of method still route safely, and does
+  EITHER pathway still deliver?
+
+  Arms: PATH_PGP + PATH_PW + sigma2 (concurrency -> Careless) on Alex, and the misroute outcome, so the
+  careless method-decide can genuinely pick the wrong route.
+  Run: check.py --prove ceremonies/secure_email/S16_both_pathways.spthy
+*/
+
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PGP
+#define PATH_PW
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_CARELESS_MISROUTE
+
+#include "base.spthy"
+
+// onset coverage (lesson 16).
+lemma S16_distract_onset: exists-trace "Ex #i. Distract('Alex')@i"
+
+// (C) STRONG T5, on BOTH pathways: a CARELESS Alex still delivers, by either method.
+lemma S16_completes_under_sigma2_pgp:
+  exists-trace
+  "Ex m #o #s #r.
+     Distract('Alex')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r
+   & #o < #s"
+
+lemma S16_completes_under_sigma2_pw:
+  exists-trace
+  "Ex m link #o #s #u #r.
+     Distract('Alex')@o & Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r
+   & #o < #s"
+
+// the point of holding both methods at once: a degraded human can MISROUTE the choice itself -- pick
+// 'Standard (TLS only)' instead of either secure pathway. This is only expressible where both are present.
+lemma S16_careless_misroutes_the_choice:
+  exists-trace
+  "Ex m #o #d. Distract('Alex')@o & Send('Alex','TLS', m)@d & #o < #d"
+
+// (S) secrecy still reduces to the SAME shared boundary list, with both pathways live.
+lemma S16_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d)
+     | (Ex p #d. SendPremature(p)@d)
+     | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
+
+lemma S16_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+end

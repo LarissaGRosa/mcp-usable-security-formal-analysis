@@ -67,9 +67,15 @@ but it is no longer an inconsistency in *soundness*.
 With both pathways compiled into every theory, each profile hauled the whole two-pathway/two-party surface
 and only ONE stressor fitted in 3 min — the plan's stressor *trios* were unprovable. Gating halved the
 surface and the trios came back (σ6+σ2: >3 min → 13 s).
-**Shortcoming.** No *stressed* profile exercises both pathways at once; only the (stressor-free) `S0` does.
-The plan's picture of one theory holding both methods, with the human choosing between them under stress,
-is not realised.
+**FIXED (`S16_both_pathways`, 27 s).** The gating was a budget ceiling, and the spine work (D4) lifted it.
+`S16` arms `PATH_PGP` **and** `PATH_PW` **and** σ2, and proves the strong T5 on BOTH pathways (a Careless
+Alex still delivers by either method) plus the (S) boundary list with both live. It also proves the one
+thing the gating made **inexpressible**: `S16_careless_misroutes_the_choice` — a degraded human misroutes
+the *method choice itself*, picking 'Standard (TLS only)' over either secure pathway. You cannot state that
+in a theory that compiles in only one method. The plan's picture — one theory holding both methods, with the
+human choosing between them under stress — is now realised.
+**Residual.** The other 34 profiles are still pathway-gated (they are cheaper that way and each targets one
+pathway deliberately); `S16` is the single profile that carries both.
 
 ### B3. Levers are opt-in because the budget is nearly full
 The reply leg + the adversary-mediated Screen-C compare (`PGP_REPLY`) could not be made unconditional:
@@ -96,6 +102,7 @@ which is honest, but it means **no single profile shows the whole interface at o
 | T5 completion-under-onset, strong (ordered) form | **MET** | was the biggest real gap; see D6. Every stressed S/K profile now carries one `_completes_under_<σ>` per ARMED stressor (28 lemmas), pinning the onset strictly before the STRESSED party's own completion step. |
 | Onset coverage per armed stressor (lesson 16) | **MET** | the four legacy P-profiles that armed a stressor no lemma witnessed (`P1`,`P2`,`P3`,`P6`) now have one; all 10 verified, so no stressor was in fact dead. |
 | A11 expiration, A4 Cc/Bcc, A12 attach, A16 discard, B3/B5/B8/B9 | **exposure only** | posed as `!Demand` for density; no answer drives anything. |
+| Both methods in ONE theory, chosen under stress | **MET** | `S16_both_pathways` (27 s): PATH_PGP + PATH_PW + σ2, strong T5 on both, and the careless human misroutes the METHOD CHOICE itself — inexpressible while the pathways were gated apart. See B2. |
 | RFC lever pairs | **MET, 12/12 proven** | incl. `REQ-CONFIRM-BEFORE-SESSION`, the SAME core lever as `REQ-VERIFY-BEFORE-SEND` proved necessary in a second, independent ceremony. |
 
 ---
