@@ -129,7 +129,9 @@ rule IF_pw_share_inband [color=#c0392b]:
 // (authorize) + B6/B7 reply-route (exposure). ----
 rule IF_screen_blake_pw [color=#f2994a]:
     [ BlakeInit(idB), In(claimedOrigin), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId), Fr(~ckId) ]
-  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake'), LandedOn('Blake', claimedOrigin) ]->
+  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake'), LandedOn('Blake', claimedOrigin),
+      Posed('Blake', ~cId, 'confirm'), Posed('Blake', ~entId, 'transcribe'),
+      CopresentClaim('Blake', ~cId, ~entId) ]->
     [ // B6/B7 reply-route decide -- EXPOSURE-ONLY (counted, never performed: !Demand, no Prompt)
       !Demand('Blake', ~rrId,  'decide'),
       // the page's SECOND confirm (the cookie / "trust this browser" banner stacked on the link-confirm)

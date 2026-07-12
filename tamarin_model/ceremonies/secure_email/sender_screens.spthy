@@ -36,7 +36,10 @@
 // Emits the persistent shallow anchor + a linear MethodChoice the decide resolves.
 rule IF_screen_composer [color=#f2994a]:
     [ AlexInit(idA), Fr(~toId), Fr(~subjId), Fr(~methId), Fr(~sendId) ]
-  --[ UIStep('Alex','compose'), UIStep('Alex','btn_send'), PoseComposer('Alex') ]->
+  --[ UIStep('Alex','compose'), UIStep('Alex','btn_send'), PoseComposer('Alex'),
+      Posed('Alex', ~toId, 'transcribe'), Posed('Alex', ~subjId, 'transcribe'),
+      Posed('Alex', ~methId, 'decide'), Posed('Alex', ~sendId, 'authorize'),
+      CopresentClaim('Alex', ~toId, ~subjId) ]->
     [ Prompt('Alex', ~toId,   'transcribe'), !Demand('Alex', ~toId,   'transcribe'), !Displayed('Alex', ~toId,   'Blake'),
       Prompt('Alex', ~subjId, 'transcribe'), !Demand('Alex', ~subjId, 'transcribe'), !Displayed('Alex', ~subjId, 'generic-subject'),
       Prompt('Alex', ~methId, 'decide'),     !Demand('Alex', ~methId, 'decide'),

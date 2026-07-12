@@ -40,11 +40,28 @@ for attribution — but it is stated over the ceremony's mistake vocabulary, not
 Fine for the 2–3 prompts an ambient stub posed; **catastrophic** once a real screen poses 8–12 co-present
 controls (even the trivially-true `H_sk_secret` timed out). Both were rewritten in core to read a SINGLE
 marker (`!Copresent`, `!CopresentDecide`).
-**Shortcoming (unfixed).** The detector no longer *derives* concurrency from the posed prompts — the
-**ceremony now asserts it**. A screen emits the marker because its author says it shows ≥2 controls. A
-mis-authored screen could claim density it does not have and the model would believe it. σ8 and
-σ_ADDITIVE still count real prompt pairs (their M is small), so **the model is inconsistent on this point** —
-that inconsistency is where the budget bit, not a principle.
+**The derivation was RETRIED and it genuinely does not fit — now measured, not assumed.** Since the spine
+work (D4) bought a lot of headroom, and since σ8 has always carried a two-`!Demand` product inside budget, I
+rebuilt the marker as a *derived* fact in core: one once-bounded rule producing `!Copresent` from two
+distinct real `!Demand` rows (and `!CopresentDecide` from three distinct `'decide'` rows), with every
+ceremony-side emission deleted. Result: **every screen profile times out (>178 s — S1, S3, K2), while the
+small-N legacy profiles pass in ~11 s.** That is the O(N²)/O(N³) product again; persistent premises are
+lookups, but the *product* is still paid, and a real screen posing 8–12 controls cannot afford it. Reverted.
+
+**Fixed instead, by a soundness GUARD (not a derivation).** The marker stays asserted, but the assertion is
+now *checked*: a screen that emits a density marker must, in the SAME step, have POSED the distinct controls
+it claims. Two ungated lemmas in `core/properties.spthy` — `UP_copresence_is_grounded` and
+`UP_decide_density_is_grounded` — verify in all 35 profiles and cost nothing (action facts only, no `K()`).
+A mis-authored screen claiming density it does not have is now **caught by a lemma** instead of believed.
+
+**Residual (honest).** Two things are still true. (a) The guard proves the claim is *grounded in posed
+controls*; it does not *derive* concurrency, so the model still takes "these controls are simultaneously on
+screen" from the screen's own authorship. (b) The **legacy kdf wire surfaces**
+(`IF_concurrency_surface` / `IF_alertvolume_surface`, used by the P-profiles) conjure the marker from
+`!StressEnable` alone and pose nothing at all — they emit no claim, so the guards are **vacuous there**.
+Those profiles model an abstract surface with no interface to ground density in, which is a reason, not an
+excuse. σ8/σ_ADDITIVE still count real prompt pairs directly, so the inconsistency in *mechanism* remains —
+but it is no longer an inconsistency in *soundness*.
 
 ### B2. The PATHWAY is gated per profile (`PATH_PGP` / `PATH_PW`)
 With both pathways compiled into every theory, each profile hauled the whole two-pathway/two-party surface

@@ -332,14 +332,18 @@ restriction OnceNonceAckPerParty:
 // --- K1 send-code: transcribe own nonce (!Displayed = own nonce) + share to the correspondent's chat ---
 rule IF_k1_alex [color=#f2994a]:
     [ AlexInit(idA), Fr(~Na), Fr(~nId), Fr(~shId) ]
-  --[ PoseK1('Alex'), OwnNonce('Alex', ~Na) ]->
+  --[ PoseK1('Alex'), OwnNonce('Alex', ~Na),
+      Posed('Alex', ~nId, 'transcribe'), Posed('Alex', ~shId, 'share'),
+      CopresentClaim('Alex', ~nId, ~shId) ]->
     [ Prompt('Alex', ~nId, 'transcribe'), !Demand('Alex', ~nId, 'transcribe'), !Displayed('Alex', ~nId, ~Na),
       Prompt('Alex', ~shId, 'share'),     !Demand('Alex', ~shId, 'share'),     !Displayed('Alex', ~shId, <'Blake','Blake','nonce'>),
       !Copresent('Alex'), !AlexNonce(idA, ~Na), !Readback('Blake', ~Na), K1Alex(idA, ~nId, ~shId) ]
 
 rule IF_k1_blake [color=#f2994a]:
     [ BlakeInit(idB), Fr(~Nb), Fr(~nId), Fr(~shId) ]
-  --[ PoseK1('Blake'), OwnNonce('Blake', ~Nb) ]->
+  --[ PoseK1('Blake'), OwnNonce('Blake', ~Nb),
+      Posed('Blake', ~nId, 'transcribe'), Posed('Blake', ~shId, 'share'),
+      CopresentClaim('Blake', ~nId, ~shId) ]->
     [ Prompt('Blake', ~nId, 'transcribe'), !Demand('Blake', ~nId, 'transcribe'), !Displayed('Blake', ~nId, ~Nb),
       Prompt('Blake', ~shId, 'share'),     !Demand('Blake', ~shId, 'share'),     !Displayed('Blake', ~shId, <'Alex','Alex','nonce'>),
       !Copresent('Blake'), !BlakeNonce(idB, ~Nb), !Readback('Alex', ~Nb), K1Blake(idB, ~nId, ~shId) ]
@@ -407,7 +411,9 @@ rule IF_k2_accept_blake [color=#1f6fd0]:
 // human faces at once). The session normally requires the key-confirmation shutdown to have PASSED.
 rule IF_k3_alex [color=#f2994a]:
     [ AlexBoth(idA, Na, Nb), Fr(~rid), Fr(~kId), Fr(~sid) ]
-  --[ PoseK3('Alex'), Secret(kdf(Na, Nb)) ]->
+  --[ PoseK3('Alex'), Secret(kdf(Na, Nb)),
+      Posed('Alex', ~rid, 'compute'), Posed('Alex', ~kId, 'transcribe'), Posed('Alex', ~sid, 'authorize'),
+      CopresentClaim('Alex', ~rid, ~kId) ]->
     [ Prompt('Alex', ~rid, 'compute'),    !Demand('Alex', ~rid, 'compute'), !Displayed('Alex', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
       // the KEY-ENTRY field: the derived key is typed into the app. A 'med' step co-present with the
       // derivation -- the two 'med' fields (K1 nonce entry + this) ARE the additive-load surface.
@@ -417,7 +423,9 @@ rule IF_k3_alex [color=#f2994a]:
       AlexAwaitKey(idA, ~rid), !AlexStart(idA, ~sid) ]
 rule IF_k3_blake [color=#f2994a]:
     [ BlakeBoth(idB, Na, Nb), Fr(~rid), Fr(~kId), Fr(~sid) ]
-  --[ PoseK3('Blake'), Secret(kdf(Na, Nb)) ]->
+  --[ PoseK3('Blake'), Secret(kdf(Na, Nb)),
+      Posed('Blake', ~rid, 'compute'), Posed('Blake', ~kId, 'transcribe'), Posed('Blake', ~sid, 'authorize'),
+      CopresentClaim('Blake', ~rid, ~kId) ]->
     [ Prompt('Blake', ~rid, 'compute'),    !Demand('Blake', ~rid, 'compute'), !Displayed('Blake', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
       Prompt('Blake', ~kId, 'transcribe'), !Demand('Blake', ~kId, 'transcribe'), !Displayed('Blake', ~kId, kdf(Na, Nb)),
       Prompt('Blake', ~sid, 'authorize'),  !Demand('Blake', ~sid, 'authorize'),

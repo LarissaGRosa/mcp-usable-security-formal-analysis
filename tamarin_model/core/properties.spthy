@@ -11,6 +11,42 @@
   (out-of-order authorize) / Misroute (wrong-route decide) -- each routed to Out by a CEREMONY effect rule.
 */
 
+// ===== SOUNDNESS GUARD on the density markers -- UNGATED, so EVERY profile checks it =====
+//
+// The density detectors (sigma2, sigma9) read a SINGLE marker (!Copresent / !CopresentDecide) rather than
+// "any two/three of N !Demand", because that product is O(N^2)/O(N^3) and MEASURABLY does not fit: deriving
+// the marker from real !Demand rows in core times out (>178 s) on every screen profile (S1, S3, K2), while
+// the small-N legacy profiles pass in ~11 s. So the marker stays ASSERTED by the screen.
+//
+// The danger that creates: a MIS-AUTHORED screen could CLAIM density it does not have, and the model would
+// believe it. These two lemmas close that -- a screen that emits a density marker must, in the SAME step,
+// have POSED the distinct controls it is claiming. The claim is now checked against the screen's own
+// !Demand rows instead of being taken on trust. It is a soundness check, not a derivation, and it costs
+// nothing (action facts only, no K(), witnesses at the same timepoint).
+//
+// CARVE-OUT (honest): the LEGACY kdf wire surfaces (IF_concurrency_surface / IF_alertvolume_surface, used
+// by the P-profiles) emit the marker from !StressEnable alone and pose NOTHING. They emit no claim, so
+// these lemmas are vacuously true there. That is not an oversight being hidden: those profiles model an
+// ABSTRACT surface with no interface to ground the density in. Only the SCREEN ceremonies are checked --
+// which is exactly where a screen inventory exists to check against.
+
+lemma UP_copresence_is_grounded:
+  all-traces
+  "All p x y #i.
+     CopresentClaim(p, x, y)@i
+   ==> not(x = y)
+     & (Ex a #j. Posed(p, x, a)@j)
+     & (Ex b #k. Posed(p, y, b)@k)"
+
+lemma UP_decide_density_is_grounded:
+  all-traces
+  "All p x y z #i.
+     CopresentDecideClaim(p, x, y, z)@i
+   ==> not(x = y) & not(x = z) & not(y = z)
+     & (Ex #j. Posed(p, x, 'decide')@j)
+     & (Ex #k. Posed(p, y, 'decide')@k)
+     & (Ex #l. Posed(p, z, 'decide')@l)"
+
 #ifdef PROPERTIES
 // ===== generic, includable (hold for any profile that #defines PROPERTIES) =====
 

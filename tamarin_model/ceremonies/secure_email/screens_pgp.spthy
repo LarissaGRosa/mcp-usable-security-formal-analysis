@@ -118,7 +118,11 @@ rule IF_attach_key [color=#1f6fd0]:
 #ifdef PGP_REPLY
 rule IF_screen_blake_pgp [color=#f2994a]:
     [ BlakeInit(idB), In(senderKey), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
-  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
+  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake'),
+      Posed('Blake', ~vid, 'compare'), Posed('Blake', ~decId, 'authorize'),
+      Posed('Blake', ~fwdId, 'decide'), Posed('Blake', ~rplId, 'decide'), Posed('Blake', ~ovfId, 'decide'),
+      CopresentClaim('Blake', ~vid, ~decId),
+      CopresentDecideClaim('Blake', ~fwdId, ~rplId, ~ovfId) ]->
     [ // C3 shows the OFFERED sender key against the OOB reference (the correspondent identity 'Alex'): an
       // Attentive compare fires only on <k,k> and so CATCHES a substituted key; a credulous mask accepts
       // any offered key -> Mistake -> the reply gets encrypted to the adversary (IF_blake_reply_hijacked).
@@ -134,7 +138,11 @@ rule IF_screen_blake_pgp [color=#f2994a]:
 #else
 rule IF_screen_blake_pgp [color=#f2994a]:
     [ BlakeInit(idB), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
-  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
+  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake'),
+      Posed('Blake', ~vid, 'compare'), Posed('Blake', ~decId, 'authorize'),
+      Posed('Blake', ~fwdId, 'decide'), Posed('Blake', ~rplId, 'decide'), Posed('Blake', ~ovfId, 'decide'),
+      CopresentClaim('Blake', ~vid, ~decId),
+      CopresentDecideClaim('Blake', ~fwdId, ~rplId, ~ovfId) ]->
     [ // PERFORMED (a mask answers these -- they drive outcomes): trusted-key compare, decrypt, Forward.
       Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <'AliceKey', 'AliceKey'>),
       Prompt('Blake', ~decId, 'authorize'), !Demand('Blake', ~decId, 'authorize'),
