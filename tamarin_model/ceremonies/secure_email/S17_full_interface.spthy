@@ -1,0 +1,85 @@
+theory SecureEmail_S17_FullInterface
+begin
+
+/*
+  S17 -- THE WHOLE INTERFACE, AT ONCE, STRESSED. Closes DIVERGENCES B3.
+
+  Every lever was opt-in because the budget was nearly full: PGP_REPLY (the reply leg + the
+  adversary-mediated Screen-C compare), IF_REVEAL (show-password), and the three degraded-outcome routes
+  each lived in a DEDICATED profile. Honest, but it meant NO SINGLE PROFILE SHOWED THE WHOLE INTERFACE --
+  so nothing ruled out the possibility that two levers, each fine alone, INTERACT.
+
+  This profile arms them ALL, in their VULNERABLE (default) setting -- both pathways, the reply leg, the
+  reveal control, and all three degraded-outcome routes -- with Alex under sigma2. The mitigations
+  (IF_HARDENED, IF_FIELD_REMINDER) are deliberately NOT armed: those are the levers whose RFC pairs prove
+  they REMOVE an outcome, and arming them here would suppress the very routes this profile exists to keep
+  simultaneously live.
+
+  NOT armed: SIGMA_ADDITIVE. It is non-terminating in combination with PATH_PW (a known landmine), and this
+  profile carries PATH_PW.
+
+  Run: check.py --prove ceremonies/secure_email/S17_full_interface.spthy
+*/
+
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PGP
+#define PATH_PW
+#define PGP_REPLY
+#define IF_REVEAL
+#define OUTCOME_CARELESS_MISROUTE
+#define OUTCOME_PREMATURE
+#define OUTCOME_CARELESS_SKIPCHECK
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+
+#include "base.spthy"
+
+// onset coverage (lesson 16).
+lemma S17_distract_onset: exists-trace "Ex #i. Distract('Alex')@i"
+
+// (C) STRONG T5 on BOTH pathways, with every lever compiled in.
+lemma S17_completes_under_sigma2_pgp:
+  exists-trace
+  "Ex m #o #s #r.
+     Distract('Alex')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r
+   & #o < #s"
+
+lemma S17_completes_under_sigma2_pw:
+  exists-trace
+  "Ex m link #o #s #u #r.
+     Distract('Alex')@o & Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r
+   & #o < #s"
+
+// the reply leg (PGP_REPLY) still closes with the whole interface present -- the reciprocity property.
+lemma S17_reply_completes:
+  exists-trace
+  "Ex c rep #a #r. KeyAttached('Alex', c)@a & ReplyRead('Alex', rep)@r & #a < #r"
+
+// EVERY degraded route stays REACHABLE with all levers co-present (DIVERGENCES D2: a route is not modelled
+// until some profile proves it reachable -- and a route that is reachable ALONE could be shadowed once the
+// other levers compile in).
+lemma S17_misroute_reachable:
+  exists-trace "Ex m #i. Send('Alex','TLS', m)@i"
+
+lemma S17_premature_reachable:
+  exists-trace "Ex #i. SendPremature('Alex')@i"
+
+// (S) the SAME shared boundary list still holds with the entire interface live.
+lemma S17_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d)
+     | (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d)
+     | (Ex p #d. SendPremature(p)@d)
+     | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
+
+lemma S17_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+end

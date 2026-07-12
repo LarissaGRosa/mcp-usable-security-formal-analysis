@@ -24,9 +24,27 @@ lemma H_nonce_leak_routes [reuse]:
 
 // (S) BOUNDARY LIST / compositional payoff: the session key reaches the adversary only if BOTH parties
 // exported a nonce. Leaking ONE is insufficient (kdf/2 free). Profiles' secrecy lemmas consume this.
+//
+// THE INJECTION DISJUNCT IS NOT OPTIONAL. The "both parties must leak" form -- which is what this lemma
+// said for most of its life -- is **FALSE** as soon as the adversary can INJECT a nonce, and K8 falsifies
+// it in 13 steps. The argument "kdf/2 is free, so the adversary needs BOTH nonces" is sound; the error was
+// assuming it must LEARN both. Under KDF_SPOOF it SUPPLIES one: Adv_spoof_chat posts an adversary-known x
+// into the chat, a degraded human accepts x as the peer's nonce (a compare Mistake), and the session key is
+// kdf(x, Nb) with x ALREADY KNOWN. Now ONE leak -- Nb -- is enough.
+//
+// This was true in every profile that shipped, but it was never a THEOREM: K6 arms KDF_SPOOF yet stresses
+// only Blake, so the second leak was unreachable and the hole never opened. It took K8 -- the whole
+// interface at once, both humans degraded -- to expose it. That is exactly the composition risk that made
+// "no single profile shows the whole interface" (DIVERGENCES B3) a real defect and not just untidiness.
+//
+// Read the disjunction as: for the adversary to hold sk, EACH nonce must have reached it -- and a nonce
+// reaches it either by EXPORT (the owner leaked/misdelivered it) or by INJECTION (it planted the value and
+// a human accepted it). No compare Mistake => no injection => the original both-parties-leaked claim, and
+// the compositional payoff of the private wire stands unchanged in every non-spoofing profile.
 lemma H_sk_requires_both_leaks [reuse]:
   all-traces
   "All na nb #s #k.
      Secret(kdf(na, nb))@s & K(kdf(na, nb))@k
-   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
-     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
+   ==> ( Ex p vid #m. Mistake(p, vid)@m )
+     | ( ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+       & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) ) )"

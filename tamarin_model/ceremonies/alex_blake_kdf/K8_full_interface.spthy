@@ -1,0 +1,88 @@
+theory KDF_K8_FullInterface
+begin
+
+/*
+  K8 -- THE WHOLE KDF INTERFACE, AT ONCE, STRESSED. The kdf half of DIVERGENCES B3.
+
+  KDF_SPOOF (the adversary posting a code into the chat) lived only in K6, and OUTCOME_PREMATURE (the
+  out-of-order authorize) only in K3, because each cost budget. So no kdf profile ever showed the spoofing
+  adversary AND the premature-grant route at the same time -- and the interesting question is precisely
+  whether they COMPOSE: does a human who can be MITM'd *and* can authorize out of order have a route that
+  neither lever exposes alone?
+
+  Arms all four screens, both degraded-outcome routes (OUTCOME_DEGRADED_CLICK, OUTCOME_PREMATURE), the
+  spoofing adversary (KDF_SPOOF), and stresses BOTH parties -- Alex under sigma2 and Blake under sigma6,
+  which is also the only profile besides K4 to degrade two humans at once.
+
+  NOT armed: SIGMA_ADDITIVE (K7 carries it; it is the expensive one and is not needed to show the levers
+  co-exist).
+
+  Run: check.py --prove ceremonies/alex_blake_kdf/K8_full_interface.spthy
+*/
+
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_COMPARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+#define STRESS_ALEX
+#define STRESS_BLAKE
+#define SIGMA2_CONCURRENCY
+#define SIGMA6_ABSTRACTION
+#define OUTCOME_DEGRADED_CLICK
+#define OUTCOME_PREMATURE
+#define KDF_SPOOF
+
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+// onset coverage (lesson 16) -- both humans degrade, by different stressors.
+lemma K8_distract_onset:    exists-trace "Ex #i. Distract('Alex')@i"
+lemma K8_abstraction_onset: exists-trace "Ex #i. Abstraction('Blake')@i"
+
+// (C) STRONG T5: the session still comes up for BOTH parties despite the onset, with every lever compiled in.
+lemma K8_completes_under_sigma2:
+  exists-trace
+  "Ex #o #a #b. Distract('Alex')@o & SessionUp('Alex')@a & SessionUp('Blake')@b & #o < #a"
+
+// both degraded routes stay REACHABLE with all levers co-present (D2: a route reachable ALONE could be
+// shadowed once the others compile in).
+lemma K8_premature_reachable:
+  exists-trace "Ex #i. SessionUnconfirmed('Alex')@i"
+
+lemma K8_mitm_reachable:
+  exists-trace "Ex p vid #i. Mistake(p, vid)@i"
+
+// (S) THE COMPOSITIONAL PAYOFF DOES **NOT** SURVIVE THE WHOLE INTERFACE IN ITS ORIGINAL FORM -- and that
+// is this profile's headline result. With KDF_SPOOF armed AND both humans degradable, "the adversary needs
+// BOTH parties to export a nonce" is FALSE: it INJECTS one nonce (spoofed chat, accepted by a degraded
+// compare) and only has to learn the OTHER. So ONE leak suffices. See the comment on
+// H_sk_requires_both_leaks -- K8 is what falsified it. The sound statement keeps the injection disjunct.
+lemma K8_only_correspondents_know_sk:
+  all-traces
+  "All na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k
+   ==> ( Ex p vid #m. Mistake(p, vid)@m )
+     | ( ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+       & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) ) )"
+
+// ...and the injection route is REACHABLE here, which is what makes the disjunct above load-bearing rather
+// than a hedge: the adversary holds the session key having learned only ONE nonce.
+lemma K8_one_leak_suffices_under_spoof:
+  exists-trace
+  "Ex na nb p vid #s #k #m #b.
+     Secret(kdf(na,nb))@s & K(kdf(na,nb))@k & Mistake(p, vid)@m
+   & NonceLeaked('Blake')@b
+   & not (Ex #a. NonceLeaked('Alex')@a)
+   & not (Ex #a. MisdeliveredNonce('Alex')@a)"
+
+end

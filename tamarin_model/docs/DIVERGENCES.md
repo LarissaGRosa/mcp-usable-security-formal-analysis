@@ -27,9 +27,13 @@ the plan's one-file-per-ceremony.
 The plan (step 7) specifies `K(kdf(Na,Nb)) => (K(Na) & K(Nb)) | key-leak`. This is **false in tamarin** and
 is falsified in 14 steps: `K(·)` is an *action* that fires when the adversary *uses* a term; it does not
 fire on the sub-terms of a term the adversary *derives* (those are `!KU` facts).
-**Proved instead:** `H_sk_requires_both_leaks` — `Secret(kdf(na,nb)) & K(kdf(na,nb)) =>` **both parties**
-performed a nonce-exporting mistake. Same claim ("leaking ONE nonce is insufficient"), provable, and better
-for attribution — but it is stated over the ceremony's mistake vocabulary, not over adversary knowledge.
+**Proved instead:** `H_sk_requires_both_leaks` — stated over the ceremony's mistake vocabulary rather than
+over adversary knowledge, which is provable and better for attribution.
+**But the form I first proved was WRONG, and shipped wrong for most of this work.** "Both parties performed
+a nonce-exporting mistake" is FALSE once the adversary can INJECT a nonce rather than learn it — see B3,
+where `K8` falsifies it in 13 steps. The lemma now carries the injection disjunct. The claim "leaking ONE
+nonce is insufficient" survives **only in the absence of a spoofing adversary**, which is a materially
+weaker statement than the one I had been making.
 
 ---
 
@@ -83,6 +87,39 @@ The reply leg + the adversary-mediated Screen-C compare (`PGP_REPLY`) could not 
 Same story for `IF_REVEAL`, `IF_FIELD_REMINDER`, `KDF_SPOOF`. Each is exercised by a dedicated profile,
 which is honest, but it means **no single profile shows the whole interface at once**.
 
+**FIXED — and it was the most expensive item on this list, because closing it BROKE A LEMMA I BELIEVED.**
+I had this filed as the least interesting divergence: untidiness, not unsoundness. It was unsoundness.
+
+- `S17_full_interface` (65 s): the whole secure_email interface at once — both pathways, the reply leg, the
+  reveal control, and all three degraded-outcome routes, under σ2. Every degraded route stays **reachable**
+  with the others compiled in (no lever shadows another). Clean.
+- `K8_full_interface` (79 s): the whole kdf interface — `KDF_SPOOF` + `OUTCOME_PREMATURE` +
+  `OUTCOME_DEGRADED_CLICK`, both humans degraded (Alex σ2, Blake σ6). **It falsified
+  `H_sk_requires_both_leaks` in 13 steps** — the shared `[reuse]` spine lemma for the entire ceremony.
+
+**What broke.** The ceremony's headline compositional claim was "the adversary needs BOTH nonces (kdf/2 is
+free), so leaking ONE is provably insufficient." The algebra is right; the error was assuming the adversary
+must **learn** both. Under `KDF_SPOOF` it **supplies** one: `Adv_spoof_chat` posts an adversary-known `x`
+into the chat, a degraded human accepts `x` as the peer's nonce (a compare `Mistake`), and the session key
+is `kdf(x, Nb)` with `x` **already known**. One leak — `Nb` — now suffices.
+`K8_one_leak_suffices_under_spoof` witnesses it: Alex neither leaks **nor** misdelivers, and the adversary
+still holds `sk`.
+
+**Why no shipped profile caught it.** `K6` arms `KDF_SPOOF` but stresses only *Blake*, so the second leak
+was unreachable and the hole never opened. The lemma was **true in every profile while being false in the
+model**. Only the whole interface, with both humans degradable, exposed it. That is exactly the composition
+risk that made "no single profile shows the whole interface" a real defect — and I had dismissed it.
+
+**Restated (not weakened).** Each nonce reaches the adversary either by EXPORT (the owner leaked or
+misdelivered it) or by INJECTION (the adversary planted the value and a human accepted it). No compare
+`Mistake` ⇒ no injection ⇒ the original both-parties-leaked claim, so **the private wire's payoff stands
+unchanged in every non-spoofing profile**. All eight pre-existing K-profiles still pass.
+
+**The trap worth remembering.** In the failing run, `K8_only_correspondents_know_sk` reported *"verified
+(12 steps)"* — because it CONSUMES the falsified `[reuse]` lemma. **A false `[reuse]` lemma silently
+poisons every lemma downstream of it.** Checking only the profile's own secrecy lemma would have shipped a
+green result resting on a false premise.
+
 ---
 
 ## C. Plan items: current status
@@ -102,6 +139,7 @@ which is honest, but it means **no single profile shows the whole interface at o
 | T5 completion-under-onset, strong (ordered) form | **MET** | was the biggest real gap; see D6. Every stressed S/K profile now carries one `_completes_under_<σ>` per ARMED stressor (28 lemmas), pinning the onset strictly before the STRESSED party's own completion step. |
 | Onset coverage per armed stressor (lesson 16) | **MET** | the four legacy P-profiles that armed a stressor no lemma witnessed (`P1`,`P2`,`P3`,`P6`) now have one; all 10 verified, so no stressor was in fact dead. |
 | A11 expiration, A4 Cc/Bcc, A12 attach, A16 discard, B3/B5/B8/B9 | **exposure only** | posed as `!Demand` for density; no answer drives anything. |
+| Whole interface in ONE theory (all levers co-present) | **MET** | `S17_full_interface` (65 s) and `K8_full_interface` (79 s). K8 **falsified the kdf spine lemma** — see B3; the lever-composition risk was real. |
 | Both methods in ONE theory, chosen under stress | **MET** | `S16_both_pathways` (27 s): PATH_PGP + PATH_PW + σ2, strong T5 on both, and the careless human misroutes the METHOD CHOICE itself — inexpressible while the pathways were gated apart. See B2. |
 | RFC lever pairs | **MET, 12/12 proven** | incl. `REQ-CONFIRM-BEFORE-SESSION`, the SAME core lever as `REQ-VERIFY-BEFORE-SEND` proved necessary in a second, independent ceremony. |
 
