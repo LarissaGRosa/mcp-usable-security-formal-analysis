@@ -151,3 +151,47 @@ tamarin-prover interactive $D/ --interface=127.0.0.1 --port=3001
   For a demand-profile swap (expert / hardened / inline seed), name the demand flag instead of `LEXICON_DEFAULT`.
 - Keep the theory **closed**; re-run all profiles after touching any shared file (`base.spthy`,
   `protocol.spthy`, `interface.spthy`, or a `core/*.spthy`).
+
+---
+
+## Prover budget & timings
+
+**Hard requirement: every theorem proves in under 3 minutes**, run capped (the box has no swap):
+
+```bash
+export MAUDE_LIB=/usr/share/maude
+python3 .claude/skills/model-tamarin/check.py --prove --timeout 178 \
+        ceremonies/alex_blake_kdf/K4_worstcase.spthy -- +RTS -M6G -RTS
+```
+
+### P-profiles — the PUBLIC-wire testbed (`KDF_WIRE`)
+
+| P0 | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | P10 | P11 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1s | 1s | 25s | 11s | 2s | 0s | 2s | 1s | 1s | 0s | 1s | 0s |
+
+### K-profiles — the invented PRIVATE messenger (`KDF_MESSENGER`)
+
+The nonces cross a private `Chat()`, so the adversary learns one **only** on a human mistake. That is
+what makes the (S) goal statable at all here: `sk = kdf(Na,Nb)` and `kdf/2` is FREE, so **K(sk) requires
+BOTH nonces** — leaking one is provably insufficient (`H_sk_requires_both_leaks`). The public-wire
+P-profiles cannot state this: their nonces are already on the DY channel.
+
+| Profile | stressor | headline | time |
+|---|---|---|---|
+| `K0_baseline` | — | both parties complete, keys agree, secrecy ABSOLUTE | 1s |
+| `K1_send_code` | σ1 (Busy) | nonce TYPO caught by the key-confirmation shutdown (safe-fail) vs WRONG CHAT → `Out(nonce)` | 5s |
+| `K2_leak` | σ2 (Careless) | in-band leak — the partner still receives it, so nothing looks wrong (SILENT) | 3s |
+| `K3_premature` | `OUTCOME_PREMATURE` | "start session" pressed BEFORE the key read-back → `SessionUnconfirmed` | 4s |
+| `K4_worstcase` | both parties | the breach is REACHABLE — and only by BOTH of them leaking | 28s |
+
+`K3` is the same core order-violation lever proved in `secure_email` (`SendPremature`): **one lever, two
+ceremonies** — the RFC-grade generality claim.
+
+## What keeps it in budget
+
+Same discipline as `secure_email` (see its README): density detectors read a SINGLE marker (σ2 →
+`!Copresent`, σ9 → `!CopresentDecide` via the dedicated surfaces), every `Prompt` is posed off a shallow
+source, and the boundary list is proven once as `[reuse]` so each profile's T6 costs ~12 steps. The
+P4 harness stays **token-bounded** (a fixed budget of `OpToken`/`DecToken` consumed by the posers) rather
+than restriction-bounded.

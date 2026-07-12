@@ -103,3 +103,54 @@ python3 .claude/skills/model-tamarin/check.py --prove tamarin_model/ceremonies/s
 degraded-click row, the novice lexicon) and assembles the layers in order:
 `framework → protocol → demands → masks → stressors → knobs → properties → lemmas`. Each profile
 `#define`s its stressors, then `#include "base.spthy"`, then its own lemmas.
+
+---
+
+## Prover budget & timings
+
+**Hard requirement: every theorem proves in under 3 minutes.** Run capped — the box has no swap, so an
+unbounded proof must abort rather than OOM the machine:
+
+```bash
+export MAUDE_LIB=/usr/share/maude        # else tamarin cannot find prelude.maude (false FAILs)
+python3 .claude/skills/model-tamarin/check.py --prove --timeout 178 \
+        ceremonies/secure_email/S4_worstcase.spthy -- +RTS -M6G -RTS
+```
+
+| Profile | pathway | stressors (mask) | time | lemmas |
+|---|---|---|---|---|
+| `S0_baseline` | PGP+PW | — | 5s | 8 |
+| `S1_trio_pgp` | PGP | σ6 (Naive) + σ2 (Careless) + skipcheck + **premature** | 14s | 11 |
+| `S2_trio_pw` | PW | σ1 + σ3 (Busy) → misdeliver | 33s | 10 |
+| `S3_trio_mixed` | PGP | σ6 + σ8 + anxiety on **Blake** (Naive/Habituated/Fearful) | 25s | 11 |
+| `S4_worstcase` | PGP | σ6 + σ2 + anxiety + every outcome row + `PROPERTIES` | 27s | 15 |
+| `S5_cue_phish` | PGP | σ_CUE (Naive) | 3s | 10 |
+| `S6_recovery_habituation` | PGP | σ8 + recovery (Blake) | 11s | 9 |
+| `S7_recovery_careless` | PGP | σ2 + recovery | 67s | 9 |
+| `S8_transcribe` | PGP | σ2 (Careless) → subject leak + TLS misroute | 6s | 10 |
+| `S9_transcribe_slip` | PGP | σ_ADDITIVE (Busy) → field slip (safe-fail) | 5s | 9 |
+| `S10_pw_inband_leak` | PW | σ2 (Careless) → in-band leak (silent) | 33s | 10 |
+
+## What keeps it in budget (learned the hard way)
+
+These are not style preferences — each one was the difference between a proof and a non-terminating
+search. Break any of them and the theory stops proving.
+
+1. **Gate the PATHWAY per profile** (`PATH_PGP` / `PATH_PW`). With both pathways compiled in, every
+   theory carried the whole two-pathway/two-party surface and only ONE stressor fitted in 3 min.
+   Compiled alone a pathway is half the surface — the σ6+σ2 trio went from **>3 min to 13s**.
+2. **Density detectors read a SINGLE marker**, never "any N of M `!Demand`". σ2 reads `!Copresent(P)`,
+   σ9 reads `!CopresentDecide(P)`. The "any two/three of N" form is an O(N²)/O(N³) lookup that explodes
+   the source saturation once a real screen poses many co-present controls.
+3. **Exposure-only controls emit `!Demand` WITHOUT a `Prompt`.** Density *counts* posed controls; the
+   mask *answers* `Prompt`. So a control that drives no outcome (badges, Reply, overflow, reply-route) is
+   counted for free — performing it is pure branching (lesson 15b).
+4. **Keep every `Prompt` producer SHALLOW** — posed off `AlexInit` or the persistent `!AlexScreen` anchor,
+   never off a deep linear chain. (Audited: every screen rule reads only init/persistent/`Fr`/`In`.)
+5. **The send EFFECT joins ONE free-valued `!StepData`** (the recipient, from the compare). A second one
+   opened source chains that never closed.
+6. **Prove the boundary list ONCE as `[reuse]`** (`H_leak_routes`). The per-profile T6 then costs 8 steps
+   instead of 261.
+7. **Busy is the expensive mask** (its slips mint fresh terms). `SIGMA_ADDITIVE` is the cheap route to it
+   (S9: 93s under σ1 → **5s** under σ_ADDITIVE). Where a story needs Busy AND Careless, SPLIT it by mask
+   (S8/S9 for transcribe, S2/S10 for the share) rather than raise the timeout.
