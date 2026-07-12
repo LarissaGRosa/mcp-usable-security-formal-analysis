@@ -1,0 +1,61 @@
+theory KDF_K6_Mitm
+begin
+/*
+  K6 -- the MITM on the "incoming code" screen (K2). What the messenger SHOWS is adversary-mediated: an
+  attacker can substitute the code in the chat window. The defence is the OOB READ-BACK -- the partner
+  reads their nonce out over a separate channel and you compare it against what the app displays.
+
+  sigma6 (the comparison is effortful) -> NAIVE -> the compare is answered CREDULOUSLY: whatever is shown
+  is accepted. The party then derives its key from the ADVERSARY's nonce, and the two parties no longer
+  hold the same key.
+
+  This is the route the read-back exists to close, and it is why an Attentive compare (which fires only on
+  <k,k>) catches BOTH a substitution and the partner's typo.
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_COMPARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+
+#define STRESS_BLAKE
+#define SIGMA6_ABSTRACTION
+#define KDF_SPOOF
+
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+lemma K6_abstraction_onset:
+  exists-trace "Ex #i. Abstraction('Blake')@i"
+
+// the MITM: a credulous incoming-code compare accepts a substituted nonce.
+lemma K6_mitm_reachable:
+  exists-trace "Ex p vid #i. Mistake(p, vid)@i"
+
+// AGREEMENT: if both parties confirm a key, they hold the SAME key -- UNLESS the incoming-code compare
+// was answered credulously. This is the authentication property the read-back buys, and the MITM is
+// exactly its counterexample.
+lemma K6_agreement_unless_mistake:
+  all-traces
+  "All na1 nb1 na2 nb2 #a #b.
+     Secret(kdf(na1,nb1))@a & Secret(kdf(na2,nb2))@b
+     & not (Ex p vid #d. Mistake(p, vid)@d)
+   ==> kdf(na1,nb1) = kdf(na2,nb2)"
+
+// an ATTENTIVE compare catches the substitution: with no Mistake the adversary's nonce is never adopted.
+lemma K6_only_correspondents_know_sk:
+  all-traces
+  "All na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k
+   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
+end

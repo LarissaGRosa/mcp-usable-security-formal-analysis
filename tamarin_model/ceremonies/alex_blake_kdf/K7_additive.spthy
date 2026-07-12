@@ -1,0 +1,68 @@
+theory KDF_K7_Additive
+begin
+/*
+  K7 -- the ADDITIVE-LOAD surface on the REAL screens, and the sigma10 CLOSURE in the second ceremony.
+
+  The invented messenger has TWO 'med' text fields: the nonce entry (K1 "send your code") and the key
+  entry (K3 "calculate" -- the derived key is typed back into the app). Two 'med' steps sum past the
+  threshold (Sweller) -> SIGMA_ADDITIVE -> BUSY -> a field entry SLIPS -> !Failed -> SIGMA10
+  RepeatedFailure -> CARELESS -> the next entry is EXPORTED (the code is pasted into a public channel).
+
+  This is the SAME closure proved in secure_email (S8), reached through a completely different interface
+  -- which is the point: the loop is a property of the ACTION CLASS, not of one ceremony's screens.
+
+  The typo itself is a SAFE-FAIL: the key-confirmation shutdown compares the committed key against the
+  DISPLAYED correct key and aborts. It does not leak -- it DEGRADES, and the degradation leaks.
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_COMPARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+
+#define STRESS_ALEX
+#define SIGMA_ADDITIVE
+#define SIGMA10_REPEATFAIL
+
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+lemma K7_additive_onset:
+  exists-trace "Ex #i. AdditiveLoad('Alex')@i"
+
+lemma K7_repeatfail_onset:
+  exists-trace "Ex #i. RepeatedFailure('Alex')@i"
+
+// THE SIGMA10 CLOSURE, second ceremony: additive load -> Busy -> slip -> !Failed -> sigma10 -> Careless
+// -> the nonce is pasted into a public channel (NonceLeaked).
+lemma K7_sigma10_closure:
+  exists-trace
+  "Ex #a #s #r #l.
+     AdditiveLoad('Alex')@a & Slip('Alex')@s & RepeatedFailure('Alex')@r & NonceLeaked('Alex')@l
+   & #a < #s & #s < #r & #r < #l"
+
+// the SLIP is a SAFE-FAIL: the shutdown catches a mistyped key, and a Slip is not a leak route.
+lemma K7_slip_caught_by_shutdown:
+  exists-trace "Ex #s #a. Slip('Alex')@s & ShutdownAbort('Alex')@a"
+
+lemma K7_only_correspondents_know_sk:
+  all-traces
+  "All na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k
+   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
+
+// (C) T5 strong (ordered): the ceremony still completes DESPITE the onset.
+lemma K7_completes_under_onset:
+  exists-trace
+  "Ex #o #a #b. AdditiveLoad('Alex')@o & SessionUp('Alex')@a & SessionUp('Blake')@b & #o < #a"
+end

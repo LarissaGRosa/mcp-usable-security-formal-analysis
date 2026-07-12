@@ -335,14 +335,14 @@ rule IF_k1_alex [color=#f2994a]:
   --[ PoseK1('Alex'), OwnNonce('Alex', ~Na) ]->
     [ Prompt('Alex', ~nId, 'transcribe'), !Demand('Alex', ~nId, 'transcribe'), !Displayed('Alex', ~nId, ~Na),
       Prompt('Alex', ~shId, 'share'),     !Demand('Alex', ~shId, 'share'),     !Displayed('Alex', ~shId, <'Blake','Blake','nonce'>),
-      !Copresent('Alex'), !AlexNonce(idA, ~Na), K1Alex(idA, ~nId, ~shId) ]
+      !Copresent('Alex'), !AlexNonce(idA, ~Na), !Readback('Blake', ~Na), K1Alex(idA, ~nId, ~shId) ]
 
 rule IF_k1_blake [color=#f2994a]:
     [ BlakeInit(idB), Fr(~Nb), Fr(~nId), Fr(~shId) ]
   --[ PoseK1('Blake'), OwnNonce('Blake', ~Nb) ]->
     [ Prompt('Blake', ~nId, 'transcribe'), !Demand('Blake', ~nId, 'transcribe'), !Displayed('Blake', ~nId, ~Nb),
       Prompt('Blake', ~shId, 'share'),     !Demand('Blake', ~shId, 'share'),     !Displayed('Blake', ~shId, <'Alex','Alex','nonce'>),
-      !Copresent('Blake'), !BlakeNonce(idB, ~Nb), K1Blake(idB, ~nId, ~shId) ]
+      !Copresent('Blake'), !BlakeNonce(idB, ~Nb), !Readback('Alex', ~Nb), K1Blake(idB, ~nId, ~shId) ]
 
 restriction OncePoseK1: "All p #i #j. PoseK1(p)@i & PoseK1(p)@j ==> #i = #j"
 
@@ -368,28 +368,59 @@ rule IF_k1_blake_inband [color=#c0392b]:
     [ K1Blake(idB, nId, shId), !StepData('Blake', nId, val), ShareOutcome('Blake', shId, 'inband-leak') ]
   --[ ShareRoute('Blake','inband-leak'), NonceLeaked('Blake') ]-> [ Chat('Alex', val), Out(val) ]
 
-// --- receive the correspondent's nonce from the private chat ---
-rule IF_recv_alex [color=#1f6fd0]:
-    [ !AlexNonce(idA, Na), Chat('Alex', Nb) ] --[ RecvNonce('Alex', Nb) ]-> [ AlexBoth(idA, Na, Nb) ]
-rule IF_recv_blake [color=#1f6fd0]:
-    [ !BlakeNonce(idB, Nb), Chat('Blake', Na) ] --[ RecvNonce('Blake', Na) ]-> [ BlakeBoth(idB, Na, Nb) ]
+// --- K2 "incoming code": the arriving nonce is COMPARED against the correspondent's out-of-band
+// read-back before it is used. What the messenger SHOWS is adversary-mediated (In(shown)) -- a MITM can
+// substitute the code in the chat window -- while the read-back reference is the correspondent's TRUE
+// nonce. An Attentive compare fires only on <k,k>, so it accepts the genuine code and CATCHES both a
+// substitution and the partner's typo. A credulous compare accepts whatever is shown => Mistake => the
+// party derives a key from the ADVERSARY's nonce (the MITM route), and the two parties no longer agree.
+rule IF_k2_alex [color=#f2994a]:
+    [ !AlexNonce(idA, Na), Chat('Alex', chatVal), !Readback('Alex', refNb), Fr(~vid) ]
+  --[ PoseK2('Alex'), UIStep('Alex','incoming_code') ]->
+    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'),
+      !Displayed('Alex', ~vid, <chatVal, refNb>), AlexK2(idA, Na, ~vid) ]
+
+rule IF_k2_blake [color=#f2994a]:
+    [ !BlakeNonce(idB, Nb), Chat('Blake', chatVal), !Readback('Blake', refNa), Fr(~vid) ]
+  --[ PoseK2('Blake'), UIStep('Blake','incoming_code') ]->
+    [ Prompt('Blake', ~vid, 'compare'), !Demand('Blake', ~vid, 'compare'),
+      !Displayed('Blake', ~vid, <chatVal, refNa>), BlakeK2(idB, Nb, ~vid) ]
+
+// THE MITM CHANNEL. The messenger's chat can be SPOOFED: the adversary can post a code it knows into the
+// window (impersonating the correspondent). It can NOT read the genuine one -- the chat stays private for
+// reading, which is what keeps (S) non-vacuous. So the substitution enters through the CHAT, not through
+// the display, and the OOB read-back is the only thing that can catch it: an Attentive compare fires only
+// on <k,k> and so rejects any code that is not the correspondent's true nonce.
+restriction OncePoseK2: "All p #i #j. PoseK2(p)@i & PoseK2(p)@j ==> #i = #j"
+
+// the ACCEPTED nonce (the compare's committed value) is the one the party derives with.
+rule IF_k2_accept_alex [color=#1f6fd0]:
+    [ AlexK2(idA, Na, vid), !StepData('Alex', vid, accNb) ]
+  --[ RecvNonce('Alex', accNb) ]-> [ AlexBoth(idA, Na, accNb) ]
+rule IF_k2_accept_blake [color=#1f6fd0]:
+    [ BlakeK2(idB, Nb, vid), !StepData('Blake', vid, accNa) ]
+  --[ RecvNonce('Blake', accNa) ]-> [ BlakeBoth(idB, accNa, Nb) ]
 
 // --- K3 calculate: the interface DISPLAYS the correct key kdf(Na,Nb); the compute mask commits it
 // (COMPUTE_KEYRESULT adapter -> KeyResult). Secret(sk) is born here (both nonces known). ---
 // K3 also poses the K4 "start session" AUTHORIZE, co-present with the derivation (the two controls the
 // human faces at once). The session normally requires the key-confirmation shutdown to have PASSED.
 rule IF_k3_alex [color=#f2994a]:
-    [ AlexBoth(idA, Na, Nb), Fr(~rid), Fr(~sid) ]
+    [ AlexBoth(idA, Na, Nb), Fr(~rid), Fr(~kId), Fr(~sid) ]
   --[ PoseK3('Alex'), Secret(kdf(Na, Nb)) ]->
-    [ Prompt('Alex', ~rid, 'compute'),   !Demand('Alex', ~rid, 'compute'), !Displayed('Alex', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
-      Prompt('Alex', ~sid, 'authorize'), !Demand('Alex', ~sid, 'authorize'),
+    [ Prompt('Alex', ~rid, 'compute'),    !Demand('Alex', ~rid, 'compute'), !Displayed('Alex', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
+      // the KEY-ENTRY field: the derived key is typed into the app. A 'med' step co-present with the
+      // derivation -- the two 'med' fields (K1 nonce entry + this) ARE the additive-load surface.
+      Prompt('Alex', ~kId, 'transcribe'), !Demand('Alex', ~kId, 'transcribe'), !Displayed('Alex', ~kId, kdf(Na, Nb)),
+      Prompt('Alex', ~sid, 'authorize'),  !Demand('Alex', ~sid, 'authorize'),
       !Copresent('Alex'),
       AlexAwaitKey(idA, ~rid), !AlexStart(idA, ~sid) ]
 rule IF_k3_blake [color=#f2994a]:
-    [ BlakeBoth(idB, Na, Nb), Fr(~rid), Fr(~sid) ]
+    [ BlakeBoth(idB, Na, Nb), Fr(~rid), Fr(~kId), Fr(~sid) ]
   --[ PoseK3('Blake'), Secret(kdf(Na, Nb)) ]->
-    [ Prompt('Blake', ~rid, 'compute'),   !Demand('Blake', ~rid, 'compute'), !Displayed('Blake', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
-      Prompt('Blake', ~sid, 'authorize'), !Demand('Blake', ~sid, 'authorize'),
+    [ Prompt('Blake', ~rid, 'compute'),    !Demand('Blake', ~rid, 'compute'), !Displayed('Blake', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
+      Prompt('Blake', ~kId, 'transcribe'), !Demand('Blake', ~kId, 'transcribe'), !Displayed('Blake', ~kId, kdf(Na, Nb)),
+      Prompt('Blake', ~sid, 'authorize'),  !Demand('Blake', ~sid, 'authorize'),
       !Copresent('Blake'),
       BlakeAwaitKey(idB, ~rid), !BlakeStart(idB, ~sid) ]
 
@@ -430,4 +461,22 @@ rule IF_k4_blake_premature [color=#c0392b]:
   --[ SessionUnconfirmed('Blake'), SessionUp('Blake'), Finish('Blake') ]->
     [ !Session('Blake', idB, sk) ]
 #endif
+#endif
+
+// ===================== the MITM channel (top level -- NEVER nested inside KDF_MESSENGER) =====================
+// The messenger's chat can be SPOOFED: the adversary posts a code it knows into the window, impersonating
+// the correspondent. It can NOT read the genuine one -- the chat stays private for READING, which is what
+// keeps (S) non-vacuous. So a substitution enters through the CHAT, not the display, and the OOB read-back
+// is the only thing that catches it (an Attentive compare fires only on <k,k>).
+//
+// This block is TOP LEVEL, not inside #ifdef KDF_MESSENGER: tamarin cannot SKIP a nested #ifdef (MEMORY
+// lesson 20), and every P-profile skips KDF_MESSENGER -- nesting it there silently mis-nested the whole
+// file and broke all twelve of them. Gated on its own flag so only the MITM profile pays for the In-driven
+// adversary producer; ONCE-bounded (lesson 5).
+#ifdef KDF_SPOOF
+rule Adv_spoof_chat [color=#eb5757]:
+    [ In(x) ] --[ SpoofedChat(x) ]-> [ Chat('Alex', x), Chat('Blake', x) ]
+
+restriction OnceSpoofedChat:
+  "All x y #i #j. SpoofedChat(x)@i & SpoofedChat(y)@j ==> #i = #j"
 #endif

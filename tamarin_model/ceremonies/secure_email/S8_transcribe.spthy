@@ -2,15 +2,24 @@ theory SecureEmail_S8_Transcribe
 begin
 
 /*
-  S8 -- the TRANSCRIBE-LEAK profile (NEW with the full interface). Screen A's To (A2) and subject (A5)
-  are real 'med' text fields; the subject carries the guide's standing "not encrypted" warning, and a
-  CARELESS entry EXPORTS it -- the message's cleartext metadata leaks at send even though every crypto
-  step was perfect (SubjectLeak -> Out(m)). This is the route the old model had no vocabulary for.
+  S8 -- the TRANSCRIBE profile, and the sigma10 CLOSURE. The field-entry action class is the whole story,
+  and this profile proves the LOOP the plan asked for, end to end and IN ORDER:
 
-  Arms sigma2 (Careless) + STRESS_ALEX. The companion slip story (a BUSY entry SLIPS instead, raising
-  !Failed) is S9_transcribe_slip -- they are SPLIT because the two together need two masks (Busy AND
-  Careless) on the full screens, which overruns the prover budget. Splitting per story is the plan's own
-  fallback ("split rather than raise the timeout").
+      two co-present 'med' fields (To A2 + subject A5)  -- the additive-load surface (Sweller)
+        -> SIGMA_ADDITIVE -> BUSY
+        -> a field entry SLIPS (a fresh wrong value is committed) -> !Failed
+        -> SIGMA10 RepeatedFailure -> CARELESS
+        -> the subject entry is now EXPORTED (TranscribeLeak) -> Out(m) at send   [SubjectLeak]
+
+  So the TWO outcomes of ONE action class are causally chained: the Busy slip is a SAFE-FAIL that does not
+  leak -- but it is exactly what degrades the human into the Careless state where the next field entry DOES
+  leak. That is the claim the transcribe class exists to make, and it is the loop the plan called for.
+
+  Both masks (Busy AND Careless) are live here. That only fits the prover budget because the PATHWAY is
+  gated -- with both pathways compiled in this profile did not terminate. See docs/DIVERGENCES.md.
+
+  Also armed: OUTCOME_CARELESS_MISROUTE, so the Careless state additionally reaches the encryption
+  selector's "Standard (TLS only)" exit -> PlaintextAtProvider (a NAMED unsafe outcome, never an Out).
   Run: check.py --prove ceremonies/secure_email/S8_transcribe.spthy
 */
 
@@ -20,21 +29,40 @@ begin
 #define PATH_PGP
 
 #define STRESS_ALEX
-#define SIGMA2_CONCURRENCY
+#define SIGMA_ADDITIVE
+#define SIGMA10_REPEATFAIL
 #define OUTCOME_CARELESS_MISROUTE
 
 #include "base.spthy"
 
-// ---- onset coverage (lesson 16) ----
-lemma S8_distract_onset:
-  exists-trace "Ex #i. Distract('Alex')@i"
+// ---- onset coverage (lesson 16): one exists-trace per armed stressor ----
+lemma S8_additive_onset:
+  exists-trace "Ex #i. AdditiveLoad('Alex')@i"
 
-// ---- the headline: a Careless SUBJECT transcribe exports the subject -> Out(m) at send ----
-lemma S8_subject_leak_chain:
-  exists-trace "Ex #i. SubjectLeak('Alex')@i"
+lemma S8_repeatfail_onset:
+  exists-trace "Ex #i. RepeatedFailure('Alex')@i"
 
-// the TLS misroute: a Careless encryption-selector decide drops to "Standard (TLS only)" -- a NAMED
-// unsafe outcome (PlaintextAtProvider), NOT an Out, so it never yields K(m). An RFC lemma forbids it.
+// ---- THE SIGMA10 CLOSURE: the full causal chain, IN ORDER ----
+lemma S8_sigma10_closure:
+  exists-trace
+  "Ex #a #s #r #l.
+     AdditiveLoad('Alex')@a & Slip('Alex')@s & RepeatedFailure('Alex')@r & SubjectLeak('Alex')@l
+   & #a < #s & #s < #r & #r < #l"
+
+// ---- the SLIP alone is a SAFE-FAIL: with every EXPORT route excluded, the only way the adversary can
+// still learn m is a credulous compare (Mistake) -- a Slip is NOT a leak route. This is precisely why the
+// closure matters: the slip does not breach, it DEGRADES, and the degradation breaches. ----
+lemma S8_slip_alone_is_safe:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+     & not (Ex p #d. SubjectLeak(p)@d)
+     & not (Ex p #d. SendPremature(p)@d)
+     & not (Ex p #d. ForwardedOutside(p)@d)
+     & not (Ex p #d. LeakPw(p)@d)
+     & not (Ex p #d. MisdeliveredPw(p)@d)
+   ==> (Ex p vid #d. Mistake(p, vid)@d)"
+
+// the Careless state also reaches the TLS exit -- a NAMED outcome, never an Out.
 lemma S8_tls_misroute_chain:
   exists-trace "Ex m #i. PlaintextAtProvider(m)@i"
 
@@ -48,9 +76,10 @@ lemma S8_only_correspondents_know:
 lemma S8_read_only_blake:
   all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
-// ---- (C) T5 (fallback form -- onset conjunct dropped so the search does not wander; the onset is
-// covered above and cleanliness comes from T6) ----
-lemma S8_completes:
-  exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset ----
+lemma S8_completes_under_onset:
+  exists-trace
+  "Ex m #o #s #r.
+     AdditiveLoad('Alex')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r & #o < #s"
 
 end

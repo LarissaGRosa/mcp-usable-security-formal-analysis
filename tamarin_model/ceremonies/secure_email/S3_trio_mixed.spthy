@@ -1,11 +1,12 @@
 theory SecureEmail_S3_TrioMixed
 begin
 /*
-  S3 -- the RECIPIENT trio {sigma6 Abstraction, sigma8 Habituation, sigma_ANXIETY} on Blake's Screen C.
+  S3 -- the RECIPIENT trio {sigma6, sigma8, sigma9, sigma_ANXIETY} on Blake's Screen C.
   BLAKE is the stressed party: the inbox shows encryption + signature badges (two co-present confirms ->
   habituation), a trusted-key fingerprint view (effortful compare -> abstraction), and a decrypt authorize
-  (arousal -> a Fearful FREEZE: the guide's abandonment case, a safe-fail). The click-through row is armed,
-  so a Habituated Blake accepts without looking.
+  (arousal -> a Fearful FREEZE: the guide's abandonment case, a safe-fail), and THREE co-present decides
+  (Reply / Forward / overflow -> sigma9 AlertVolume -> Careless). The click-through row is armed, so a
+  Habituated Blake accepts without looking, and a Careless Blake FORWARDS the message out of the boundary.
 */
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
@@ -17,6 +18,7 @@ begin
 #define SIGMA6_ABSTRACTION
 #define SIGMA8_HABITUATION
 #define SIGMA_ANXIETY
+#define SIGMA9_ALERTVOLUME
 #define OUTCOME_HABITUATED_CLICKTHROUGH
 #define OUTCOME_CARELESS_MISROUTE
 
@@ -25,6 +27,7 @@ begin
 lemma S3_abstraction_onset: exists-trace "Ex #i. Abstraction('Blake')@i"
 lemma S3_habituate_onset:   exists-trace "Ex #i. Habituate('Blake')@i"
 lemma S3_anxiety_onset:     exists-trace "Ex #i. SecurityAnxiety('Blake')@i"
+lemma S3_alertvolume_onset: exists-trace "Ex #i. AlertVolume('Blake')@i"
 
 // the recipient-side breach: a degraded Forward re-sends m to a keyless third party -> Out(m), even
 // though every SENDER step was perfect. (The "vulnerable" half of the forward-guard RFC pair.)
