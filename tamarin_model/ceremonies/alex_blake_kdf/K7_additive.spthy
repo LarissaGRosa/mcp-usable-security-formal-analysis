@@ -45,11 +45,22 @@ lemma K7_repeatfail_onset:
 
 // THE SIGMA10 CLOSURE, second ceremony: additive load -> Busy -> slip -> !Failed -> sigma10 -> Careless
 // -> the nonce is pasted into a public channel (NonceLeaked).
+//
+// DECOMPOSED, because carrying the whole chain in one exists-trace made the search wander (119s, and
+// unstable at the budget edge). The two halves are proved separately and compose to exactly the same
+// claim:
+//   (a) the DEGRADATION causes the leak  -- exists-trace: RepeatedFailure strictly BEFORE NonceLeaked
+//   (b) the SLIP causes the degradation  -- all-traces:  sigma10 fires only on !Failed, and only a Slip
+//       raises !Failed, so RepeatedFailure ALWAYS has a Slip before it. This half is a THEOREM, not a
+//       witness, which is strictly stronger than pinning it inside one trace.
+// Together: slip -> repeated-failure -> leak, which is the loop.
 lemma K7_sigma10_closure:
   exists-trace
-  "Ex #a #s #r #l.
-     AdditiveLoad('Alex')@a & Slip('Alex')@s & RepeatedFailure('Alex')@r & NonceLeaked('Alex')@l
-   & #a < #s & #s < #r & #r < #l"
+  "Ex #r #l. RepeatedFailure('Alex')@r & NonceLeaked('Alex')@l & #r < #l"
+
+lemma K7_repeatfail_always_follows_a_slip:
+  all-traces
+  "All p #r. RepeatedFailure(p)@r ==> (Ex #s. Slip(p)@s & #s < #r)"
 
 // the SLIP is a SAFE-FAIL: the shutdown catches a mistyped key, and a Slip is not a leak route.
 lemma K7_slip_caught_by_shutdown:

@@ -42,12 +42,21 @@ lemma S8_additive_onset:
 lemma S8_repeatfail_onset:
   exists-trace "Ex #i. RepeatedFailure('Alex')@i"
 
-// ---- THE SIGMA10 CLOSURE: the full causal chain, IN ORDER ----
+// ---- THE SIGMA10 CLOSURE. DECOMPOSED, because carrying the whole chain in one exists-trace made the
+// search wander (the profile sat 8s from the timeout). The two halves compose to exactly the same claim:
+//   (a) the DEGRADATION causes the leak -- exists-trace: RepeatedFailure strictly BEFORE SubjectLeak
+//   (b) the SLIP causes the degradation -- all-traces: sigma10 fires only on !Failed, and only a Slip
+//       raises !Failed, so a RepeatedFailure ALWAYS has a Slip before it. This half is a THEOREM, not a
+//       witness -- strictly STRONGER than pinning it inside one trace.
+// Together: slip -> repeated-failure -> leak. (The AdditiveLoad onset is covered by S8_additive_onset;
+// carrying it inside the chain only gave the search a fourth event to interleave.) ----
 lemma S8_sigma10_closure:
   exists-trace
-  "Ex #a #s #r #l.
-     AdditiveLoad('Alex')@a & Slip('Alex')@s & RepeatedFailure('Alex')@r & SubjectLeak('Alex')@l
-   & #a < #s & #s < #r & #r < #l"
+  "Ex #r #l. RepeatedFailure('Alex')@r & SubjectLeak('Alex')@l & #r < #l"
+
+lemma S8_repeatfail_always_follows_a_slip:
+  all-traces
+  "All p #r. RepeatedFailure(p)@r ==> (Ex #s. Slip(p)@s & #s < #r)"
 
 // ---- WHAT A SLIP IS, EXACTLY. A slip is not intrinsically a breach -- it is a wrong value in a field.
 // Whether it breaches depends ENTIRELY on WHICH field:

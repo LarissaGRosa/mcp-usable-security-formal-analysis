@@ -19,8 +19,39 @@
   a NAMED unsafe outcome an RFC lemma forbids, which is what keeps breach <-> mistake honest.
 */
 
+// ORDER MATTERS. A [reuse] lemma is only available to lemmas declared AFTER it, so the CHEAP, K-FREE
+// STRUCTURAL helpers must come FIRST -- then the expensive K(m) boundary list can consume them instead of
+// re-deriving the same facts. Declaring H_leak_routes first cost 117s in S8; moving it last takes it to a
+// fraction of that, with no change to what is proved.
+
+// a generated private key never reaches the adversary (it never leaves !OwnSk).
+lemma H_sk_secret [reuse, heuristic=C]:
+  all-traces
+  "All p sk #g #k. OwnSkGen(p, sk)@g & K(sk)@k ==> F"
+
+// prunes the K(m) search for every profile that consumes it.
+lemma H_encto_shape [reuse]:
+  all-traces
+  "All m rcpt #e.
+     EncTo(m, rcpt)@e
+   ==> (rcpt = 'Blake')
+     | (Ex p vid #d. Mistake(p, vid)@d)"
+
+// impostor (phishing) page on Blake's Screen B.
+lemma H_pw_stays_oob [reuse]:
+  all-traces
+  "All pw #c #k.
+     PwCreated(pw)@c & K(pw)@k
+   ==> (Ex p #d. LeakPw(p)@d)
+     | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. PwEnteredAtImpostor(p)@d)"
+
 // (S) BOUNDARY LIST -- every way the MESSAGE crosses the boundary. Profiles' secrecy lemmas consume this.
-lemma H_leak_routes [reuse]:
+// heuristic=I is TUNING, not structure -- but it is worth 4x here (117s -> 29s; 831 -> 496 steps) and it is
+// what buys S8_transcribe its margin. It is NOT a globally good flag: the same setting on the kdf spine makes
+// K7 TIME OUT, and heuristic=S makes THIS lemma time out. Chosen empirically, per lemma. If a future tamarin
+// changes its goal ranking, this is the first place to re-measure.
+lemma H_leak_routes [reuse, heuristic=I]:
   all-traces
   "All m #s #k.
      Secret(m)@s & K(m)@k
@@ -31,28 +62,3 @@ lemma H_leak_routes [reuse]:
      | (Ex p #d. SendPremature(p)@d)
      | (Ex p #d. ForwardedOutside(p)@d)
      | (Ex p #d. MisaddressedSend(p)@d)"
-
-// the passphrase reaches the adversary only through a degraded share outcome, or by being entered at the
-// impostor (phishing) page on Blake's Screen B.
-lemma H_pw_stays_oob [reuse]:
-  all-traces
-  "All pw #c #k.
-     PwCreated(pw)@c & K(pw)@k
-   ==> (Ex p #d. LeakPw(p)@d)
-     | (Ex p #d. MisdeliveredPw(p)@d)
-     | (Ex p #d. PwEnteredAtImpostor(p)@d)"
-
-// a generated private key never reaches the adversary (it never leaves !OwnSk).
-lemma H_sk_secret [reuse, heuristic=C]:
-  all-traces
-  "All p sk #g #k. OwnSkGen(p, sk)@g & K(sk)@k ==> F"
-
-// STRUCTURAL: a message is encrypted to the correspondent ('Blake') only, unless the fingerprint compare
-// was answered credulously (a Mistake) and it went to a non-correspondent. K-free, so it is cheap and
-// prunes the K(m) search for every profile that consumes it.
-lemma H_encto_shape [reuse]:
-  all-traces
-  "All m rcpt #e.
-     EncTo(m, rcpt)@e
-   ==> (rcpt = 'Blake')
-     | (Ex p vid #d. Mistake(p, vid)@d)"

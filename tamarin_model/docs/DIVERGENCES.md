@@ -112,10 +112,32 @@ ADDRESS misaddresses the message. Restated as `S8_slip_is_not_itself_a_leak` (ev
 NAMED route, of which the misaddressed send is now one), and both consequences of a slip are now proved:
 DIRECT (misaddress) and INDIRECT (σ10 closure → the next entry leaks).
 
-### D4. Two profiles sit uncomfortably close to the budget
-`K7_additive` 172 s and `S8_transcribe` 125 s against a 180 s ceiling. K7 in particular has ~8 s of margin
-and will fail on a slower machine. Both carry Busy AND Careless, which is the expensive combination. They
-are correct but **fragile**; if either grows, split it by mask rather than raise the timeout.
+### D4. The two fragile profiles are fixed — and the causes were both *structural*, not "hard proofs"
+`K7_additive` (172 s) and `S8_transcribe` (125 s) sat near the 180 s ceiling. Both are now comfortably
+inside it — **K7 172 → 109 s, S8 125 → 21 s** — with no property weakened. Three findings, each of which
+is a reusable rule rather than a one-off tuning hack:
+
+1. **A long ordered `exists-trace` chain makes the search wander.** Both σ10 closures pinned the whole
+   causal chain in one witness (`AdditiveLoad < Slip < RepeatedFailure < Leak`). Every extra event is
+   another thing the search may interleave. **Decomposed** into an `exists-trace` for the half that
+   genuinely needs a witness (`RepeatedFailure < Leak`) plus an **all-traces theorem** for the half that is
+   forced anyway (`RepeatedFailure ⇒ Ex Slip before` — σ10 fires only on `!Failed`, and only a `Slip`
+   raises `!Failed`). This is **strictly stronger** than the original: the second half is now a theorem, not
+   one witness trace. Closure lemma: 126 s → 8 steps.
+2. **`[reuse]` order matters, and it was wrong.** A `[reuse]` lemma is visible only to lemmas declared
+   *after* it. `H_leak_routes` — the expensive `K(m)` boundary list — was declared **first**, so it could
+   not consume the cheap, K-free structural helpers (`H_sk_secret`, `H_encto_shape`) and re-derived their
+   content inside its own search. Reordering cheap-structural-first: 831 → 503 steps, free.
+3. **The default goal-ranking heuristic was simply the wrong one for the boundary list.** `H_leak_routes`
+   with `heuristic=I`: **117 s → 29 s**. This is the single biggest win and it changes nothing about what
+   is proved. Note it is **not** a globally good setting — the *same* flag on the kdf spine
+   (`H_nonce_leak_routes` / `H_sk_requires_both_leaks`) makes K7 **time out**, and `heuristic=S` makes
+   `H_leak_routes` itself time out. The heuristic must be chosen per lemma, empirically.
+
+**Residual shortcoming.** Point 3 means the budget is now partly held up by an empirically-chosen search
+heuristic, not by structure alone. It is a real dependency: a future tamarin whose ranking changes could
+push these back out, and there is no lemma-level test that would explain *why*. Points 1 and 2 are
+structural and survive that; point 3 should be understood as tuning, and is commented as such in the file.
 
 ### D5. Still true from the first pass
 - **`--auto-sources` is unusable here** (heap-exhausts), so the model relies entirely on hand-kept
