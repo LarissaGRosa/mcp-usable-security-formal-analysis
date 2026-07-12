@@ -90,3 +90,16 @@ or a mismatched PGP recipient).
 - σ1/σ3 (compute `'hi'` + `!UnderDeadline`): A8 passphrase.
 - σ_ADDITIVE (two co-present `'med'` `transcribe`): A5 subject + A10 hint (or A2 + A5).
 - σ10 (`!Failed`): Busy-slip on any `transcribe`/passphrase.
+
+---
+
+## As-built (read this before trusting the tables above)
+
+The tables above are the **design** inventory. Several controls were **cut or downgraded** to keep every
+theorem inside the 3-minute prover budget, and a few plan items were never built. The authoritative,
+honest list of what is and is not modelled — with the reasons — is **`tamarin_model/docs/DIVERGENCES.md`**.
+
+The short version: controls marked *exposure-only* emit `!Demand` **without** a `Prompt` (they are counted
+by the density detectors but never performed, which is what makes them free); the A13 sign-attach confirm,
+the A10 hint field, the A9/B2 reveal lever and the kdf K2 MITM compare / K3 key-entry field were **not
+built**; and the To field is posed but its committed value **drives nothing**.

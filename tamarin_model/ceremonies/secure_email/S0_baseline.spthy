@@ -5,11 +5,10 @@ begin
   S0 -- BASELINE (full-interface screens, NO stressor). Every co-present control on Screens A/B/C is
   answered Attentively: both pathways (PGP / password) deliver end to end, the response ORDER is
   respected (address before send, verify before send, unlock before read), and secrecy is absolute.
-  Arms: IF_SCREENS + the four screen action classes; no stressor, so no party is even stress-enabled.
+  Arms both pathways + the screen action classes; no stressor, so no party is even stress-enabled.
   Run: check.py --prove ceremonies/secure_email/S0_baseline.spthy
 */
 
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

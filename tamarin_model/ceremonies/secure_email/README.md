@@ -154,3 +154,10 @@ search. Break any of them and the theory stops proving.
 7. **Busy is the expensive mask** (its slips mint fresh terms). `SIGMA_ADDITIVE` is the cheap route to it
    (S9: 93s under σ1 → **5s** under σ_ADDITIVE). Where a story needs Busy AND Careless, SPLIT it by mask
    (S8/S9 for transcribe, S2/S10 for the share) rather than raise the timeout.
+
+## See also
+
+- [`INTERFACE_MAP.md`](INTERFACE_MAP.md) — the screen/control inventory (design), with an as-built caveat.
+- [`../../docs/DIVERGENCES.md`](../../docs/DIVERGENCES.md) — **where the build departed from the plan, why,
+  and what is weaker as a result.** Read this before citing the model.
+- [`../../docs/RFC_GUIDANCE.md`](../../docs/RFC_GUIDANCE.md) — the generated, proof-backed requirements.

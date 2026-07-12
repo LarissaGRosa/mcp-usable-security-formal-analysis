@@ -195,3 +195,9 @@ Same discipline as `secure_email` (see its README): density detectors read a SIN
 source, and the boundary list is proven once as `[reuse]` so each profile's T6 costs ~12 steps. The
 P4 harness stays **token-bounded** (a fixed budget of `OpToken`/`DecToken` consumed by the posers) rather
 than restriction-bounded.
+
+## See also
+
+- [`INTERFACE_MAP.md`](INTERFACE_MAP.md) — the invented messenger's screens (design), with an as-built caveat.
+- [`../../docs/DIVERGENCES.md`](../../docs/DIVERGENCES.md) — **what was not built and why** (the K2 MITM
+  compare and the K3 key-entry field are NOT modelled).

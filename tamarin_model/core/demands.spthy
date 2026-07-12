@@ -48,11 +48,22 @@ restriction OncePopulationExpert:
 #endif
 
 #ifdef IF_HARDENED
-// ===== hardened verify interface -- compare Effort 'lo' (visual diff) so sigma6 cannot fire. =====
+// ===== hardened verify interface -- a REPLACEMENT demand profile, not an addition. !Demands is a
+// PERSISTENT fact and demand rows are ADDITIVE, so seeding compare/Effort/'lo' alongside LEXICON_DEFAULT's
+// 'hi' row would leave BOTH present and sigma6 would still fire on the 'hi' one. A profile therefore arms
+// LEXICON_DEFAULT *xor* IF_HARDENED: this block seeds the SAME lexicon with the ONE row the lever changes
+// (the fingerprint view becomes a visual diff -> compare Effort 'lo' -> sigma6 cannot fire). =====
 rule Seed_interface_hardened_verify [color=#9b51e0]:
     [ ]
   --[ SeedInterface('hardened_verify') ]->
-    [ !Demands('compare', 'Effort', 'lo'),
+    [ !Demands('compare',   'Effort',         'lo'),   // <-- the lever
+      !Demands('compute',   'TemporalDemand', 'hi'),
+      !Demands('compute',   'MentalDemand',   'hi'),
+      !Demands('authorize', 'Arousal',        'hi'),
+      !Demands('share',     'MentalDemand',   'hi'),
+      !Demands('share',     'TemporalDemand', 'hi'),
+      !Demands('transcribe','MentalDemand',   'med'),
+      !Demands('transcribe','TemporalDemand', 'med'),
       !Interface('hardened_verify') ]
 
 restriction OnceHardenedVerify:

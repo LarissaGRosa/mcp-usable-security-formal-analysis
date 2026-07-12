@@ -5,7 +5,6 @@ begin
   and she skips the fingerprint check; a WARNING re-engagement recovers her to Attentive. The matched
   pair: the recovery is REACHABLE, and it REQUIRES the warning.
 */
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

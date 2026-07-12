@@ -1,0 +1,59 @@
+theory SecureEmail_S11_Hardened
+begin
+/*
+  S11 -- the HARDENED interface: the same screens, the same stressors, but with the design levers in
+  place. It is the "removed_by" half of the RFC lever PAIRS (template T4): each bad outcome that is
+  REACHABLE in a baseline profile is UNREACHABLE here, and the proof of unreachability is what turns a
+  design lever into a normative requirement.
+
+  Levers armed:
+    * SEND DISABLED UNTIL VERIFY  -- the Send control cannot be granted before the fingerprint compare
+      completes, so the out-of-order route does not exist (OUTCOME_PREMATURE not armed)
+      => SendPremature UNREACHABLE.
+    * NO PLAINTEXT FALLBACK / FORWARD GUARD -- the encryption selector has no "Standard (TLS only)" exit,
+      and Forward re-encrypts or blocks (OUTCOME_CARELESS_MISROUTE not armed)
+      => PlaintextAtProvider and ForwardedOutside UNREACHABLE.
+    * HARDENED VERIFY (IF_HARDENED) -- the fingerprint view is a visual diff, so the compare is Effort-'lo'
+      and sigma6 cannot fire => the credulous compare (Mistake) is UNREACHABLE.
+
+  The stressors are STILL armed (sigma6 + sigma2): the point is that the human is under exactly the same
+  pressure and the interface no longer lets the pressure become a breach.
+*/
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define PATH_PGP
+
+#define STRESS_ALEX
+#define SIGMA6_ABSTRACTION
+#define SIGMA2_CONCURRENCY
+#define IF_HARDENED
+
+#include "base.spthy"
+
+// the stressor still fires -- the human is under the same pressure.
+lemma S11_distract_onset: exists-trace "Ex #i. Distract('Alex')@i"
+
+// ---- the four unreachability results (the "removed_by" half of the RFC pairs) ----
+lemma S11_no_premature_send:
+  all-traces "not (Ex p #i. SendPremature(p)@i)"
+
+lemma S11_no_plaintext_fallback:
+  all-traces "not (Ex m #i. PlaintextAtProvider(m)@i)"
+
+lemma S11_no_forward_outside:
+  all-traces "not (Ex p #i. ForwardedOutside(p)@i)"
+
+// hardened verify: the effortful compare cannot degrade, so no credulous acceptance.
+lemma S11_no_abstraction:
+  all-traces "not (Ex p #i. Abstraction(p)@i)"
+
+// ---- and the ceremony still completes + stays secret ----
+lemma S11_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+
+lemma S11_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+end

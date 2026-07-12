@@ -3,7 +3,7 @@
   variants (participants, stress targeting, NeqRecipient) and then conditionally includes ONE full flow
   (Alex sender + Blake recipient):
 
-     #ifdef IF_SCREENS  ->  sender_screens.spthy   (full-interface Screens A/B/C -- RELAYER)
+     sender_screens.spthy   (full-interface Screens A/B/C -- RELAYER; the only flow)
      #else              ->  sender_legacy.spthy    (method choice + ambient surfaces + pick/verify/send
                                                     + the legacy Blake receiver rules)
 
@@ -53,9 +53,5 @@ restriction OnceStressBlake:
   "All #i #j. StressOn('Blake')@i & StressOn('Blake')@j ==> #i = #j"
 #endif
 
-// ===================== sender selection (full-interface screens vs legacy) =====================
-#ifdef IF_SCREENS
+// ===================== the full-interface flow (Screens A/B/C) =====================
 #include "sender_screens.spthy"
-#else
-#include "sender_legacy.spthy"
-#endif

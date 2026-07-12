@@ -7,7 +7,6 @@ begin
   a non-correspondent. The ORDER lever is armed too: a degraded Send can fire BEFORE the verify at all
   (SendPremature) -- something the old model could not even express.
 */
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

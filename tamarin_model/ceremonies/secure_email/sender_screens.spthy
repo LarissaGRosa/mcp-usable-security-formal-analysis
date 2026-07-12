@@ -5,9 +5,10 @@
      #ifdef PATH_PGP  ->  screens_pgp.spthy   (Alex verify+send, Blake Screen C inbox)
      #ifdef PATH_PW   ->  screens_pw.spthy    (Alex passphrase+share, Blake Screen B password page)
 
-  Included by protocol.spthy when IF_SCREENS is armed. See secure_email/INTERFACE_MAP.md.
+  Included by protocol.spthy (the only flow -- the legacy sender was retired in step 10).
+  See secure_email/INTERFACE_MAP.md.
 
-  A profile arms: IF_SCREENS + MASK_TRANSCRIBE / MASK_COMPUTE / MASK_DECIDE (MASK_COMPARE /
+  A profile arms: MASK_TRANSCRIBE / MASK_COMPUTE / MASK_DECIDE (MASK_COMPARE /
   MASK_COMPARE_KEYCHECKED / MASK_SHARE / MASK_AUTHORIZE are constant in base.spthy), at least one PATH_*,
   and STRESS_ALEX and/or STRESS_BLAKE. A PATH_PW profile must ALSO arm MASK_CONFIRM (Screen B hangs off
   the link-confirm).

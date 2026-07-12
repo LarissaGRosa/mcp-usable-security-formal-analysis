@@ -271,3 +271,27 @@ flowchart LR
 - [ ] Property templates instantiated (reachability + attribution + the lever pair).
 - [ ] `check.py --prove` green for every profile (see `TERMINATION.md` if it stalls).
 - [ ] Requirement(s) added to `tools/rfc_requirements.json`; `rfc_gen.py` regenerated.
+
+## 8b. The agnosticism audit (mechanical — run it before every commit to `core/`)
+
+`core/` must never learn a ceremony's vocabulary. Three checks:
+
+```bash
+# (a) no ceremony constant may appear in core/
+grep -nE "'(Alex|Blake|composer|subject|hint|pgp|pw|nonce|chat)'" tamarin_model/core/   # must be EMPTY
+
+# (b) every MASK_*/SIGMA*/OUTCOME_* flag is armed by BOTH ceremonies, or listed with a reason
+# (c) a new core block must be consumed by BOTH ceremonies unchanged -- that is the proof it is agnostic
+grep -rl "#define MASK_TRANSCRIBE"   tamarin_model/ceremonies/*/   # both ceremonies
+grep -rl "#define OUTCOME_PREMATURE" tamarin_model/ceremonies/*/   # both ceremonies
+```
+
+Single-ceremony flags are allowed but must be *deliberate*: `MASK_POLICY`, `SIGMA_INDUCED_TIME`,
+`MASK_COMPARE_VERIFYDONE` (kdf-only); `SIGMA_CUE`, `OUTCOME_CARELESS_MISROUTE`,
+`OUTCOME_HABITUATED_CLICKTHROUGH`, `OUTCOME_CARELESS_SKIPCHECK` (secure_email-only). **`SIGMA9_ALERTVOLUME`
+is currently kdf-only and that is a GAP, not a decision** — see `docs/DIVERGENCES.md`.
+
+The rule that makes this work: **core provides the LEVER, the ceremony provides the EFFECT.** Core's
+`OUTCOME_PREMATURE` emits `GrantedUnchecked` and knows nothing about what the grant was waiting for; each
+ceremony writes the one effect rule that consumes it (`SendPremature` / `SessionUnconfirmed`). That is why
+the same core lever yields an RFC requirement in two unrelated ceremonies.

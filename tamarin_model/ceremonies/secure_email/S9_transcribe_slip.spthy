@@ -17,7 +17,6 @@ begin
   Run: check.py --prove ceremonies/secure_email/S9_transcribe_slip.spthy
 */
 
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

@@ -7,7 +7,6 @@ begin
   (arousal -> a Fearful FREEZE: the guide's abandonment case, a safe-fail). The click-through row is armed,
   so a Habituated Blake accepts without looking.
 */
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE
@@ -26,6 +25,11 @@ begin
 lemma S3_abstraction_onset: exists-trace "Ex #i. Abstraction('Blake')@i"
 lemma S3_habituate_onset:   exists-trace "Ex #i. Habituate('Blake')@i"
 lemma S3_anxiety_onset:     exists-trace "Ex #i. SecurityAnxiety('Blake')@i"
+
+// the recipient-side breach: a degraded Forward re-sends m to a keyless third party -> Out(m), even
+// though every SENDER step was perfect. (The "vulnerable" half of the forward-guard RFC pair.)
+lemma S3_forward_outside:
+  exists-trace "Ex #i. ForwardedOutside('Blake')@i"
 
 lemma S3_fearful_freeze_safe:
   exists-trace "Ex a #i. Abort('Blake', a)@i"

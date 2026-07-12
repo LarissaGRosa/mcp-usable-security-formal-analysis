@@ -80,8 +80,12 @@
       "risk_text": "Sending a sharing password in-band (same channel as the ciphertext) lets the adversary decrypt; a Careless user takes that shortcut and leaks it silently.",
       "vulnerable": [
         {
+          "profile": "tamarin_model/ceremonies/secure_email/S10_pw_inband_leak.spthy",
+          "lemma": "S10_inband_leak_silent"
+        },
+        {
           "profile": "tamarin_model/ceremonies/secure_email/S2_trio_pw.spthy",
-          "lemma": "S2_alertvolume_inband_silent"
+          "lemma": "S2_misdelivered_pw"
         }
       ],
       "removed_by": {
@@ -107,6 +111,82 @@
         "lever": "the expert population (low demand) -- which a novice does NOT enjoy; so the safety is population-scoped"
       },
       "requirement": "The analysis/deployment MUST consider the least-skilled intended user population (the slip is reachable for novices though not experts); equivalently, the interface MUST lower the step's demand for everyone."
+    },
+    {
+      "id": "REQ-VERIFY-BEFORE-SEND",
+      "title": "Disable the send control until verification completes",
+      "risk_text": "When the composer shows the Send button CO-PRESENT with the unfinished key verification, a degraded user can authorise the send BEFORE the fingerprint has been checked at all. This is not a wrong answer to a prompt -- it is answering the prompts OUT OF ORDER, and the resulting message leaves the boundary unverified. The old model could not even express this: a ceremony whose steps are joined linearly cannot produce an out-of-order trace.",
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S1_trio_pgp.spthy",
+          "lemma": "S1_premature_send"
+        },
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S4_worstcase.spthy",
+          "lemma": "S4_premature_send"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/secure_email/S11_hardened.spthy",
+        "lemma": "S11_no_premature_send",
+        "lever": "a forcing function: the Send control is disabled (not merely warned about) until the recipient's key has been verified, so the out-of-order grant has no route to the wire"
+      },
+      "requirement": "Implementations MUST disable the send action until recipient-key verification has completed. A warning or a confirmation dialog is NOT sufficient: the degraded user grants it."
+    },
+    {
+      "id": "REQ-CONFIRM-BEFORE-SESSION",
+      "title": "Disable session start until key confirmation completes (second ceremony)",
+      "risk_text": "The SAME order violation appears in a completely different ceremony: in the manual key-establishment messenger, a degraded user presses 'start session' before the key read-back, and the session goes live on an unconfirmed -- possibly slipped or substituted -- key. The shutdown that would have caught it is simply skipped.",
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/alex_blake_kdf/K3_premature.spthy",
+          "lemma": "K3_premature_reachable"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/alex_blake_kdf/K5_hardened.spthy",
+        "lemma": "K5_no_unconfirmed_session",
+        "lever": "the same forcing function: 'start session' is disabled until the key confirmation read-back has completed"
+      },
+      "requirement": "Implementations MUST disable session establishment until key confirmation has completed. This is the SAME requirement as REQ-VERIFY-BEFORE-SEND, proved necessary in a second, independent ceremony -- which is what makes it a general design rule rather than an artefact of one protocol."
+    },
+    {
+      "id": "REQ-NO-PLAINTEXT-FALLBACK",
+      "title": "No silent plaintext fallback in the encryption selector",
+      "risk_text": "When the encryption selector offers 'Standard (TLS only)' alongside the protected methods, a degraded user picks the wrong route and the message is handed to the provider in the clear. Nothing about the send looks unusual to the user.",
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S8_transcribe.spthy",
+          "lemma": "S8_tls_misroute_chain"
+        },
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S4_worstcase.spthy",
+          "lemma": "S4_tls_misroute"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/secure_email/S11_hardened.spthy",
+        "lemma": "S11_no_plaintext_fallback",
+        "lever": "removing the plaintext exit from the selector for a correspondent whose key is available (the composer's per-recipient lock indicator already knows this)"
+      },
+      "requirement": "Implementations MUST NOT offer an unprotected send route as a peer option in the encryption selector when a protected route is available for the recipient."
+    },
+    {
+      "id": "REQ-FORWARD-GUARD",
+      "title": "Forward must re-encrypt or block",
+      "risk_text": "The recipient-side breach: every SENDER step can be perfect and the message still leaves the boundary, because a degraded recipient forwards it to a third party for whom no key exists and the client silently sends it in the clear. This is a breach of 'only the correspondents know m' that no sender-side mitigation can prevent.",
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S3_trio_mixed.spthy",
+          "lemma": "S3_forward_outside"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/secure_email/S11_hardened.spthy",
+        "lemma": "S11_no_forward_outside",
+        "lever": "Forward re-encrypts to the new recipient or BLOCKS -- it never silently downgrades to cleartext"
+      },
+      "requirement": "Implementations MUST NOT silently downgrade a forwarded protected message to cleartext. Forward MUST either re-protect for the new recipient or refuse."
     }
   ]
 }

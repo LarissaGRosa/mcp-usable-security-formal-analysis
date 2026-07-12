@@ -7,7 +7,6 @@ begin
   Careless in-band leak lives in S10_pw_inband_leak: arming Busy AND Careless together overruns the
   budget, so the two share outcomes are split by mask (as the transcribe story is across S8/S9).
 */
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

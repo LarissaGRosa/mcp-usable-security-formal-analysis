@@ -15,16 +15,18 @@
 #define MASK_SHARE
 #define MASK_AUTHORIZE
 #define OUTCOME_DEGRADED_CLICK
-#define LEXICON_DEFAULT
 
-// The legacy variant stresses BOTH parties (S0-S7 behaviour). A full-interface (IF_SCREENS) profile
-// picks STRESS_ALEX / STRESS_BLAKE itself -- stressing ONE party keeps the two-party screen surface
-// tractable (the unstressed party's degraded rules are pruned from precomputation).
-#ifdef IF_SCREENS
+// The demand profile is a CHOICE, not an addition: !Demands rows are persistent and additive, so a
+// hardened profile must REPLACE the novice lexicon rather than seed a second row for the same step
+// (otherwise the detector just fires on the un-hardened row). A profile arms IF_HARDENED to take the
+// hardened lexicon; everything else gets the novice default.
+#ifdef IF_HARDENED
 #else
-#define STRESS_ALEX
-#define STRESS_BLAKE
+#define LEXICON_DEFAULT
 #endif
+
+// Each profile picks STRESS_ALEX / STRESS_BLAKE itself -- stressing ONE party keeps the two-party
+// screen surface tractable (the unstressed party's degraded rules are pruned from precomputation).
 
 #include "../../core/framework.spthy"
 #include "protocol.spthy"

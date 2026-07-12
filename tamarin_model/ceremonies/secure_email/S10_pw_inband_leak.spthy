@@ -9,7 +9,6 @@ begin
   Companion to S2_trio_pw (Busy -> misdeliver): the two share outcomes are split by mask because arming
   Busy AND Careless together on the screens overruns the prover budget.
 */
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

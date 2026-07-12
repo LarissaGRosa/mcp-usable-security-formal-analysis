@@ -276,3 +276,41 @@
     turned out vestigial (stressors read `!Prompt`, adapters read `!StepData`/outcomes, lemmas read
     action labels like `Verify`/`Slip`) — dropping it took S4 solo 340s → 204s with no proof change.
     Keep only the committed `!StepData` where a consumer actually reads it.
+
+20. **Tamarin's preprocessor cannot SKIP a nested `#ifdef` (RELAYER, 2026-07-11).** It supports only
+    `#ifdef` / `#else` / `#endif` / `#define` / `#include` — there is **no `#ifndef`**. And when it skips a
+    false `#ifdef`, it does **not** track nested `#ifdef`s: it matches the FIRST `#endif` and silently
+    mis-nests everything after. The theory still loads, well-formedness still passes, and every lemma goes
+    quietly **vacuous**. Symptom: a trivially-reachable `exists-trace` is "falsified — no trace found" in 2
+    steps. Fix: any mutually-exclusive block that itself contains inner `#ifdef`s must be a **separate
+    file**, conditionally `#include`d (a skipped branch then holds only the `#include` line). This is why
+    the secure_email flow is `sender_screens.spthy` + `screens_pgp.spthy` + `screens_pw.spthy`.
+
+21. **Density detectors of the form "any N of M prompts" explode; use a single marker.** σ2 (`any two
+    !Demand`) and σ9 (`any three 'decide'`) are O(M²)/O(M³) lookups in the SOURCE SATURATION. Harmless with
+    the 2–3 prompts an ambient stub poses; **catastrophic** once a real screen poses 8–12 co-present
+    controls — even the trivially-true `H_sk_secret` timed out. Rewrote σ2/σ9 in core to read ONE marker
+    (`!Copresent` / `!CopresentDecide`) emitted by a screen that shows enough controls. Cost: the detector
+    no longer *derives* concurrency, the ceremony *asserts* it (see docs/DIVERGENCES.md B1).
+
+22. **Density COUNTS `!Demand`; the mask ANSWERS `Prompt` — so exposure-only controls emit `!Demand` with
+    NO `Prompt`.** That makes them free: counted by the detectors, never performed, zero branching. Posing a
+    `Prompt` for a control that drives no outcome is pure branching (lesson 15b) and with MASK_DECIDE +
+    MASK_CONFIRM armed the exposure controls ALONE timed the proof out.
+
+23. **Gate the PATHWAY per profile.** With both the PGP and password pathways compiled into every theory,
+    each profile hauled the whole two-pathway/two-party surface and only ONE stressor fitted in budget —
+    the stressor TRIOS were unprovable. Gating (`PATH_PGP`/`PATH_PW`) halves the surface: σ6+σ2 went from
+    >3 min to **13 s**. Also: **Busy is the expensive mask** (its slips mint fresh terms); `SIGMA_ADDITIVE`
+    is the cheap route to it (93 s under σ1 → 5 s). A story needing Busy AND Careless must be SPLIT by mask.
+
+24. **`K(f(a,b))` does NOT imply `K(a) & K(b)` in a lemma.** `K(·)` is an ACTION that fires when the
+    adversary *uses* a term; it does not fire on the sub-terms of a term the adversary *derives* (those are
+    `!KU` facts). The plan's `H_sk_requires_both_nonces` is falsifiable as written. State the equivalent
+    over the ceremony's MISTAKE vocabulary instead ("both parties exported a nonce") — same claim, provable,
+    and better for attribution.
+
+25. **The prover budget is 3 minutes per theorem, and it is a MODELLING gate, not a timeout knob.** Run
+    capped — the box has no swap, so a runaway proof OOM-freezes it:
+    `MAUDE_LIB=/usr/share/maude check.py --prove --timeout 178 FILE -- +RTS -M6G -RTS`
+    (without `MAUDE_LIB` tamarin cannot find `prelude.maude` and every profile FAILs spuriously).

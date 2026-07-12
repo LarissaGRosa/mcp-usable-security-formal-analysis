@@ -7,7 +7,6 @@ begin
   agnostic attribution invariants -- including UP_premature_requires_degrade, which pins the ORDER
   violation to a prior degrade (an Attentive human can never take that route).
 */
-#define IF_SCREENS
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE

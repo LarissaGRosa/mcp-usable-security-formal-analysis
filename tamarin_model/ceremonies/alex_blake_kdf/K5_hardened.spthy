@@ -1,0 +1,44 @@
+theory KDF_K5_Hardened
+begin
+/*
+  K5 -- the HARDENED messenger: the CONFIRM-BEFORE-SESSION forcing function. The "start session" control
+  cannot be granted before the key-confirmation read-back, so the out-of-order route does not exist
+  (OUTCOME_PREMATURE not armed) => SessionUnconfirmed UNREACHABLE.
+
+  This is the "removed_by" half of the SAME RFC lever already proved in secure_email (send-disabled-until-
+  verify / SendPremature). One core lever (OUTCOME_PREMATURE + a GrantedUnchecked consumer), proved
+  necessary in TWO independent ceremonies -- which is the RFC-grade generality claim.
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_DEGRADED_CLICK
+
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+// the stressor still fires -- the human is under the same pressure.
+lemma K5_distract_onset: exists-trace "Ex #i. Distract('Alex')@i"
+
+// the forcing function: the session can NEVER go live on an unconfirmed key.
+lemma K5_no_unconfirmed_session:
+  all-traces "not (Ex p #i. SessionUnconfirmed(p)@i)"
+
+// and the ceremony still completes.
+lemma K5_completes:
+  exists-trace "Ex #a #b. SessionUp('Alex')@a & SessionUp('Blake')@b"
+end
