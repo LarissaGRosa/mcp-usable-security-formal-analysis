@@ -56,5 +56,20 @@ lemma S11_only_correspondents_know:
      | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
      | (Ex p #d. MisaddressedSend(p)@d)"
 
-lemma S11_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset. ----
+// The weak form ("Ex Send & Read") is satisfied by a trace in which the stressor NEVER FIRED, so in a
+// STRESSED profile it says almost nothing. These pin the onset strictly BEFORE the stressed party's own
+// completion step, so the witness is a trace where the human was ALREADY degraded and still finished.
+
+// NOTE: there is deliberately NO S11_..._completes_under_sigma6. IF_HARDENED seeds the FULL lexicon, so
+// the abstraction onset CANNOT fire -- S11_no_abstraction proves exactly that. A "completes under sigma6"
+// witness would contradict it. The hardening lever REMOVES the stressor rather than surviving it, which is
+// a STRONGER outcome than completing under it, and the sigma2 witness below shows the profile is not
+// merely stressor-free.
+lemma S11_hardened_completes_under_sigma2:
+  exists-trace
+  "Ex m #o #s #r.
+     Distract('Alex')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r
+   & #o < #s"
+
 end

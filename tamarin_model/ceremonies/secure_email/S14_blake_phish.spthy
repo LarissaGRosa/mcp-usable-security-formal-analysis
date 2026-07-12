@@ -44,4 +44,16 @@ lemma S14_pw_stays_oob:
   all-traces
   "All pw #c #k. PwCreated(pw)@c & K(pw)@k
    ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d) | (Ex p #d. PwEnteredAtImpostor(p)@d)"
+
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset. ----
+// The weak form ("Ex Send & Read") is satisfied by a trace in which the stressor NEVER FIRED, so in a
+// STRESSED profile it says almost nothing. These pin the onset strictly BEFORE the stressed party's own
+// completion step, so the witness is a trace where the human was ALREADY degraded and still finished.
+
+lemma S14_blake_phish_completes_under_sigma8:
+  exists-trace
+  "Ex m link #o #s #u #r.
+     Habituate('Blake')@o & Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r
+   & #o < #r"
+
 end

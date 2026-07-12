@@ -39,6 +39,21 @@ lemma S2_only_correspondents_know:
 lemma S2_read_only_blake:
   all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
-lemma S2_completes:
-  exists-trace "Ex m link #s #u #r. Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset. ----
+// The weak form ("Ex Send & Read") is satisfied by a trace in which the stressor NEVER FIRED, so in a
+// STRESSED profile it says almost nothing. These pin the onset strictly BEFORE the stressed party's own
+// completion step, so the witness is a trace where the human was ALREADY degraded and still finished.
+
+lemma S2_trio_pw_completes_under_sigma1:
+  exists-trace
+  "Ex m link #o #s #u #r.
+     Load('Alex')@o & Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r
+   & #o < #s"
+
+lemma S2_trio_pw_completes_under_sigma3:
+  exists-trace
+  "Ex m link #o #s #u #r.
+     TimePressure('Alex')@o & Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r
+   & #o < #s"
+
 end

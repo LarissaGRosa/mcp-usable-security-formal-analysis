@@ -52,5 +52,21 @@ lemma S12_only_correspondents_know:
      | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
      | (Ex p #d. MisaddressedSend(p)@d)"
 
-lemma S12_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset. ----
+// The weak form ("Ex Send & Read") is satisfied by a trace in which the stressor NEVER FIRED, so in a
+// STRESSED profile it says almost nothing. These pin the onset strictly BEFORE the stressed party's own
+// completion step, so the witness is a trace where the human was ALREADY degraded and still finished.
+
+lemma S12_field_reminder_completes_under_additive:
+  exists-trace
+  "Ex m #o #s #r.
+     AdditiveLoad('Alex')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r
+   & #o < #s"
+
+lemma S12_field_reminder_completes_under_sigma10:
+  exists-trace
+  "Ex m #o #s #r.
+     RepeatedFailure('Alex')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r
+   & #o < #s"
+
 end

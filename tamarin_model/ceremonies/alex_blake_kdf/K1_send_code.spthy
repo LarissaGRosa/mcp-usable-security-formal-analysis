@@ -42,6 +42,15 @@ lemma K1_only_correspondents_know_sk:
    ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
      & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
 
-lemma K1_completes:
-  exists-trace "Ex #a #b. SessionUp('Alex')@a & SessionUp('Blake')@b"
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset. ----
+// The weak form ("Ex Send & Read") is satisfied by a trace in which the stressor NEVER FIRED, so in a
+// STRESSED profile it says almost nothing. These pin the onset strictly BEFORE the stressed party's own
+// completion step, so the witness is a trace where the human was ALREADY degraded and still finished.
+
+lemma K1_send_code_completes_under_sigma1:
+  exists-trace
+  "Ex #o #a #b.
+     Load('Alex')@o & SessionUp('Alex')@a & SessionUp('Blake')@b
+   & #o < #a"
+
 end

@@ -62,4 +62,11 @@ lemma P2_mistake_requires_abstraction:
   all-traces
   "All p vid #o. Mistake(p,vid)@o ==> (Ex #s. Abstraction(p)@s & #s < #o)"
 
+// ---- onset coverage (lesson 16): every ARMED stressor must be WITNESSED firing in the profile that
+// arms it. Without this a stressor can be silently unreachable and every other lemma still passes --
+// the same vacuity that hid PwEnteredAtImpostor (DIVERGENCES D2). ----
+
+lemma P2_anxiety_onset:
+  exists-trace "Ex #i. SecurityAnxiety('Alex')@i"
+
 end

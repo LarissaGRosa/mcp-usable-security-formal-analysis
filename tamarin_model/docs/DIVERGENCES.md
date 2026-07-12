@@ -76,7 +76,8 @@ which is honest, but it means **no single profile shows the whole interface at o
 | A5 subject reminder (`IF_FIELD_REMINDER`) | **MET** | RFC pair `S8` → `S12_no_subject_leak`. **DERIVED, not axiomatic** — see D1. |
 | To-field slip → misdirection | **MET** | `S8_to_field_misaddressed`. Core now emits a `TranscribeSlipped` token (the counterpart of `TranscribeLeaked`) so the ceremony gives it meaning WITHOUT threading a second free-valued `!StepData` into the send — which is what originally opened the non-terminating source chains. |
 | Blake's compare/confirm adversary-mediated | **MET** | Screen B `In(claimedOrigin)`; Screen C `In(senderKey)` (under `PGP_REPLY`). |
-| T5 completion-under-onset, strong (ordered) form | **partly MET** | `S8_completes_under_onset` and `K7_completes_under_onset` use the ORDERED form. Most other profiles still use the fallback (unordered, unsafe-conjunct dropped), so they say "the onset happens and the ceremony completes", not "completes DESPITE the onset". |
+| T5 completion-under-onset, strong (ordered) form | **MET** | was the biggest real gap; see D6. Every stressed S/K profile now carries one `_completes_under_<σ>` per ARMED stressor (28 lemmas), pinning the onset strictly before the STRESSED party's own completion step. |
+| Onset coverage per armed stressor (lesson 16) | **MET** | the four legacy P-profiles that armed a stressor no lemma witnessed (`P1`,`P2`,`P3`,`P6`) now have one; all 10 verified, so no stressor was in fact dead. |
 | A11 expiration, A4 Cc/Bcc, A12 attach, A16 discard, B3/B5/B8/B9 | **exposure only** | posed as `!Demand` for density; no answer drives anything. |
 | RFC lever pairs | **MET, 12/12 proven** | incl. `REQ-CONFIRM-BEFORE-SESSION`, the SAME core lever as `REQ-VERIFY-BEFORE-SEND` proved necessary in a second, independent ceremony. |
 
@@ -138,6 +139,40 @@ is a reusable rule rather than a one-off tuning hack:
 heuristic, not by structure alone. It is a real dependency: a future tamarin whose ranking changes could
 push these back out, and there is no lemma-level test that would explain *why*. Points 1 and 2 are
 structural and survive that; point 3 should be understood as tuning, and is commented as such in the file.
+
+### D6. The (C) half of the (C)∧(S) pair was near-VACUOUS in 20 profiles (the plan's own G5)
+The worst finding of the whole audit, and it was mine. Plan step 7 specifies T5 as
+`Sx_completes_under_<σ>` — **onset ∧ finish**. It permits dropping the *negated-unsafe* conjunct as a
+fallback; it does **not** permit dropping the **onset**, which is the entire "under σ". I dropped the onset
+everywhere except `S8` and `K7`. What twenty profiles actually shipped was:
+
+    lemma S1_completes: exists-trace "Ex m #s #r. Send('Alex','PGP',m)@s & Read('Blake',m)@r"
+
+**That witness is satisfied by a trace in which the stressor never fired.** In a profile whose whole point
+is σ6+σ2, it asserts only "the ceremony can complete" — which the *baseline* already proves. So the pair the
+plan was built to deliver (G5: "no uniform per-stressor pair (C) ∧ (S)") had a real (S) side and a hollow
+(C) side, in exactly the profiles where (C) was supposed to carry weight.
+
+**Fixed:** every stressed S/K profile now carries one `_completes_under_<σ>` per ARMED stressor (28
+lemmas). The onset is pinned strictly before **the stressed party's own** completion step — Alex's onsets
+before `Send`, Blake's before `Read`/`SessionUp`. (Ordering a *Blake* onset before *Alex's* send is simply
+false: Blake degrades when he reads, which is after Alex sent. The naive "onset < first event" form would
+have been unprovable for `S3`/`S6`/`S14`/`K6` for an uninteresting reason.)
+
+Two of the 28 came back **falsified**, and both were worth having:
+- **`S11_hardened` under σ6 is IMPOSSIBLE — and that is the correct outcome.** `IF_HARDENED` seeds the full
+  lexicon, so the abstraction onset cannot fire at all; `S11_no_abstraction` already proved it. The lever
+  **removes** the stressor rather than surviving it, which is *stronger* than completing under it. The
+  profile deliberately has no σ6 witness now, with a comment saying why, and its σ2 witness shows it is not
+  merely stressor-free.
+- **`K6_mitm` was asking about the wrong human** (`Abstraction('Alex')` in a `STRESS_BLAKE` profile — Alex
+  has no `!StressEnable`, so the onset was unsatisfiable). Corrected to Blake. It now proves something
+  pointed: Blake abstracted, the MITM active, and **both parties still reach `SessionUp`** — i.e.
+  *completion does not imply security*, which is the whole thesis of the ceremony.
+
+**Residual shortcoming.** The unsafe-conjunct is still dropped (the plan's sanctioned fallback), so T5 says
+"completes despite the onset", not "completes despite the onset *and cleanly*". Cleanliness is derived
+separately from T6 rather than inside the same witness.
 
 ### D5. Still true from the first pass
 - **`--auto-sources` is unusable here** (heap-exhausts), so the model relies entirely on hand-kept

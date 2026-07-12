@@ -64,4 +64,23 @@ lemma P3_attentive_never_accepts_tampered:
   all-traces
   "All p vid #i. Verify(p,vid,'Attentive')@i ==> not (Ex #j. Tampered(vid)@j)"
 
+// ---- onset coverage (lesson 16): every ARMED stressor must be WITNESSED firing in the profile that
+// arms it. Without this a stressor can be silently unreachable and every other lemma still passes --
+// the same vacuity that hid PwEnteredAtImpostor (DIVERGENCES D2). ----
+
+lemma P3_sigma1_onset:
+  exists-trace "Ex #i. Load('Alex')@i"
+
+lemma P3_sigma2_onset:
+  exists-trace "Ex #i. Distract('Alex')@i"
+
+lemma P3_sigma3_onset:
+  exists-trace "Ex #i. TimePressure('Alex')@i"
+
+lemma P3_sigma8_onset:
+  exists-trace "Ex #i. Habituate('Alex')@i"
+
+lemma P3_anxiety_onset:
+  exists-trace "Ex #i. SecurityAnxiety('Alex')@i"
+
 end

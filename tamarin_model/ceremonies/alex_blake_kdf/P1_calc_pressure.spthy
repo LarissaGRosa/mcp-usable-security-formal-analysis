@@ -52,4 +52,14 @@ lemma P1_busy_no_correct_key:
   all-traces
   "All p k #i. (Calc(p,'Busy')@i & Key(p,k)@i) ==> not(Ex a b. k = kdf(a,b))"
 
+// ---- onset coverage (lesson 16): every ARMED stressor must be WITNESSED firing in the profile that
+// arms it. Without this a stressor can be silently unreachable and every other lemma still passes --
+// the same vacuity that hid PwEnteredAtImpostor (DIVERGENCES D2). ----
+
+lemma P1_sigma2_onset:
+  exists-trace "Ex #i. Distract('Alex')@i"
+
+lemma P1_sigma3_onset:
+  exists-trace "Ex #i. TimePressure('Alex')@i"
+
 end

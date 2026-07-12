@@ -49,4 +49,14 @@ lemma P6_no_tampered_mistake:
   all-traces
   "All p vid #o. Mistake(p,vid)@o ==> not (Ex #j. Tampered(vid)@j)"
 
+// ---- onset coverage (lesson 16): every ARMED stressor must be WITNESSED firing in the profile that
+// arms it. Without this a stressor can be silently unreachable and every other lemma still passes --
+// the same vacuity that hid PwEnteredAtImpostor (DIVERGENCES D2). ----
+
+lemma P6_sigma1_onset:
+  exists-trace "Ex #i. Load('Alex')@i"
+
+lemma P6_sigma6_onset:
+  exists-trace "Ex #i. Abstraction('Alex')@i"
+
 end

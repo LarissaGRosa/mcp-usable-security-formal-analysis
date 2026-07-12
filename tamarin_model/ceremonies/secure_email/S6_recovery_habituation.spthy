@@ -35,5 +35,15 @@ lemma S6_only_correspondents_know:
 lemma S6_read_only_blake:
   all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
-lemma S6_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+// ---- (C) T5, the STRONG (ordered) form: the ceremony completes DESPITE the onset. ----
+// The weak form ("Ex Send & Read") is satisfied by a trace in which the stressor NEVER FIRED, so in a
+// STRESSED profile it says almost nothing. These pin the onset strictly BEFORE the stressed party's own
+// completion step, so the witness is a trace where the human was ALREADY degraded and still finished.
+
+lemma S6_recovery_habituation_completes_under_sigma8:
+  exists-trace
+  "Ex m #o #s #r.
+     Habituate('Blake')@o & Send('Alex','PGP', m)@s & Read('Blake', m)@r
+   & #o < #r"
+
 end
