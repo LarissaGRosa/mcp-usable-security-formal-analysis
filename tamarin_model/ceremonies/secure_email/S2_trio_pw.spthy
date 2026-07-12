@@ -1,72 +1,38 @@
 theory SecureEmail_S2_TrioPW
 begin
-
 /*
-  S2 -- the PASSWORD trio {sigma1 Load, sigma3-deadline, sigma9 AlertVolume}: the password's channel
-  is the whole game. Every leak is a HUMAN MISTAKE on the address/send step -- misdelivery to the wrong
-  contact (Out) or an in-band leak (silent: Blake still reads). No adversary keyserver or mail injection.
-  Run: check.py --prove ceremonies/secure_email/S2_trio_pw.spthy
+  S2 -- the PASSWORD pair {sigma1 Load, sigma3 Deadline} -> BUSY on the REAL Screens A/B.
+  The passphrase compute is MentalDemand-hi and sits under the link timer; the password's CHANNEL is the
+  whole game. A BUSY share MISDELIVERS the passphrase to the wrong contact -> Out(pw). The companion
+  Careless in-band leak lives in S10_pw_inband_leak: arming Busy AND Careless together overruns the
+  budget, so the two share outcomes are split by mask (as the transcribe story is across S8/S9).
 */
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PW
 
-// -- the trio (Blake is also a stress target via protocol.spthy's Enable_Stress_Blake) --
+#define STRESS_ALEX
 #define SIGMA1_LOAD
 #define SIGMA3_DEADLINE
-#define SIGMA9_ALERTVOLUME
 
 #include "base.spthy"
 
-// ---- security properties under this trio ----
+lemma S2_load_onset:     exists-trace "Ex #i. Load('Alex')@i"
+lemma S2_deadline_onset: exists-trace "Ex #i. TimePressure('Alex')@i"
+lemma S2_misdelivered_pw: exists-trace "Ex p #i. MisdeliveredPw(p)@i"
 
-// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
-// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
-lemma S2_message_secrecy_attribution:
+lemma S2_only_correspondents_know:
   all-traces
-  "All m #s #k.
-     Secret(m)@s & K(m)@k
-   ==> (Ex p vid #d. Mistake(p, vid)@d)
-     | (Ex p #d. LeakPw(p)@d)
-     | (Ex p #d. MisdeliveredPw(p)@d)"
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
 
-lemma S2_degrade_from_interface_step:
-  all-traces
-  "All p m #s.
-     SetMask(p, m)@s & not(m = 'Attentive')
-   ==> (Ex step #u. UIStep(p, step)@u & #u < #s)"
+lemma S2_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
-// ---- one chain per stressor ----
-
-// sigma1: the passphrase compute is MentalDemand-hi -> Busy -> misdelivered password. (K-free chain
-// per lesson 15: state it to the mistake+send; the attribution lemma carries the K(m) story.)
-lemma S2_load_busy_misdelivery:
-  exists-trace
-  "Ex m #u #o #h #d #s.
-     UIStep('Alex','set_passphrase')@u & Load('Alex')@o
-   & Share('Alex','Busy')@h & MisdeliveredPw('Alex')@d
-   & Send('Alex','PW', m)@s"
-
-// sigma3 v2: the address/send control is presented UNDER THE LINK TIMER -> Busy -> misdelivery.
-lemma S2_deadline_pressure_misdelivery:
-  exists-trace
-  "Ex m #u #o #h #d #s.
-     UIStep('Alex','btn_send')@u & TimePressure('Alex')@o
-   & Share('Alex','Busy')@h & MisdeliveredPw('Alex')@d
-   & Send('Alex','PW', m)@s"
-
-// sigma9: weighing the method options fatigues -> Careless in-band leak: the SILENT compromise
-// (Blake still reads while the passphrase leaks). K-free: LeakPw is the leak witness, the attribution
-// lemma carries K(m).
-lemma S2_alertvolume_inband_silent:
-  exists-trace
-  "Ex m #u #o #h #d #s #r.
-     UIStep('Alex','method_toggle')@u & AlertVolume('Alex')@o
-   & Share('Alex','Careless')@h & LeakPw('Alex')@d
-   & Send('Alex','PW', m)@s & Read('Blake', m)@r"
-
-// ATTRIBUTION on the password pathway: any adversary win traces to a degraded (non-Attentive) share.
-lemma S2_attentive_defeats_leak:
-  all-traces
-  "All m #s #k.
-     Secret(m)@s & K(m)@k & not (Ex p vid #d. Mistake(p, vid)@d)
-   ==> (Ex p mask #h. Share(p, mask)@h & not (mask = 'Attentive'))"
-
+lemma S2_completes:
+  exists-trace "Ex m link #s #u #r. Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
 end

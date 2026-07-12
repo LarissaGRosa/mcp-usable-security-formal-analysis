@@ -1,0 +1,47 @@
+theory SecureEmail_S10_PwInbandLeak
+begin
+/*
+  S10 -- the SILENT compromise on the password pathway (sigma2 -> Careless). A Careless share leaks the
+  passphrase IN-BAND (it is mailed alongside the link instead of going out-of-band) -- and Blake STILL
+  reads the message, so nothing looks wrong to either party while the passphrase has escaped. Blake's
+  phishing-page link-confirm is live here too (PwEnteredAtImpostor).
+
+  Companion to S2_trio_pw (Busy -> misdeliver): the two share outcomes are split by mask because arming
+  Busy AND Careless together on the screens overruns the prover budget.
+*/
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PW
+
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+
+#include "base.spthy"
+
+lemma S10_distract_onset: exists-trace "Ex #i. Distract('Alex')@i"
+
+// the SILENT compromise: the passphrase leaks in-band and Blake STILL reads -- nothing looks wrong.
+lemma S10_inband_leak_silent:
+  exists-trace "Ex p m #l #r. LeakPw(p)@l & Read('Blake', m)@r"
+
+lemma S10_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+
+lemma S10_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+// the passphrase reaches the adversary ONLY through a degraded share / the phishing page.
+lemma S10_pw_stays_oob:
+  all-traces
+  "All pw #c #k. PwCreated(pw)@c & K(pw)@k
+   ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d) | (Ex p #d. PwEnteredAtImpostor(p)@d)"
+
+lemma S10_completes:
+  exists-trace "Ex m link #s #u #r. Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
+end

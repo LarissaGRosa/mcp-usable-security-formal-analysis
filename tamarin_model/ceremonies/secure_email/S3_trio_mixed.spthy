@@ -1,59 +1,43 @@
 theory SecureEmail_S3_TrioMixed
 begin
-
 /*
-  S3 -- the MIXED trio {sigma6 Abstraction, sigma8 Habituation, Anxiety} on the PGP surface: two ways a
-  degraded compare accepts a substituted key (Naive; click-through) plus the Fearful freeze (the
-  degradation that HELPS secrecy). sigma8 is the profile's one DENSITY detector (see S1's note: two
-  density detectors cannot share a profile).
-  Run: check.py --prove ceremonies/secure_email/S3_trio_mixed.spthy
+  S3 -- the RECIPIENT trio {sigma6 Abstraction, sigma8 Habituation, sigma_ANXIETY} on Blake's Screen C.
+  BLAKE is the stressed party: the inbox shows encryption + signature badges (two co-present confirms ->
+  habituation), a trusted-key fingerprint view (effortful compare -> abstraction), and a decrypt authorize
+  (arousal -> a Fearful FREEZE: the guide's abandonment case, a safe-fail). The click-through row is armed,
+  so a Habituated Blake accepts without looking.
 */
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PGP
 
-// -- the mixed trio + the opt-in row the habituation story needs --
+#define STRESS_BLAKE
 #define SIGMA6_ABSTRACTION
 #define SIGMA8_HABITUATION
 #define SIGMA_ANXIETY
 #define OUTCOME_HABITUATED_CLICKTHROUGH
+#define OUTCOME_CARELESS_MISROUTE
 
 #include "base.spthy"
 
-// ---- security properties under this trio ----
+lemma S3_abstraction_onset: exists-trace "Ex #i. Abstraction('Blake')@i"
+lemma S3_habituate_onset:   exists-trace "Ex #i. Habituate('Blake')@i"
+lemma S3_anxiety_onset:     exists-trace "Ex #i. SecurityAnxiety('Blake')@i"
 
-// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
-// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
-lemma S3_message_secrecy_attribution:
+lemma S3_fearful_freeze_safe:
+  exists-trace "Ex a #i. Abort('Blake', a)@i"
+
+lemma S3_only_correspondents_know:
   all-traces
-  "All m #s #k.
-     Secret(m)@s & K(m)@k
-   ==> (Ex p vid #d. Mistake(p, vid)@d)
-     | (Ex p #d. LeakPw(p)@d)
-     | (Ex p #d. MisdeliveredPw(p)@d)"
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
 
-// ---- one chain per stressor ----
+lemma S3_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
-// sigma6 on the PGP pathway.
-lemma S3_abstraction_naive_substitution:
-  exists-trace
-  "Ex m vid #u #o #v #d #s.
-     UIStep('Alex','btn_verify_fp')@u & Abstraction('Alex')@o
-   & Verify('Alex', vid, 'Naive')@v & Mistake('Alex', vid)@d
-   & Send('Alex','PGP', m)@s"
-
-// sigma8: the two button confirms habituate -> click-through accepts the substituted key. (K-free
-// chain per lesson 15; the attribution lemma carries the K(m) story.)
-lemma S3_habituation_clickthrough:
-  exists-trace
-  "Ex m vid #u1 #u2 #h #v #d #s.
-     UIStep('Alex','btn_generate_keypair')@u1 & UIStep('Alex','btn_fetch_key')@u2
-   & Habituate('Alex')@h
-   & Verify('Alex', vid, 'Habituated')@v & Mistake('Alex', vid)@d
-   & Send('Alex','PGP', m)@s"
-
-// Anxiety on the send authorize: the Fearful sender freezes -- NO message ever leaves.
-lemma S3_anxiety_fearful_freeze:
-  exists-trace
-  "Ex aid #u #o #a.
-     UIStep('Alex','btn_send')@u & SecurityAnxiety('Alex')@o & Abort('Alex', aid)@a
-   & not (Ex method m #s. Send('Alex', method, m)@s)"
-
+lemma S3_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
 end

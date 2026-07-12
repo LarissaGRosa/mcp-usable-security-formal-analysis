@@ -14,6 +14,8 @@ begin
 #define MASK_COMPUTE
 #define MASK_DECIDE
 #define MASK_CONFIRM
+#define PATH_PGP
+#define PATH_PW
 
 #include "base.spthy"
 

@@ -1,56 +1,43 @@
 theory SecureEmail_S1_TrioPGP
 begin
-
 /*
-  S1 -- PAIR on the PGP key-verification surface: sigma6 Abstraction (Naive) + sigma2 Concurrency
-  (skip-the-check). Both converge on the same weak point -- a degraded compare accepts a substituted
-  key and the message is sent to a non-correspondent. (Habituation sigma8 lives in S3: two DENSITY
-  detectors -- sigma2/sigma8/sigma9 -- cannot share a profile, else the all-traces mask-interleaving
-  search explodes; one density detector per profile keeps every proof in budget.)
-  Run: check.py --prove ceremonies/secure_email/S1_trio_pgp.spthy
+  S1 -- the PGP trio {sigma6 Abstraction, sigma2 Concurrency} + the skip-check row, on the REAL Screens
+  A/C. The fingerprint compare is the canonical weak point: an effortful comparison (sigma6) plus
+  competing co-present controls (sigma2) degrade the mask, the check is skipped, and the message goes to
+  a non-correspondent. The ORDER lever is armed too: a degraded Send can fire BEFORE the verify at all
+  (SendPremature) -- something the old model could not even express.
 */
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define PATH_PGP
 
-// -- sigma6 + the density detector sigma2, plus the opt-in row the concurrency story needs --
+#define STRESS_ALEX
 #define SIGMA6_ABSTRACTION
 #define SIGMA2_CONCURRENCY
 #define OUTCOME_CARELESS_SKIPCHECK
+#define OUTCOME_PREMATURE
 
 #include "base.spthy"
 
-// ---- security properties under this trio ----
+lemma S1_abstraction_onset: exists-trace "Ex #i. Abstraction('Alex')@i"
+lemma S1_distract_onset:    exists-trace "Ex #i. Distract('Alex')@i"
 
-// (the "attentive keeps secret" guarantee is this lemma's CONTRAPOSITIVE -- no degraded
-// outcome => no adversary access -- so it holds by the same proof and is not proven twice.)
-lemma S1_message_secrecy_attribution:
+lemma S1_skipcheck_misdirects:
+  exists-trace "Ex p vid r #d #m. Mistake(p, vid)@d & MisdirectedTo('Alex', r)@m"
+
+lemma S1_premature_send:
+  exists-trace "Ex #i. SendPremature('Alex')@i"
+
+lemma S1_only_correspondents_know:
   all-traces
-  "All m #s #k.
-     Secret(m)@s & K(m)@k
-   ==> (Ex p vid #d. Mistake(p, vid)@d)
-     | (Ex p #d. LeakPw(p)@d)
-     | (Ex p #d. MisdeliveredPw(p)@d)"
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
 
-lemma S1_degrade_from_interface_step:
-  all-traces
-  "All p m #s.
-     SetMask(p, m)@s & not(m = 'Attentive')
-   ==> (Ex step #u. UIStep(p, step)@u & #u < #s)"
+lemma S1_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
 
-// ---- one chain per stressor: control -> onset -> mask -> mistake -> send ----
-
-// sigma6: the fingerprint compare overwhelms -> Naive accepts whatever the network delivered.
-lemma S1_abstraction_naive_substitution:
-  exists-trace
-  "Ex m vid #u #o #v #d #s.
-     UIStep('Alex','btn_verify_fp')@u & Abstraction('Alex')@o
-   & Verify('Alex', vid, 'Naive')@v & Mistake('Alex', vid)@d
-   & Send('Alex','PGP', m)@s"
-
-// sigma2: two prompts pending (competing demand) -> Careless SKIPS the check.
-lemma S1_distraction_skipcheck:
-  exists-trace
-  "Ex m vid #o #v #d #s.
-     Distract('Alex')@o
-   & Verify('Alex', vid, 'Careless')@v & Mistake('Alex', vid)@d
-   & Send('Alex','PGP', m)@s"
-
+lemma S1_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
 end

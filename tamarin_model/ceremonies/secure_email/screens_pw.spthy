@@ -1,0 +1,81 @@
+/*
+  screens_pw.spthy -- the PASSWORD pathway of the full interface: Alex's passphrase + pw share (Screen A,
+  password mode) and Blake's password page (Screen B). Included by sender_screens.spthy ONLY when PATH_PW
+  is armed.
+
+  A PATH_PW profile MUST also arm MASK_CONFIRM: Screen B hangs off the link-confirm (unlock consumes
+  Confirmed, the impostor route consumes AutoApprove), so without the confirm class Confirmed would have
+  NO PRODUCER -- a well-formedness failure and an unsolvable premise the search wanders on.
+*/
+
+// ---- Screen A (password mode): passphrase compute (A8) + pw share, off the shallow !AlexScreen. ----
+rule IF_screen_pw [color=#f2994a]:
+    [ !AlexScreen('Alex', idA, subjId, sendId), Fr(~pwId), Fr(~shId), Fr(~pw) ]
+  --[ PosePwScreen('Alex'), PwCreated(~pw) ]->
+    [ Prompt('Alex', ~pwId, 'compute'), !Demand('Alex', ~pwId, 'compute'), !Displayed('Alex', ~pwId, ~pw), !UnderDeadline(~pwId),
+      Prompt('Alex', ~shId,  'share'),   !Demand('Alex', ~shId,  'share'),   !Displayed('Alex', ~shId, <'Blake','Blake', ~pw>),
+      PwPending(idA, ~shId, ~pw) ]
+
+restriction OncePosePwScreen:
+  "All p #i #j. PosePwScreen(p)@i & PosePwScreen(p)@j ==> #i = #j"
+
+// send: decide handled + Send granted -> deliver the ENCRYPTED message to Blake's private mailbox
+// (recipient fixed); the pw travels separately via the share, the PW pathway's leak channel.
+rule IF_send_pw_screen_good [color=#1f6fd0]:
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), PwPending(idA, shId, pw),
+      Granted('Alex', sendId), !StepData('Alex', pwId, pwc), Fr(~m) ]
+  --[ Send('Alex','PW', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
+    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw) ]
+
+// pw share routing (mirrors legacy PW_deliver_*; only the pw travels here). oob -> private OobPw;
+// misdeliver -> Out(pw); inband-leak -> OobPw + Out(pw) (the SILENT compromise: Blake still reads).
+rule IF_pw_share_oob [color=#1f6fd0]:
+    [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'oob') ]
+  --[ ShareRoute('Alex','oob') ]->
+    [ OobPw('Blake', pw) ]
+
+rule IF_pw_share_misdeliver [color=#c0392b]:
+    [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'misdeliver') ]
+  --[ ShareRoute('Alex','misdeliver'), MisdirectedTo('Alex','wrong-contact') ]->
+    [ Out(pw) ]
+
+rule IF_pw_share_inband [color=#c0392b]:
+    [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'inband-leak') ]
+  --[ ShareRoute('Alex','inband-leak') ]->
+    [ OobPw('Blake', pw), Out(pw) ]
+
+// ---- Screen B: recipient password page (Blake). Reached via the mailed link, so a link-confirm
+// (<claimed-origin, expected-origin> -- the guide's "can resemble phishing") guards entry. pw-entry
+// (transcribe) + Unlock (authorize) + B6/B7 reply-route (exposure). ----
+rule IF_screen_blake_pw [color=#f2994a]:
+    [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId) ]
+  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake') ]->
+    [ // B6/B7 reply-route decide -- EXPOSURE-ONLY (counted, never performed: !Demand, no Prompt)
+      !Demand('Blake', ~rrId,  'decide'),
+      Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <'GenuinePage', 'GenuinePage'>),
+      Prompt('Blake', ~entId, 'transcribe'), !Demand('Blake', ~entId, 'transcribe'), !Displayed('Blake', ~entId, 'oob-pw'),
+      Prompt('Blake', ~unlId, 'authorize'),  !Demand('Blake', ~unlId, 'authorize'),
+      !Copresent('Blake'),
+      !BlakePwScreen(idB, ~cId, ~unlId) ]
+
+restriction OncePoseBlakePw:
+  "All p #i #j. PoseBlakePw(p)@i & PoseBlakePw(p)@j ==> #i = #j"
+
+// legit: link-confirm answered + Unlock granted -> read m, unlock pw.
+rule IF_blake_pw_unlock [color=#1f6fd0]:
+    [ !BlakePwScreen(idB, cId, unlId), Confirmed('Blake', cId, mask),
+      Granted('Blake', unlId), Mailbox('Blake', m), OobPw('Blake', pw) ]
+  --[ UIStep('Blake','unlock'), Read('Blake', m), ReadVia('Blake','PW'), Unlocked('Blake', pw) ]->
+    [ ]
+
+// impostor: a credulous link-confirm (AutoApprove) accepted an impostor page -> Blake enters his pw
+// there -> the impostor learns it -> Out(pw). PwEnteredAtImpostor is the named recipient-side breach.
+rule IF_blake_pw_impostor [color=#c0392b]:
+    [ !BlakePwScreen(idB, cId, unlId), OobPw('Blake', pw) ]
+  --[ PwEnteredAtImpostor('Blake'), AutoApproveGuard('Blake', cId) ]->
+    [ Out(pw) ]
+
+// the impostor route only fires when the link-confirm was AUTO-APPROVED (credulous) -- an Attentive
+// verify catches the phishing page. (Guard restriction on the action, so no extra fact join.)
+restriction ImpostorRequiresAutoApprove:
+  "All p c #i. AutoApproveGuard(p, c)@i ==> (Ex #j. AutoApprove(p, c)@j)"

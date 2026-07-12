@@ -1,43 +1,40 @@
 theory SecureEmail_S5_CuePhish
 begin
-
 /*
-  S5 -- PHISHING via a CUE-LOOKUP stressor (SIGMA_CUE). A high AUTHORITY persuasion cue on the
-  fingerprint-verify step ("your admin vouches for this key") over-trusts the human into Naive, who
-  accepts the substituted key credulously -> wrong-recipient send -> leak. The attacker's only lever is
-  psychological (the cue); the human MISTAKE stays the sole leak route. This is the same dose-response
-  shape as the workload detectors, but on a persuasion dimension -- the social-engineering axis.
-  Run: check.py --prove ceremonies/secure_email/S5_cue_phish.spthy
+  S5 -- the PERSUASION axis (sigma_CUE + CUE_PHISH) on the real fingerprint compare. The adversary's only
+  power here is psychological: an AUTHORITY cue on the key-verification step ("your admin vouches for this
+  key") over-trusts the human into a credulous compare. The MISTAKE is still the sole leak route -- the cue
+  only degrades the mask.
 */
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define PATH_PGP
 
+#define STRESS_ALEX
 #define SIGMA_CUE
 #define CUE_PHISH
 
 #include "base.spthy"
 
-// (contrapositive secrecy) any adversary win traces to a human mistake / leak outcome.
-lemma S5_message_secrecy_attribution:
-  all-traces
-  "All m #s #k.
-     Secret(m)@s & K(m)@k
-   ==> (Ex p vid #d. Mistake(p, vid)@d)
-     | (Ex p #d. LeakPw(p)@d)
-     | (Ex p #d. MisdeliveredPw(p)@d)"
+lemma S5_persuaded_onset: exists-trace "Ex p pr #i. Persuaded(p, pr)@i"
 
-// the phishing chain: authority cue -> Persuaded -> Naive compare -> Mistake -> PGP send.
-lemma S5_authority_cue_phish:
-  exists-trace
-  "Ex m vid #c #o #v #d #s.
-     UIStep('Alex','btn_verify_fp')@c & Persuaded('Alex','authority')@o
-   & Verify('Alex', vid, 'Naive')@v & Mistake('Alex', vid)@d
-   & Send('Alex','PGP', m)@s"
+lemma S5_cue_drives_mistake:
+  exists-trace "Ex p vid #o #d. Persuaded(p, 'authority')@o & Mistake(p, vid)@d"
 
-// ATTRIBUTION: with no workload abstraction detector armed, a Naive compare here can only come from the
-// persuasion cue -- so the phish is provably attributable to the cue.
 lemma S5_naive_requires_persuasion:
   all-traces
-  "All vid #v.
-     Verify('Alex', vid, 'Naive')@v
-   ==> (Ex prin #o. Persuaded('Alex', prin)@o & #o < #v)"
+  "All p #i. RespMask(p, 'Naive')@i ==> (Ex pr #o. Persuaded(p, pr)@o & #o < #i)"
 
+lemma S5_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+
+lemma S5_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+lemma S5_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
 end

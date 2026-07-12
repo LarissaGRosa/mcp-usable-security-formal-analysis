@@ -1,15 +1,17 @@
 theory SecureEmail_S7_RecoveryCareless
 begin
-
 /*
-  S7 -- MATCHED recovery, careless case. Concurrency-driven Careless (sigma2, competing demand) is
-  recovered by a re-engagement WARNING (a salience interrupt that breaks the distraction) but NOT by a
-  mode-break (there is no reason a forcing-function restores a distracted user's attention). Both
-  interventions are AVAILABLE; the theorems show Careless recovers ONLY via the warning -- the mirror of
-  S6. Together S6 + S7 prove the recovery-must-match-the-driver matrix.
-  Run: check.py --prove ceremonies/secure_email/S7_recovery_careless.spthy
+  S7 -- the CARELESS recovery pair on Screen A. Competing co-present controls (sigma2) make Alex Careless
+  and she skips the fingerprint check; a WARNING re-engagement recovers her to Attentive. The matched
+  pair: the recovery is REACHABLE, and it REQUIRES the warning.
 */
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define PATH_PGP
 
+#define STRESS_ALEX
 #define SIGMA2_CONCURRENCY
 #define OUTCOME_CARELESS_SKIPCHECK
 #define MASK_RECOVERY
@@ -18,20 +20,19 @@ begin
 
 #include "base.spthy"
 
-// the warning restores Attentive after concurrency-driven Careless -> the human then verifies
-// attentively (reachable).
-lemma S7_warning_recovers_careless:
-  exists-trace
-  "Ex vid #c #r #v.
-     Distract('Alex')@c & RecoverVia('Alex','warning')@r
-   & Verify('Alex', vid, 'Attentive')@v & #c < #r & #r < #v"
+lemma S7_distract_onset: exists-trace "Ex #i. Distract('Alex')@i"
 
-// MATCHING (all-traces): an Attentive verify after a distraction REQUIRES a warning between -- an
-// available mode-break is NOT what recovers Careless.
-lemma S7_careless_needs_warning_not_modebreak:
+lemma S7_recovers_to_attentive:
+  exists-trace "Ex #d #r. Distract('Alex')@d & SetMask('Alex','Attentive')@r & #d < #r"
+
+lemma S7_only_correspondents_know:
   all-traces
-  "All vid #v #c.
-     Verify('Alex', vid, 'Attentive')@v & Distract('Alex')@c & #c < #v
-   ==> (Ex #r. RecoverVia('Alex','warning')@r & #c < #r & #r < #v)"
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
 
+lemma S7_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+lemma S7_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
 end

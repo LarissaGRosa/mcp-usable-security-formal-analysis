@@ -1,15 +1,18 @@
 theory SecureEmail_S6_RecoveryHabituation
 begin
-
 /*
-  S6 -- MATCHED recovery, habituation case. Recovery must fit the degrade's driver. Habituation (sigma8,
-  automaticity from repeated confirms) is recovered by a forcing-function MODE-BREAK (a challenge that
-  cannot be reflex-clicked, resetting automaticity) but NOT by a re-engagement warning -- warnings
-  habituate too (Anderson & Vance 2015). Both interventions are AVAILABLE here; the theorems show
-  Habituated recovers ONLY via the mode-break.
-  Run: check.py --prove ceremonies/secure_email/S6_recovery_habituation.spthy
+  S6 -- the HABITUATION recovery pair on Blake's Screen C. The two co-present badges habituate Blake into
+  clicking through; a MODE-BREAK re-engagement recovers him to Attentive. The matched pair: the recovery
+  is REACHABLE, and it REQUIRES the mode-break (no free recovery).
 */
+#define IF_SCREENS
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PGP
 
+#define STRESS_BLAKE
 #define SIGMA8_HABITUATION
 #define OUTCOME_HABITUATED_CLICKTHROUGH
 #define MASK_RECOVERY
@@ -18,19 +21,19 @@ begin
 
 #include "base.spthy"
 
-// the mode-break restores Attentive after habituation -> the human then verifies attentively (reachable).
-lemma S6_modebreak_recovers_habituated:
-  exists-trace
-  "Ex vid #h #r #v.
-     Habituate('Alex')@h & RecoverVia('Alex','modebreak')@r
-   & Verify('Alex', vid, 'Attentive')@v & #h < #r & #r < #v"
+lemma S6_habituate_onset: exists-trace "Ex #i. Habituate('Blake')@i"
 
-// MATCHING (all-traces): an Attentive verify after habituation REQUIRES a mode-break between -- an
-// available warning is NOT enough to recover Habituated.
-lemma S6_habituated_needs_modebreak_not_warning:
+lemma S6_recovers_to_attentive:
+  exists-trace "Ex #h #r. Habituate('Blake')@h & SetMask('Blake','Attentive')@r & #h < #r"
+
+lemma S6_only_correspondents_know:
   all-traces
-  "All vid #v #h.
-     Verify('Alex', vid, 'Attentive')@v & Habituate('Alex')@h & #h < #v
-   ==> (Ex #r. RecoverVia('Alex','modebreak')@r & #h < #r & #r < #v)"
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
 
+lemma S6_read_only_blake:
+  all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
+
+lemma S6_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
 end

@@ -1,23 +1,33 @@
 /*
-  sender_screens.spthy -- the FULL-INTERFACE flow (RELAYER): Alex Screen A (compose) + Blake Screen B
-  (password page) + Screen C (inbox). Real co-present controls replace the ambient stubs + the legacy
-  pick/verify/send + Blake receiver rules. Included by protocol.spthy ONLY when IF_SCREENS is armed. See
-  secure_email/INTERFACE_MAP.md. A profile that arms IF_SCREENS ALSO arms MASK_TRANSCRIBE / MASK_COMPUTE /
-  MASK_DECIDE / MASK_CONFIRM (MASK_COMPARE / MASK_COMPARE_KEYCHECKED / MASK_SHARE / MASK_AUTHORIZE are
-  constant in base.spthy), and picks STRESS_ALEX or STRESS_BLAKE -- stressing ONE party keeps the two-
-  party surface within the prover budget (the unstressed party's degraded rules are pruned).
+  sender_screens.spthy -- the FULL-INTERFACE flow (RELAYER). Holds Screen A's COMPOSE window (shared by
+  both pathways) and then conditionally includes ONE OR BOTH pathways:
 
-  TRACTABILITY (prover budget <2min, no swap). Mirrors the legacy sender's shape so the sources stay as
-  shallow as legacy:
-    * ONE persistent shallow anchor !AlexScreen(P,idA,subjId,sendId) off AlexInit -- every pathway prompt
-      is posed off it (never off a deep linear chain), exactly as legacy poses verify/send off the
-      persistent !AlexSession. This keeps sigma2's source product a product of SHALLOW sources.
-    * the send EFFECT joins ONE free-valued !StepData (the recipient from the fingerprint compare, as
-      legacy) -- never a second To !StepData; the To transcribe is a real performed control (density +
-      Busy slip -> !Failed feeds sigma10) whose committed value drives nothing.
-    * message m leaks ONLY through routes that carry an EncTo(m,rcpt) shape (badkey) -- so the legacy
-      H_encto_shape [reuse] helper prunes K(m). SUBJECT_LEAK (an Out(m) with no EncTo shape) is a separate
-      opt-in gate, added with its own [reuse] helper in the step-7 spine.
+     #ifdef PATH_PGP  ->  screens_pgp.spthy   (Alex verify+send, Blake Screen C inbox)
+     #ifdef PATH_PW   ->  screens_pw.spthy    (Alex passphrase+share, Blake Screen B password page)
+
+  Included by protocol.spthy when IF_SCREENS is armed. See secure_email/INTERFACE_MAP.md.
+
+  A profile arms: IF_SCREENS + MASK_TRANSCRIBE / MASK_COMPUTE / MASK_DECIDE (MASK_COMPARE /
+  MASK_COMPARE_KEYCHECKED / MASK_SHARE / MASK_AUTHORIZE are constant in base.spthy), at least one PATH_*,
+  and STRESS_ALEX and/or STRESS_BLAKE. A PATH_PW profile must ALSO arm MASK_CONFIRM (Screen B hangs off
+  the link-confirm).
+
+  WHY THE PATHWAYS ARE SPLIT -- the budget. With BOTH pathways compiled into every profile, each theory
+  carried the whole two-pathway, two-party surface and only ONE stressor fitted in the 3-min budget (Busy
+  alone ~90s; any two stressors overran). Compiled alone a pathway is roughly half the surface, so a
+  profile can arm a stressor TRIO again, exactly as the legacy profiles do -- which is what lets the whole
+  matrix move onto the screen standard instead of stranding the trios on the legacy rules.
+  (They are separate FILES, not nested #ifdefs, because tamarin's preprocessor cannot SKIP a nested
+  #ifdef: a conditionally-included file is only inserted in the TAKEN branch, so its inner #ifdefs -- the
+  OUTCOME_* levers -- are always processed in an entered context.)
+
+  TRACTABILITY invariants the screens keep (learned the hard way):
+    * ONE persistent shallow anchor !AlexScreen off AlexInit -- every pathway prompt is posed off it,
+      never off a deep linear chain (that is what legacy's persistent !AlexSession does).
+    * the send EFFECT joins ONE free-valued !StepData (the recipient from the compare) -- never a second.
+    * density detectors read SINGLE markers (!Copresent / !CopresentDecide), never "any N of M !Demand".
+    * exposure-only controls emit !Demand WITHOUT a Prompt: COUNTED by density, never PERFORMED, so they
+      cost nothing (lesson 15a/15b).
 */
 
 // ---- Screen A: compose window (Alex). ONE rule poses all co-present controls off AlexInit, once-
@@ -30,8 +40,7 @@ rule IF_screen_composer [color=#f2994a]:
       Prompt('Alex', ~subjId, 'transcribe'), !Demand('Alex', ~subjId, 'transcribe'), !Displayed('Alex', ~subjId, 'generic-subject'),
       Prompt('Alex', ~methId, 'decide'),     !Demand('Alex', ~methId, 'decide'),
       Prompt('Alex', ~sendId, 'authorize'),  !Demand('Alex', ~sendId, 'authorize'),
-      // the compose window shows >=2 co-present controls -> the single sigma2 concurrency marker
-      // (grounded here in a REAL screen; no N^2 !Demand product for the source saturation).
+      // the compose window shows >=2 co-present controls -> the single sigma2 concurrency marker.
       !Copresent('Alex'),
       !AlexScreen('Alex', idA, ~subjId, ~sendId),
       MethodChoice(idA, ~methId) ]
@@ -41,7 +50,8 @@ restriction OncePoseComposer:
 
 // method decide routing: HANDLED -> SecureFlag (the secure sends require it); MISROUTE
 // (OUTCOME_CARELESS_MISROUTE) -> 'Standard (TLS only)' -> the NAMED unsafe outcome PlaintextAtProvider
-// (NOT Out). Both consume the linear MethodChoice, so exactly one fires.
+// (NOT Out -- it never yields K(m), which is what keeps breach <-> mistake honest; an RFC lemma forbids
+// it). Both adapters consume the same linear MethodChoice, so exactly one pathway proceeds.
 rule IF_method_secure [color=#1f6fd0]:
     [ MethodChoice(idA, methId), DecisionDone('Alex', methId) ]
   --[ ComposeSecure('Alex', methId) ]->
@@ -57,170 +67,19 @@ rule IF_method_tls_misroute [color=#c0392b]:
     [ ]
 #endif
 
-// ---- Screen A (PGP mode): fingerprint compare (verify), posed off the SHALLOW persistent !AlexScreen
-// (as legacy IF_verify_fp is posed off !AlexSession). The recipient is the compare's committed key. ----
-rule IF_screen_pgp [color=#f2994a]:
-    [ !AlexScreen('Alex', idA, subjId, sendId), In(offered), Fr(~vid), Fr(~sk) ]
-  --[ UIStep('Alex','btn_verify_fp'), KeyGenerated('Alex'), OwnSkGen('Alex', ~sk), PosePgpScreen('Alex') ]->
-    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
-      AlexVerifying(idA, ~vid) ]
-
-restriction OncePosePgpScreen:
-  "All p #i #j. PosePgpScreen(p)@i & PosePgpScreen(p)@j ==> #i = #j"
-
-// good: decide handled (SecureFlag) + verify done (KeyChecked) + accepted 'Blake' + Send granted.
-rule IF_send_pgp_screen_good [color=#1f6fd0]:
-    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), AlexVerifying(idA, vid),
-      Granted('Alex', sendId), !KeyChecked('Alex', vid), !StepData('Alex', vid, 'Blake'), Fr(~m) ]
-  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
-    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId) ]
-
-// leak (bad key): a credulous fingerprint compare accepted a non-'Blake' key -> Out. (Mistake at compare;
-// carries EncTo shape so H_encto_shape prunes K(m).)
-rule IF_send_pgp_screen_badkey [color=#c0392b]:
-    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), AlexVerifying(idA, vid),
-      Granted('Alex', sendId), !KeyChecked('Alex', vid), !StepData('Alex', vid, rcpt), Fr(~m) ]
-  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, rcpt), Neq(rcpt,'Blake'), MisdirectedTo('Alex', rcpt) ]->
-    [ Out(~m), SentMsg(idA, ~m, subjId) ]
-
-// premature (OUTCOME_PREMATURE): Send granted BEFORE verify (GrantedUnchecked, NO KeyChecked join).
-#ifdef OUTCOME_PREMATURE
-rule IF_send_pgp_screen_premature [color=#c0392b]:
-    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), GrantedUnchecked('Alex', sendId), Fr(~m) ]
-  --[ Send('Alex','PGP', ~m), Secret(~m), SendPremature('Alex'), MisdirectedTo('Alex','unverified') ]->
-    [ Out(~m), SentMsg(idA, ~m, subjId) ]
-#endif
-
-// ---- Screen A (password mode): passphrase compute (A8) + pw share, off the shallow !AlexScreen. ----
-rule IF_screen_pw [color=#f2994a]:
-    [ !AlexScreen('Alex', idA, subjId, sendId), Fr(~pwId), Fr(~shId), Fr(~pw) ]
-  --[ PosePwScreen('Alex'), PwCreated(~pw) ]->
-    [ Prompt('Alex', ~pwId, 'compute'), !Demand('Alex', ~pwId, 'compute'), !Displayed('Alex', ~pwId, ~pw), !UnderDeadline(~pwId),
-      Prompt('Alex', ~shId,  'share'),   !Demand('Alex', ~shId,  'share'),   !Displayed('Alex', ~shId, <'Blake','Blake', ~pw>),
-      PwPending(idA, ~shId, ~pw) ]
-
-restriction OncePosePwScreen:
-  "All p #i #j. PosePwScreen(p)@i & PosePwScreen(p)@j ==> #i = #j"
-
-// send: decide handled + Send granted -> deliver the ENCRYPTED message to Blake's private mailbox
-// (recipient fixed); the pw travels separately via the share (below), the PW pathway's leak channel.
-rule IF_send_pw_screen_good [color=#1f6fd0]:
-    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), PwPending(idA, shId, pw),
-      Granted('Alex', sendId), !StepData('Alex', pwId, pwc), Fr(~m) ]
-  --[ Send('Alex','PW', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
-    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw) ]
-
-// pw share routing (mirrors legacy PW_deliver_*; only the pw travels here). oob -> private OobPw;
-// misdeliver -> Out(pw); inband-leak -> OobPw + Out(pw).
-rule IF_pw_share_oob [color=#1f6fd0]:
-    [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'oob') ]
-  --[ ShareRoute('Alex','oob') ]->
-    [ OobPw('Blake', pw) ]
-
-rule IF_pw_share_misdeliver [color=#c0392b]:
-    [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'misdeliver') ]
-  --[ ShareRoute('Alex','misdeliver'), MisdirectedTo('Alex','wrong-contact') ]->
-    [ Out(pw) ]
-
-rule IF_pw_share_inband [color=#c0392b]:
-    [ PwEnvelope(idA, shId, pw), ShareOutcome('Alex', shId, 'inband-leak') ]
-  --[ ShareRoute('Alex','inband-leak') ]->
-    [ OobPw('Blake', pw), Out(pw) ]
-
-// subject leak: a Careless subject transcribe exported the subject -> the message's cleartext metadata
-// leaks -> Out(m). This Out(m) has NO EncTo shape, but with the single-marker sigma2 the source graph
-// stays tractable and the secrecy lemma's SubjectLeak disjunct covers it directly (no extra helper).
+// subject leak (both pathways): a Careless subject transcribe exported the subject -> the message's
+// cleartext metadata leaks -> Out(m). Consumes the generic TranscribeLeaked token from core; SentMsg is
+// produced by whichever pathway sent.
 rule IF_subject_leak [color=#c0392b]:
     [ SentMsg(idA, m, subjId), TranscribeLeaked('Alex', subjId, leaked) ]
   --[ SubjectLeak('Alex'), MisdirectedTo('Alex','subject') ]->
     [ Out(m) ]
 
-// ============================================================================================
-// BLAKE recipient screens (Screen B password page, Screen C inbox). Same tractability discipline as the
-// sender: shallow persistent anchor per screen, single-source joins, the single sigma2 !Copresent marker.
-// A screens profile that stresses Blake ALSO arms MASK_CONFIRM (Blake's link-confirm / trusted-key).
-// ============================================================================================
-
-// ---- Screen C: recipient end-to-end inbox (Blake, PGP). Encryption/signature badges (C1/C2, exposure
-// confirms -- they feed sigma8's two-confirm density), trusted-key compare (C3), decrypt authorize,
-// Reply (C6) + Forward (C7) decides. Blake publishes his key here. ----
-rule IF_screen_blake_pgp [color=#f2994a]:
-    [ BlakeInit(idB), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
-  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
-    [ // PERFORMED (a mask answers these -- they drive outcomes): trusted-key compare, decrypt, Forward.
-      Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <'AliceKey', 'AliceKey'>),
-      Prompt('Blake', ~decId, 'authorize'), !Demand('Blake', ~decId, 'authorize'),
-      Prompt('Blake', ~fwdId, 'decide'),    !Demand('Blake', ~fwdId, 'decide'),
-      // EXPOSURE-ONLY (lesson 15a/15b): C1/C2 badges + C6 Reply + C8 overflow are COUNTED by the density
-      // detectors but never PERFORMED -- they emit !Demand WITHOUT a Prompt, so no mask answers them and
-      // they add ZERO branching. Two confirms feed sigma8; Reply+Forward+overflow feed sigma9.
-      !Demand('Blake', ~b1,    'confirm'),
-      !Demand('Blake', ~b2,    'confirm'),
-      !Demand('Blake', ~rplId, 'decide'),
-      !Demand('Blake', ~ovfId, 'decide'),
-      // >=2 co-present controls (sigma2) and >=3 co-present DECIDES (sigma9) -- single markers, O(1).
-      !Copresent('Blake'), !CopresentDecide('Blake'),
-      !BlakePgpScreen(idB, ~decId, ~fwdId) ]
-
-restriction OncePoseBlakePgp:
-  "All p #i #j. PoseBlakePgp(p)@i & PoseBlakePgp(p)@j ==> #i = #j"
-
-// decrypt (authorize) gates the read; a Fearful freeze on the authorize = the guide's abandonment case
-// (safe-fail -- no Read). Reading holds m for a possible forward.
-rule IF_blake_decrypt [color=#1f6fd0]:
-    [ !BlakePgpScreen(idB, decId, fwdId), Granted('Blake', decId), Mailbox('Blake', m) ]
-  --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
-    [ BlakeHasMsg(idB, m) ]
-
-// Forward MISROUTE (OUTCOME_CARELESS_MISROUTE): Forward to a keyless third party re-sends m in the clear
-// -> ForwardedOutside -> Out(m). The recipient-side breach of "only Alex and Blake know m" even when
-// every sender step was perfect.
-#ifdef OUTCOME_CARELESS_MISROUTE
-rule IF_blake_forward_misroute [color=#c0392b]:
-    [ BlakeHasMsg(idB, m), DecisionMisrouted('Blake', fwdId) ]
-  --[ ForwardedOutside('Blake'), MisdirectedTo('Blake','keyless-third-party') ]->
-    [ Out(m) ]
+// ===================== pathway selection =====================
+#ifdef PATH_PGP
+#include "screens_pgp.spthy"
 #endif
 
-// ---- Screen B: recipient password page (Blake, PW). Reached via the mailed link, so a link-confirm
-// (<claimed-origin, expected-origin> -- the guide's "can resemble phishing") guards entry. pw-entry
-// (transcribe) + Unlock (authorize).
-// Gated on MASK_CONFIRM: the whole screen HANGS on the link-confirm (unlock consumes Confirmed, the
-// impostor route consumes AutoApprove). A profile that does not perform the confirm class would leave
-// Confirmed with no producer -- a well-formedness failure, and an unsolvable premise the search wanders
-// on. Such a profile simply runs the PGP pathway (Screen C) instead. ----
-#ifdef MASK_CONFIRM
-rule IF_screen_blake_pw [color=#f2994a]:
-    [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId) ]
-  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake') ]->
-    [ // B6/B7 reply-route decide -- EXPOSURE-ONLY (counted, never performed: !Demand, no Prompt)
-      !Demand('Blake', ~rrId,  'decide'),
-      Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <'GenuinePage', 'GenuinePage'>),
-      Prompt('Blake', ~entId, 'transcribe'), !Demand('Blake', ~entId, 'transcribe'), !Displayed('Blake', ~entId, 'oob-pw'),
-      Prompt('Blake', ~unlId, 'authorize'),  !Demand('Blake', ~unlId, 'authorize'),
-      !Copresent('Blake'),
-      !BlakePwScreen(idB, ~cId, ~unlId) ]
-
-restriction OncePoseBlakePw:
-  "All p #i #j. PoseBlakePw(p)@i & PoseBlakePw(p)@j ==> #i = #j"
-
-// legit: link-confirm verified (claimed = 'GenuinePage') + Unlock granted -> read m, unlock pw.
-rule IF_blake_pw_unlock [color=#1f6fd0]:
-    [ !BlakePwScreen(idB, cId, unlId), Confirmed('Blake', cId, mask),
-      Granted('Blake', unlId), Mailbox('Blake', m), OobPw('Blake', pw) ]
-  --[ UIStep('Blake','unlock'), Read('Blake', m), ReadVia('Blake','PW'), Unlocked('Blake', pw) ]->
-    [ ]
-
-// impostor: a credulous link-confirm (AutoApprove) accepted an impostor page -> Blake enters his pw
-// there -> the impostor learns it -> Out(pw). PwEnteredAtImpostor is the named recipient-side breach.
-rule IF_blake_pw_impostor [color=#c0392b]:
-    [ !BlakePwScreen(idB, cId, unlId), OobPw('Blake', pw) ]
-  --[ PwEnteredAtImpostor('Blake'), AutoApproveGuard('Blake', cId) ]->
-    [ Out(pw) ]
-
-// the impostor route only fires when the link-confirm was AUTO-APPROVED (credulous) -- Attentive verify
-// catches the phishing page. (Guard restriction on the action, so no extra fact join.)
-restriction ImpostorRequiresAutoApprove:
-  "All p c #i. AutoApproveGuard(p, c)@i ==> (Ex #j. AutoApprove(p, c)@j)"
+#ifdef PATH_PW
+#include "screens_pw.spthy"
 #endif
-// ifdef MASK_CONFIRM (Blake's Screen B)

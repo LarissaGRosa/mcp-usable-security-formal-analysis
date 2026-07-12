@@ -18,7 +18,7 @@ begin
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE
-#define MASK_CONFIRM
+#define PATH_PGP
 
 #define STRESS_ALEX
 #define SIGMA2_CONCURRENCY

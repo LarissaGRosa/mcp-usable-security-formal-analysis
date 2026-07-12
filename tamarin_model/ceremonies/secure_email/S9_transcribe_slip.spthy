@@ -8,9 +8,12 @@ begin
   the secret, it just breaks the step. That asymmetry (Busy -> slip -> safe-fail vs Careless -> leak ->
   breach) is the point of separating the two field-entry outcomes.
 
-  Arms sigma1 (Busy) + STRESS_ALEX. SPLIT from S8 (Careless) because arming both masks on the full
-  screens overruns the prover budget -- the plan's own fallback ("split rather than raise the timeout").
-  NOTE: Busy is the expensive mask (its slips mint fresh terms); this profile sits near the budget.
+  Arms SIGMA_ADDITIVE (Busy) + STRESS_ALEX. The onset is the ADDITIVE-LOAD surface itself: To (A2) and
+  subject (A5) are two co-present 'med' text fields, and two 'med' steps at once are what tips the human
+  into Busy (Sweller). This is the one stressor that keys on the FIELD-ENTRY class rather than on the
+  passphrase compute -- so unlike sigma1/sigma3 it fires on ANY pathway.
+
+  SPLIT from S8 (Careless -> leak) because arming Busy AND Careless together overruns the prover budget.
   Run: check.py --prove ceremonies/secure_email/S9_transcribe_slip.spthy
 */
 
@@ -18,15 +21,16 @@ begin
 #define MASK_TRANSCRIBE
 #define MASK_COMPUTE
 #define MASK_DECIDE
+#define PATH_PGP
 
 #define STRESS_ALEX
-#define SIGMA1_LOAD
+#define SIGMA_ADDITIVE
 
 #include "base.spthy"
 
 // ---- onset coverage (lesson 16) ----
-lemma S9_load_onset:
-  exists-trace "Ex #i. Load('Alex')@i"
+lemma S9_additive_onset:
+  exists-trace "Ex #i. AdditiveLoad('Alex')@i"
 
 // ---- the chain: a Busy field entry SLIPS -> a fresh wrong value is committed -> !Failed ----
 lemma S9_slip_reachable:

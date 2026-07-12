@@ -1,0 +1,82 @@
+/*
+  screens_pgp.spthy -- the PGP pathway of the full interface: Alex's fingerprint verify + send (Screen A,
+  PGP mode) and Blake's end-to-end inbox (Screen C). Included by sender_screens.spthy ONLY when PATH_PGP
+  is armed.
+
+  Gating the pathway per profile is what buys the budget: with BOTH pathways compiled in, every profile
+  carried the whole two-pathway, two-party surface and only ONE stressor fitted in 3 min. Compiled alone,
+  a pathway is roughly half the surface, so a profile can arm a stressor TRIO again (as the legacy
+  profiles do). A profile arms PATH_PGP and/or PATH_PW; the baseline arms both (it has no stressor).
+*/
+
+// ---- Screen A (PGP mode): fingerprint compare (verify), posed off the SHALLOW persistent !AlexScreen
+// (as legacy IF_verify_fp is posed off !AlexSession). The recipient is the compare's committed key. ----
+rule IF_screen_pgp [color=#f2994a]:
+    [ !AlexScreen('Alex', idA, subjId, sendId), In(offered), Fr(~vid), Fr(~sk) ]
+  --[ UIStep('Alex','btn_verify_fp'), KeyGenerated('Alex'), OwnSkGen('Alex', ~sk), PosePgpScreen('Alex') ]->
+    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
+      AlexVerifying(idA, ~vid) ]
+
+restriction OncePosePgpScreen:
+  "All p #i #j. PosePgpScreen(p)@i & PosePgpScreen(p)@j ==> #i = #j"
+
+// good: decide handled (SecureFlag) + verify done (KeyChecked) + accepted 'Blake' + Send granted.
+rule IF_send_pgp_screen_good [color=#1f6fd0]:
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), AlexVerifying(idA, vid),
+      Granted('Alex', sendId), !KeyChecked('Alex', vid), !StepData('Alex', vid, 'Blake'), Fr(~m) ]
+  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
+    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId) ]
+
+// leak (bad key): a credulous fingerprint compare accepted a non-'Blake' key -> Out. (Mistake at compare;
+// carries EncTo shape so H_encto_shape prunes K(m).)
+rule IF_send_pgp_screen_badkey [color=#c0392b]:
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), AlexVerifying(idA, vid),
+      Granted('Alex', sendId), !KeyChecked('Alex', vid), !StepData('Alex', vid, rcpt), Fr(~m) ]
+  --[ Send('Alex','PGP', ~m), Secret(~m), EncTo(~m, rcpt), Neq(rcpt,'Blake'), MisdirectedTo('Alex', rcpt) ]->
+    [ Out(~m), SentMsg(idA, ~m, subjId) ]
+
+// premature (OUTCOME_PREMATURE): Send granted BEFORE verify (GrantedUnchecked, NO KeyChecked join).
+#ifdef OUTCOME_PREMATURE
+rule IF_send_pgp_screen_premature [color=#c0392b]:
+    [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), GrantedUnchecked('Alex', sendId), Fr(~m) ]
+  --[ Send('Alex','PGP', ~m), Secret(~m), SendPremature('Alex'), MisdirectedTo('Alex','unverified') ]->
+    [ Out(~m), SentMsg(idA, ~m, subjId) ]
+#endif
+
+// ---- Screen C: recipient end-to-end inbox (Blake). Encryption/signature badges (C1/C2), trusted-key
+// compare (C3), decrypt authorize, Reply (C6) + Forward (C7) + overflow (C8). ----
+rule IF_screen_blake_pgp [color=#f2994a]:
+    [ BlakeInit(idB), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
+  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
+    [ // PERFORMED (a mask answers these -- they drive outcomes): trusted-key compare, decrypt, Forward.
+      Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <'AliceKey', 'AliceKey'>),
+      Prompt('Blake', ~decId, 'authorize'), !Demand('Blake', ~decId, 'authorize'),
+      Prompt('Blake', ~fwdId, 'decide'),    !Demand('Blake', ~fwdId, 'decide'),
+      // EXPOSURE-ONLY (lesson 15a/15b): COUNTED by the density detectors, never PERFORMED -- they emit
+      // !Demand WITHOUT a Prompt, so no mask answers them and they add ZERO branching.
+      !Demand('Blake', ~b1,    'confirm'),
+      !Demand('Blake', ~b2,    'confirm'),
+      !Demand('Blake', ~rplId, 'decide'),
+      !Demand('Blake', ~ovfId, 'decide'),
+      // >=2 co-present controls (sigma2) and >=3 co-present DECIDES (sigma9) -- single markers, O(1).
+      !Copresent('Blake'), !CopresentDecide('Blake'),
+      !BlakePgpScreen(idB, ~decId, ~fwdId) ]
+
+restriction OncePoseBlakePgp:
+  "All p #i #j. PoseBlakePgp(p)@i & PoseBlakePgp(p)@j ==> #i = #j"
+
+// decrypt (authorize) gates the read; a Fearful freeze on the authorize = the guide's abandonment case
+// (safe-fail -- no Read). Reading holds m for a possible forward.
+rule IF_blake_decrypt [color=#1f6fd0]:
+    [ !BlakePgpScreen(idB, decId, fwdId), Granted('Blake', decId), Mailbox('Blake', m) ]
+  --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
+    [ BlakeHasMsg(idB, m) ]
+
+// Forward MISROUTE: Forward to a keyless third party re-sends m in the clear -> ForwardedOutside ->
+// Out(m). The recipient-side breach of "only Alex and Blake know m" even when the sender was perfect.
+#ifdef OUTCOME_CARELESS_MISROUTE
+rule IF_blake_forward_misroute [color=#c0392b]:
+    [ BlakeHasMsg(idB, m), DecisionMisrouted('Blake', fwdId) ]
+  --[ ForwardedOutside('Blake'), MisdirectedTo('Blake','keyless-third-party') ]->
+    [ Out(m) ]
+#endif
