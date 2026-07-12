@@ -23,11 +23,18 @@ lemma S2_load_onset:     exists-trace "Ex #i. Load('Alex')@i"
 lemma S2_deadline_onset: exists-trace "Ex #i. TimePressure('Alex')@i"
 lemma S2_misdelivered_pw: exists-trace "Ex p #i. MisdeliveredPw(p)@i"
 
+// A9/B2 -- WITHOUT the show-password reveal the typed passphrase is dots on the screen and therefore
+// UNCHECKABLE: a Busy slip on the passphrase compute is committed BLIND and travels to the send. The
+// message goes out protected by a passphrase Alex never intended. (Vulnerable half of the IF_REVEAL pair;
+// S13_pw_reveal proves it unreachable once the reveal exists.)
+lemma S2_slipped_pw_sent: exists-trace "Ex #i. SlippedPwSent('Alex')@i"
+
 lemma S2_only_correspondents_know:
   all-traces
   "All m #s #k. Secret(m)@s & K(m)@k
    ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
-     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
 
 lemma S2_read_only_blake:
   all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"

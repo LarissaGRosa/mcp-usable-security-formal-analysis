@@ -1,0 +1,45 @@
+theory SecureEmail_S13_PwReveal
+begin
+/*
+  S13 -- the SHOW-PASSWORD REVEAL lever (A9 sender / B2 recipient), the "removed_by" half of an RFC pair.
+  Same screens and the SAME Busy stressor as S2_trio_pw: the human still slips on the passphrase.
+
+  Without the reveal the passphrase is dots on the screen -- UNCHECKABLE -- so a slipped value is committed
+  BLIND and travels to the send (S2_slipped_pw_sent: REACHABLE). With the reveal the typed value is
+  VISIBLE, hence checkable, so the interface poses a SELF-CHECK compare of <typed, intended>; an Attentive
+  answer fires only on <k,k>, so a slipped passphrase never opens the send gate. The slip degrades to a
+  SAFE-FAIL, and it does so WITHOUT blocking the ceremony (S13_completes still holds).
+*/
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PW
+
+#define IF_REVEAL
+
+#define STRESS_ALEX
+#define SIGMA1_LOAD
+#define SIGMA3_DEADLINE
+
+#include "base.spthy"
+
+// the human is degraded exactly as in S2 -- still Busy, still slips.
+lemma S13_load_onset:     exists-trace "Ex #i. Load('Alex')@i"
+lemma S13_deadline_onset: exists-trace "Ex #i. TimePressure('Alex')@i"
+lemma S13_still_slips:    exists-trace "Ex #i. Slip('Alex')@i"
+
+// THE LEVER: a slipped passphrase can never reach the send.
+lemma S13_no_slipped_pw_sent:
+  all-traces "not (Ex p #i. SlippedPwSent(p)@i)"
+
+// and the lever does NOT block the ceremony (the pair is non-vacuous).
+lemma S13_completes:
+  exists-trace
+  "Ex m link #s #u #r. Send('Alex','PW', m)@s & Unlocked('Blake', link)@u & Read('Blake', m)@r"
+
+lemma S13_pw_stays_oob:
+  all-traces
+  "All pw #c #k. PwCreated(pw)@c & K(pw)@k
+   ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d) | (Ex p #d. PwEnteredAtImpostor(p)@d)"
+end

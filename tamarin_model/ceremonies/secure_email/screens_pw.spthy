@@ -1,31 +1,108 @@
 /*
-  screens_pw.spthy -- the PASSWORD pathway of the full interface: Alex's passphrase + pw share (Screen A,
-  password mode) and Blake's password page (Screen B). Included by sender_screens.spthy ONLY when PATH_PW
-  is armed.
+  screens_pw.spthy -- the PASSWORD pathway of the full interface: Alex's passphrase + hint + pw share
+  (Screen A, password mode) and Blake's password page (Screen B). Included by sender_screens.spthy ONLY
+  when PATH_PW is armed.
 
   A PATH_PW profile MUST also arm MASK_CONFIRM: Screen B hangs off the link-confirm (unlock consumes
   Confirmed, the impostor route consumes AutoApprove), so without the confirm class Confirmed would have
   NO PRODUCER -- a well-formedness failure and an unsolvable premise the search wanders on.
+  It MUST also arm MASK_TRANSCRIBE (the hint field, A10) and MASK_COMPUTE (the passphrase, A8).
+
+  INTERFACE LEVER (RFC pair, template T4) -- IF_REVEAL (A9 sender / B2 recipient), the "show password"
+  affordance. When the reveal is absent the typed passphrase is UNCHECKABLE: a Busy slip on the compute
+  is committed blind and travels to the send (SlippedPwSent -- REACHABLE). When IF_REVEAL is armed the
+  passphrase is visible, so the interface can additionally pose a SELF-CHECK compare of
+  <committed-typed, intended> whose Attentive answer only fires on <k,k>; a slipped passphrase therefore
+  never opens the send gate and the slip degrades to a SAFE-FAIL (SlippedPwSent -- UNREACHABLE).
 */
 
-// ---- Screen A (password mode): passphrase compute (A8) + pw share, off the shallow !AlexScreen. ----
+// ---- Screen A (password mode): passphrase compute (A8) + hint field (A10) + pw share, off the shallow
+// !AlexScreen. The hint is a real performed 'transcribe' control (a second 'med' field on Alex, so it
+// also feeds SIGMA_ADDITIVE); !PwCopy / !PwIntended are PERSISTENT copies of the passphrase, read by the
+// hint-leak effect and the reveal gate, so neither races the LINEAR PwEnvelope the share routing consumes.
 rule IF_screen_pw [color=#f2994a]:
-    [ !AlexScreen('Alex', idA, subjId, sendId), Fr(~pwId), Fr(~shId), Fr(~pw) ]
-  --[ PosePwScreen('Alex'), PwCreated(~pw) ]->
+    [ !AlexScreen('Alex', idA, subjId, sendId), Fr(~pwId), Fr(~hintId), Fr(~shId), Fr(~pw) ]
+  --[ PosePwScreen('Alex'), PwCreated(~pw), UIStep('Alex','pw_panel') ]->
     [ Prompt('Alex', ~pwId, 'compute'), !Demand('Alex', ~pwId, 'compute'), !Displayed('Alex', ~pwId, ~pw), !UnderDeadline(~pwId),
+      // A10 -- the "password hint" text field next to the passphrase box.
+      Prompt('Alex', ~hintId, 'transcribe'), !Demand('Alex', ~hintId, 'transcribe'), !Displayed('Alex', ~hintId, 'vague-hint'),
       Prompt('Alex', ~shId,  'share'),   !Demand('Alex', ~shId,  'share'),   !Displayed('Alex', ~shId, <'Blake','Blake', ~pw>),
-      PwPending(idA, ~shId, ~pw) ]
+      PwPending(idA, ~shId, ~pw),
+      !PwCopy(idA, ~hintId, ~pw), !PwIntended(idA, ~pwId, ~pw) ]
 
 restriction OncePosePwScreen:
   "All p #i #j. PosePwScreen(p)@i & PosePwScreen(p)@j ==> #i = #j"
 
-// send: decide handled + Send granted -> deliver the ENCRYPTED message to Blake's private mailbox
-// (recipient fixed); the pw travels separately via the share, the PW pathway's leak channel.
+// A10 HINT LEAK -- a Careless transcribe on the hint field EXPORTS what was typed there (core emits the
+// generic TranscribeLeaked token; core never emits Out). The ceremony gives that export its meaning: the
+// user defeated the hint by putting the PASSPHRASE ITSELF in it, so the passphrase now travels IN-BAND.
+// LeakPw('Alex') is the same named mistake the share's in-band route emits, so the H_pw_stays_oob [reuse]
+// boundary list already covers this route (no lemma change).
+rule IF_hint_leak [color=#c0392b]:
+    [ !PwCopy(idA, hintId, pw), TranscribeLeaked('Alex', hintId, typed) ]
+  --[ HintLeak('Alex'), LeakPw('Alex'), MisdirectedTo('Alex','hint') ]->
+    [ Out(pw) ]
+
+// ---- the send GATE: the committed (typed) passphrase must be released before the message can go. This
+// is where the IF_REVEAL lever sits; both branches produce the same linear PwGate the send consumes. ----
+
+#ifdef IF_REVEAL
+// A9/B2 WITH the reveal: the typed passphrase is VISIBLE, hence CHECKABLE, so the interface poses a
+// self-check 'compare' of <committed-typed, intended>. Posed SHALLOW -- off the persistent !AlexScreen
+// anchor plus the PERSISTENT committed !StepData (never a linear chain); it joins exactly ONE free-valued
+// !StepData, whose pwId is pinned by !PwIntended.
+rule IF_pw_reveal_check [color=#f2994a]:
+    [ !AlexScreen('Alex', idA, subjId, sendId), !PwIntended(idA, pwId, pw),
+      !StepData('Alex', pwId, pwc), Fr(~cId) ]
+  --[ PoseReveal('Alex'), UIStep('Alex','pw_reveal') ]->
+    [ Prompt('Alex', ~cId, 'compare'), !Demand('Alex', ~cId, 'compare'),
+      !Displayed('Alex', ~cId, <pwc, pw>),
+      PwCheck(idA, ~cId, pwc) ]
+
+restriction OncePoseReveal:
+  "All p #i #j. PoseReveal(p)@i & PoseReveal(p)@j ==> #i = #j"
+
+// the gate opens ONLY on a passed self-check. Attentive compare fires only on <k,k> (pwc = pw), so a
+// slipped passphrase can never open it -- the slip becomes a SAFE-FAIL (the send simply never happens).
+// Consumes the persistent !KeyChecked (the always-on compare adapter) rather than the linear Checked, so
+// it does not compete with the adapter for it.
+rule IF_pw_gate_checked [color=#1f6fd0]:
+    [ PwCheck(idA, cId, pwc), !KeyChecked('Alex', cId) ]
+  --[ PwGateOpen('Alex'), PwRevealPass('Alex') ]->
+    [ PwGate(idA, pwc) ]
+#else
+// WITHOUT the reveal the passphrase is dots on the screen: whatever was committed is released blind.
+rule IF_pw_gate_blind [color=#c0392b]:
+    [ !PwIntended(idA, pwId, pw), !StepData('Alex', pwId, pwc) ]
+  --[ PwGateOpen('Alex') ]->
+    [ PwGate(idA, pwc) ]
+#endif
+
+restriction OncePwGate:
+  "All p #i #j. PwGateOpen(p)@i & PwGateOpen(p)@j ==> #i = #j"
+
+// send: decide handled + Send granted + the passphrase gate open -> deliver the ENCRYPTED message to
+// Blake's private mailbox (recipient fixed); the pw travels separately via the share, the PW pathway's
+// leak channel. PwAtSend records <intended, actually-typed> for the slip detector below.
 rule IF_send_pw_screen_good [color=#1f6fd0]:
     [ SecureFlag(idA), !AlexScreen('Alex', idA, subjId, sendId), PwPending(idA, shId, pw),
-      Granted('Alex', sendId), !StepData('Alex', pwId, pwc), Fr(~m) ]
+      Granted('Alex', sendId), PwGate(idA, pwc), Fr(~m) ]
   --[ Send('Alex','PW', ~m), Secret(~m), EncTo(~m,'Blake'), SentOK('Alex') ]->
-    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw) ]
+    [ Mailbox('Blake', ~m), SentMsg(idA, ~m, subjId), PwEnvelope(idA, shId, pw),
+      PwAtSend(idA, pw, pwc) ]
+
+// the NAMED bad outcome of the A9/B2 lever: the message went out protected by a passphrase Alex did NOT
+// intend (a Busy slip on the compute, committed blind). CRYPTO IS ABSTRACTED here, so this is the mistake
+// itself, not a K(m) breach: it is the outcome the reveal is supposed to make impossible.
+//   baseline (no IF_REVEAL)  -> REACHABLE   (exists-trace)
+//   hardened (IF_REVEAL)     -> UNREACHABLE (all-traces)
+rule IF_pw_slipped_at_send [color=#c0392b]:
+    [ PwAtSend(idA, pw, pwc) ]
+  --[ SlippedPwSent('Alex'), NeqPw(pw, pwc) ]->
+    [ ]
+
+restriction NeqPwTyped:
+  "All x #i. NeqPw(x, x)@i ==> F"
 
 // pw share routing (mirrors legacy PW_deliver_*; only the pw travels here). oob -> private OobPw;
 // misdeliver -> Out(pw); inband-leak -> OobPw + Out(pw) (the SILENT compromise: Blake still reads).
@@ -44,38 +121,54 @@ rule IF_pw_share_inband [color=#c0392b]:
   --[ ShareRoute('Alex','inband-leak') ]->
     [ OobPw('Blake', pw), Out(pw) ]
 
-// ---- Screen B: recipient password page (Blake). Reached via the mailed link, so a link-confirm
-// (<claimed-origin, expected-origin> -- the guide's "can resemble phishing") guards entry. pw-entry
-// (transcribe) + Unlock (authorize) + B6/B7 reply-route (exposure). ----
+// ---- Screen B: recipient password page (Blake). Reached via the mailed LINK, so the origin of the page
+// Blake lands on is ADVERSARY-MEDIATED: In(claimedOrigin) is whatever the link actually led to. The
+// link-confirm displays <claimed-origin, expected-origin> (the guide's "can resemble phishing"), so an
+// Attentive confirm fires ONLY on <k,k> -- it accepts the genuine page and CATCHES an impostor one --
+// while a credulous (autoapproving) mask accepts ANY claimed origin. pw-entry (transcribe) + Unlock
+// (authorize) + B6/B7 reply-route (exposure). ----
 rule IF_screen_blake_pw [color=#f2994a]:
-    [ BlakeInit(idB), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId) ]
-  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake') ]->
+    [ BlakeInit(idB), In(claimedOrigin), Fr(~cId), Fr(~entId), Fr(~unlId), Fr(~rrId), Fr(~ckId) ]
+  --[ UIStep('Blake','pw_page'), PoseBlakePw('Blake'), LandedOn('Blake', claimedOrigin) ]->
     [ // B6/B7 reply-route decide -- EXPOSURE-ONLY (counted, never performed: !Demand, no Prompt)
       !Demand('Blake', ~rrId,  'decide'),
-      Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <'GenuinePage', 'GenuinePage'>),
+      // the page's SECOND confirm (the cookie / "trust this browser" banner stacked on the link-confirm)
+      // -- EXPOSURE-ONLY as well, so it costs nothing, but it gives sigma8 the TWO co-present confirm
+      // demands it needs: that is what makes Blake HABITUATED, hence able to autoapprove the phishing
+      // page. Without it the impostor route below is dormant in every profile (no mask autoapproves).
+      !Demand('Blake', ~ckId,  'confirm'),
+      Prompt('Blake', ~cId,   'confirm'),    !Demand('Blake', ~cId,   'confirm'),    !Displayed('Blake', ~cId, <claimedOrigin, 'GenuinePage'>),
       Prompt('Blake', ~entId, 'transcribe'), !Demand('Blake', ~entId, 'transcribe'), !Displayed('Blake', ~entId, 'oob-pw'),
       Prompt('Blake', ~unlId, 'authorize'),  !Demand('Blake', ~unlId, 'authorize'),
       !Copresent('Blake'),
-      !BlakePwScreen(idB, ~cId, ~unlId) ]
+      !BlakePwScreen(idB, ~cId, ~unlId, claimedOrigin) ]
 
+// once-bounded: ONE landing per run. Without this the In() would let the adversary re-pose Screen B for
+// every term it knows -- an unbounded fan-out the source graph cannot close.
 restriction OncePoseBlakePw:
   "All p #i #j. PoseBlakePw(p)@i & PoseBlakePw(p)@j ==> #i = #j"
 
 // legit: link-confirm answered + Unlock granted -> read m, unlock pw.
 rule IF_blake_pw_unlock [color=#1f6fd0]:
-    [ !BlakePwScreen(idB, cId, unlId), Confirmed('Blake', cId, mask),
+    [ !BlakePwScreen(idB, cId, unlId, claimedOrigin), Confirmed('Blake', cId, mask),
       Granted('Blake', unlId), Mailbox('Blake', m), OobPw('Blake', pw) ]
   --[ UIStep('Blake','unlock'), Read('Blake', m), ReadVia('Blake','PW'), Unlocked('Blake', pw) ]->
     [ ]
 
-// impostor: a credulous link-confirm (AutoApprove) accepted an impostor page -> Blake enters his pw
-// there -> the impostor learns it -> Out(pw). PwEnteredAtImpostor is the named recipient-side breach.
+// impostor: the link led to a page whose claimed origin is NOT the genuine one, and a credulous
+// link-confirm (AutoApprove) accepted it anyway -> Blake enters his pw there -> the impostor learns it ->
+// Out(pw). An Attentive confirm cannot fire on <impostor, GenuinePage>, so it CATCHES the phishing page.
+// PwEnteredAtImpostor is the named recipient-side breach (a disjunct of H_pw_stays_oob).
 rule IF_blake_pw_impostor [color=#c0392b]:
-    [ !BlakePwScreen(idB, cId, unlId), OobPw('Blake', pw) ]
-  --[ PwEnteredAtImpostor('Blake'), AutoApproveGuard('Blake', cId) ]->
+    [ !BlakePwScreen(idB, cId, unlId, claimedOrigin), OobPw('Blake', pw) ]
+  --[ PwEnteredAtImpostor('Blake'), AutoApproveGuard('Blake', cId),
+      NeqOrigin(claimedOrigin, 'GenuinePage') ]->
     [ Out(pw) ]
 
 // the impostor route only fires when the link-confirm was AUTO-APPROVED (credulous) -- an Attentive
 // verify catches the phishing page. (Guard restriction on the action, so no extra fact join.)
 restriction ImpostorRequiresAutoApprove:
   "All p c #i. AutoApproveGuard(p, c)@i ==> (Ex #j. AutoApprove(p, c)@j)"
+
+restriction NeqOriginGenuine:
+  "All x #i. NeqOrigin(x, x)@i ==> F"

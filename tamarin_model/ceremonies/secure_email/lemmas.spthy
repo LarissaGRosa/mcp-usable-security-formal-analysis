@@ -11,7 +11,7 @@
     legacy      : credulous fingerprint compare (Mistake) | PW misdeliver (MisdeliveredPw)
                   | PW in-band (LeakPw)
     screens A   : badkey compare (Mistake) | subject transcribe leak (SubjectLeak)
-                  | out-of-order send (SendPremature)
+                  | out-of-order send (SendPremature) | To-field slip (MisaddressedSend)
     screens B/C : Forward to a keyless third party (ForwardedOutside)
                   | pw entered at the phishing page (PwEnteredAtImpostor)
 
@@ -29,7 +29,8 @@ lemma H_leak_routes [reuse]:
      | (Ex p #d. MisdeliveredPw(p)@d)
      | (Ex p #d. SubjectLeak(p)@d)
      | (Ex p #d. SendPremature(p)@d)
-     | (Ex p #d. ForwardedOutside(p)@d)"
+     | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
 
 // the passphrase reaches the adversary only through a degraded share outcome, or by being entered at the
 // impostor (phishing) page on Blake's Screen B.

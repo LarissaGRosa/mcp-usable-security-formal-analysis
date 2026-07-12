@@ -186,15 +186,38 @@ rule Transcribe_correct [color=#27ae60]:
   --[ Transcribe(P, tid, mask), RespMask(P, mask), Typed(P, tid, intended), Answered(tid) ]->
     [ !StepData(P, tid, intended) ]
 
+// The slip ALSO emits a generic TranscribeSlipped token, the exact counterpart of Transcribe_leak's
+// TranscribeLeaked: core says "a wrong value was committed into this field" and stays blind to what that
+// MEANS -- the ceremony's effect rule decides (a mistyped recipient misaddresses the message; a mistyped
+// passphrase just fails to unlock). Handing the ceremony a TOKEN, rather than making it re-join the
+// committed !StepData, is what keeps the send effect's source graph shallow: a second free-valued
+// !StepData in the send is precisely what opened the chains that never closed.
 rule Transcribe_slip [color=#27ae60]:
     [ Prompt(P, tid, 'transcribe'), Fr(~wrong), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'transcribe', 'slip') ]
   --[ Transcribe(P, tid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), Slip(P), Typed(P, tid, ~wrong), Answered(tid) ]->
-    [ !Failed(P), !StepData(P, tid, ~wrong) ]
+    [ !Failed(P), !StepData(P, tid, ~wrong), TranscribeSlipped(P, tid, ~wrong) ]
 
+// The FIELD's DESIGN decides whether the careless entry actually EXPORTS the value -- the same
+// task-mediated idiom as set-policy above (Policy_clear / Policy_misleading read !ControlDesign, and a
+// profile arms IF_CLEAR xor IF_MISLEADING). A PLAIN field carries no warning that its contents are public,
+// so the careless user types the secret into it and it leaks. A field carrying a standing REMINDER that it
+// is not protected does NOT leak: the user still answers carelessly (the ceremony is not blocked -- this is
+// not a forcing function), they simply do not put the secret THERE.
+//
+// This is what makes the reminder a real lever rather than an assumption: with 'clear' seeded, the leak
+// rule has no matching design fact and CANNOT FIRE, so the unreachability of the downstream leak is
+// DERIVED from the mask layer -- not postulated by a restriction that excludes the very traces in question.
 rule Transcribe_leak [color=#27ae60]:
-    [ Prompt(P, tid, 'transcribe'), !Displayed(P, tid, intended), !EffectiveMask(P, mask), !OutcomePolicy(mask, 'transcribe', 'inband-leak') ]
+    [ Prompt(P, tid, 'transcribe'), !Displayed(P, tid, intended), !EffectiveMask(P, mask),
+      !OutcomePolicy(mask, 'transcribe', 'inband-leak'), !ControlDesign('transcribe', 'plain') ]
   --[ Transcribe(P, tid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), TranscribeLeak(P, tid), Typed(P, tid, intended), Answered(tid) ]->
     [ !StepData(P, tid, intended), TranscribeLeaked(P, tid, intended) ]
+
+rule Transcribe_reminded [color=#27ae60]:
+    [ Prompt(P, tid, 'transcribe'), !Displayed(P, tid, intended), !EffectiveMask(P, mask),
+      !OutcomePolicy(mask, 'transcribe', 'inband-leak'), !ControlDesign('transcribe', 'clear') ]
+  --[ Transcribe(P, tid, mask), RespMask(P, mask), Mask(P,'Attentive',mask), LeakAverted(P, tid), Typed(P, tid, intended), Answered(tid) ]->
+    [ !StepData(P, tid, intended) ]
 #endif
 
 #ifdef OUTCOME_DEGRADED_CLICK

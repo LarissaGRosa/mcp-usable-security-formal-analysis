@@ -1,0 +1,47 @@
+theory SecureEmail_S14_BlakePhish
+begin
+/*
+  S14 -- the PHISHING breach on Blake's password page, which until now was DORMANT in every shipped
+  profile: no PATH_PW profile stressed BLAKE, so he stayed Attentive and PwEnteredAtImpostor was
+  UNSATISFIABLE. The rule existed, the H_pw_stays_oob disjunct existed, and nothing ever fired it.
+  A leak route is not "modelled" until a profile proves it REACHABLE.
+
+  Blake follows the mailed link. The origin he lands on is ADVERSARY-MEDIATED (In(claimedOrigin)): the
+  link may lead to the genuine page or to an impostor. The link-confirm displays <claimed, expected>, so an
+  ATTENTIVE confirm fires only on <k,k> -- it catches the impostor. But the page stacks confirms (the
+  origin card plus a "trust this browser" banner), so sigma8 HABITUATES Blake, the click-through row fires,
+  and he auto-approves an origin that is NOT the genuine one -- then types his passphrase into it.
+*/
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PW
+
+#define STRESS_BLAKE
+#define SIGMA8_HABITUATION
+#define OUTCOME_HABITUATED_CLICKTHROUGH
+
+#include "base.spthy"
+
+lemma S14_habituate_onset: exists-trace "Ex #i. Habituate('Blake')@i"
+
+// Blake actually LANDS on an impostor origin (adversary-mediated), not merely a fixed constant.
+lemma S14_lands_on_impostor:
+  exists-trace "Ex o #i #j. LandedOn('Blake', o)@i & PwEnteredAtImpostor('Blake')@j"
+
+// THE BREACH: the passphrase is entered at the impostor page and leaves the boundary.
+lemma S14_pw_entered_at_impostor:
+  exists-trace "Ex #i. PwEnteredAtImpostor('Blake')@i"
+
+// ATTRIBUTION: it can only happen through an auto-approved (habituated) link-confirm. An Attentive Blake
+// -- who actually reads the origin card -- catches the phishing page.
+lemma S14_impostor_requires_autoapprove:
+  all-traces
+  "All p #i. PwEnteredAtImpostor(p)@i ==> (Ex c #j. AutoApprove(p, c)@j)"
+
+lemma S14_pw_stays_oob:
+  all-traces
+  "All pw #c #k. PwCreated(pw)@c & K(pw)@k
+   ==> (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d) | (Ex p #d. PwEnteredAtImpostor(p)@d)"
+end

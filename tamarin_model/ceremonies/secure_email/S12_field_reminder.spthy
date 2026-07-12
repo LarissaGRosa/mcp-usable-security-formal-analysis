@@ -1,0 +1,56 @@
+theory SecureEmail_S12_FieldReminder
+begin
+/*
+  S12 -- the FIELD-REMINDER lever (the "removed_by" half of an RFC pair). Same screens, same stressors as
+  S8_transcribe: the human is under exactly the same pressure and still goes Busy -> slips -> !Failed ->
+  sigma10 -> CARELESS. The ONLY difference is the interface: every text field carries a standing reminder
+  that its contents are NOT protected (the guide's "the subject line is never encrypted").
+
+  With the reminder seeded, core's Transcribe_leak has no matching !ControlDesign('transcribe','plain')
+  fact and CANNOT FIRE -- the careless user still answers (this is a reminder, NOT a forcing function: the
+  ceremony is not blocked), they simply do not put the secret in that field. So SubjectLeak becomes
+  UNREACHABLE, and the unreachability is DERIVED from the mask layer, not postulated by a restriction.
+
+  Note what this does NOT claim: the human is not made Attentive. They are still Careless, and every OTHER
+  Careless route (the TLS misroute) stays open. A reminder fixes the field, not the person.
+*/
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define PATH_PGP
+
+#define IF_FIELD_REMINDER
+
+#define STRESS_ALEX
+#define SIGMA_ADDITIVE
+#define SIGMA10_REPEATFAIL
+#define OUTCOME_CARELESS_MISROUTE
+
+#include "base.spthy"
+
+// the human is degraded EXACTLY as in S8 -- same onsets, same slip, same Careless state.
+lemma S12_additive_onset:   exists-trace "Ex #i. AdditiveLoad('Alex')@i"
+lemma S12_repeatfail_onset: exists-trace "Ex #i. RepeatedFailure('Alex')@i"
+lemma S12_still_slips:      exists-trace "Ex #i. Slip('Alex')@i"
+
+// ...and the careless entry still HAPPENS -- it is just no longer an export.
+lemma S12_careless_entry_averted:
+  exists-trace "Ex tid #i. LeakAverted('Alex', tid)@i"
+
+// THE LEVER: the subject leak is now UNREACHABLE (derived -- Transcribe_leak cannot fire).
+lemma S12_no_subject_leak:
+  all-traces "not (Ex p #i. SubjectLeak(p)@i)"
+
+// a reminder fixes the FIELD, not the PERSON: the Careless state still reaches the TLS misroute.
+lemma S12_careless_still_misroutes:
+  exists-trace "Ex m #i. PlaintextAtProvider(m)@i"
+
+lemma S12_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
+
+lemma S12_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+end

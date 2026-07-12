@@ -43,6 +43,7 @@ rule IF_screen_composer [color=#f2994a]:
       Prompt('Alex', ~sendId, 'authorize'),  !Demand('Alex', ~sendId, 'authorize'),
       // the compose window shows >=2 co-present controls -> the single sigma2 concurrency marker.
       !Copresent('Alex'),
+      !ToField(idA, ~toId),
       !AlexScreen('Alex', idA, ~subjId, ~sendId),
       MethodChoice(idA, ~methId) ]
 
@@ -67,6 +68,23 @@ rule IF_method_tls_misroute [color=#c0392b]:
   --[ Send('Alex','TLS', ~m), Secret(~m), PlaintextAtProvider(~m), MisdirectedTo('Alex','provider') ]->
     [ ]
 #endif
+
+// TO-FIELD SLIP -> MISADDRESSED SEND (both pathways). A BUSY entry in the To field commits a fresh WRONG
+// address (core's Transcribe_slip hands over the generic TranscribeSlipped token). The ceremony gives that
+// its meaning: the message was addressed to someone who is not the correspondent, so it leaves the
+// boundary. This is the mock's A2 control finally driving an outcome.
+//
+// It consumes the TOKEN rather than re-joining the committed !StepData in the send: threading a SECOND
+// free-valued !StepData through IF_send_pgp_screen_good was what opened source chains that never closed.
+// The send stays exactly as shallow as it was; this rule hangs off SentMsg, which the send already emits.
+//
+// NOTE this is a NEW named leak route, so it is added to the H_leak_routes [reuse] boundary list in
+// lemmas.spthy and to every profile's T6 disjunction -- a leak route that is not on the list would make
+// the (S) lemma FALSE, not merely incomplete.
+rule IF_to_misaddressed [color=#c0392b]:
+    [ SentMsg(idA, m, subjId), !ToField(idA, toId), TranscribeSlipped('Alex', toId, wrongAddr) ]
+  --[ MisaddressedSend('Alex'), MisdirectedTo('Alex', wrongAddr) ]->
+    [ Out(m) ]
 
 // subject leak (both pathways): a Careless subject transcribe exported the subject -> the message's
 // cleartext metadata leaks -> Out(m). Consumes the generic TranscribeLeaked token from core; SentMsg is

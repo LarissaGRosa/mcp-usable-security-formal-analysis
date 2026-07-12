@@ -187,6 +187,40 @@
         "lever": "Forward re-encrypts to the new recipient or BLOCKS -- it never silently downgrades to cleartext"
       },
       "requirement": "Implementations MUST NOT silently downgrade a forwarded protected message to cleartext. Forward MUST either re-protect for the new recipient or refuse."
+    },
+    {
+      "id": "REQ-FIELD-REMINDER",
+      "title": "Standing reminder on every unprotected field",
+      "risk_text": "The subject line is never encrypted, and neither is a password hint -- but nothing on the screen says so. Under load the user degrades to Careless and types the secret into the field that looks like part of the protected message. The crypto is perfect and the secret still leaves in cleartext metadata. Note what the lever does NOT do: the reminded user is STILL Careless and still reaches every other careless route (the model proves the TLS misroute remains open). A reminder fixes the FIELD, not the PERSON.",
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S8_transcribe.spthy",
+          "lemma": "S8_sigma10_closure"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/secure_email/S12_field_reminder.spthy",
+        "lemma": "S12_no_subject_leak",
+        "lever": "a standing, always-visible reminder next to every field whose contents are NOT protected. It is a REMINDER, not a forcing function: the careless user still answers (the ceremony is not blocked -- S12_completes still holds), they simply do not put the secret THERE"
+      },
+      "requirement": "Implementations SHOULD display a persistent indication, next to every field whose contents are not protected (subject line, password hint), that its contents are not protected. The indication MUST be visible at the moment of entry, not only in help text."
+    },
+    {
+      "id": "REQ-SHOW-PASSWORD",
+      "title": "Offer to reveal a typed secret so it can be checked",
+      "risk_text": "A passphrase masked as dots is UNCHECKABLE. Under time pressure the user slips, the wrong value is committed BLIND, and the message goes out protected by a passphrase the sender never intended -- while the recipient is given the one the sender meant. The failure is silent at both ends.",
+      "vulnerable": [
+        {
+          "profile": "tamarin_model/ceremonies/secure_email/S2_trio_pw.spthy",
+          "lemma": "S2_slipped_pw_sent"
+        }
+      ],
+      "removed_by": {
+        "profile": "tamarin_model/ceremonies/secure_email/S13_pw_reveal.spthy",
+        "lemma": "S13_no_slipped_pw_sent",
+        "lever": "a show/hide affordance: revealing the typed value makes it CHECKABLE, so the user's own self-check catches the slip before the send. The user still slips (S13_still_slips) -- the interface simply lets them see it"
+      },
+      "requirement": "Implementations SHOULD offer a reveal control for any secret the user must TYPE (as opposed to paste), so the typed value can be verified before it is committed. A value the user cannot see is a value the user cannot check."
     }
   ]
 }

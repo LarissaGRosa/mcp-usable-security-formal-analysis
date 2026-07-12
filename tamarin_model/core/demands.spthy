@@ -94,6 +94,30 @@ restriction OnceMisleadingPolicy:
   "All #i #j. SeedInterface('misleading_policy')@i & SeedInterface('misleading_policy')@j ==> #i = #j"
 #endif
 
+// ===== the FIELD-DESIGN lever (always seeded, one way or the other) =====
+// A text field either carries a standing reminder that its contents are NOT protected, or it does not.
+// This is a property of the INTERFACE, so exactly one of the two designs holds in every run -- hence
+// #ifdef/#else rather than an opt-in seed (the same shape as LEXICON_DEFAULT xor IF_HARDENED). The key
+// names the ACTION CLASS ('transcribe'), never a ceremony field, so core stays agnostic.
+//
+//   default            -> !ControlDesign('transcribe','plain')  : a careless entry EXPORTS the value
+//   IF_FIELD_REMINDER  -> !ControlDesign('transcribe','clear')  : it does not (Transcribe_leak cannot fire)
+#ifdef IF_FIELD_REMINDER
+rule Seed_field_reminder [color=#9b51e0]:
+    [ ] --[ SeedInterface('field_reminder') ]->
+    [ !ControlDesign('transcribe', 'clear'), !Interface('field_reminder') ]
+
+restriction OnceFieldReminder:
+  "All #i #j. SeedInterface('field_reminder')@i & SeedInterface('field_reminder')@j ==> #i = #j"
+#else
+rule Seed_field_plain [color=#9b51e0]:
+    [ ] --[ SeedInterface('field_plain') ]->
+    [ !ControlDesign('transcribe', 'plain') ]
+
+restriction OnceFieldPlain:
+  "All #i #j. SeedInterface('field_plain')@i & SeedInterface('field_plain')@j ==> #i = #j"
+#endif
+
 #ifdef CUE_PHISH
 // ===== phishing lure: the fingerprint-verify step carries a high AUTHORITY persuasion cue ("your admin
 // vouches for this key") -- feeds SIGMA_CUE -> Naive on the compare. Same seed mechanism as !Demands. =====

@@ -277,14 +277,18 @@
     action labels like `Verify`/`Slip`) — dropping it took S4 solo 340s → 204s with no proof change.
     Keep only the committed `!StepData` where a consumer actually reads it.
 
-20. **Tamarin's preprocessor cannot SKIP a nested `#ifdef` (RELAYER, 2026-07-11).** It supports only
+20. **Tamarin's preprocessor: no `#ifndef`, and skipping a nested `#ifdef` is DANGEROUS (but not always fatal) (RELAYER, 2026-07-11; CORRECTED 2026-07-12).** It supports only
     `#ifdef` / `#else` / `#endif` / `#define` / `#include` — there is **no `#ifndef`**. And when it skips a
     false `#ifdef`, it does **not** track nested `#ifdef`s: it matches the FIRST `#endif` and silently
     mis-nests everything after. The theory still loads, well-formedness still passes, and every lemma goes
     quietly **vacuous**. Symptom: a trivially-reachable `exists-trace` is "falsified — no trace found" in 2
-    steps. Fix: any mutually-exclusive block that itself contains inner `#ifdef`s must be a **separate
-    file**, conditionally `#include`d (a skipped branch then holds only the `#include` line). This is why
-    the secure_email flow is `sender_screens.spthy` + `screens_pgp.spthy` + `screens_pw.spthy`.
+    steps. **CORRECTION:** I first wrote that this ALWAYS happens. It does not — it is *pattern-dependent*.
+    Nesting `#ifdef KDF_SPOOF` inside `#ifdef KDF_MESSENGER` (skipped by every P-profile) broke all twelve
+    of them, yet `#ifdef OUTCOME_PREMATURE` nested in the SAME block does not. I have no crisp
+    characterisation of when it bites. **Conservative rule:** put a lever's `#ifdef` at the TOP LEVEL of an
+    always-included file, or inside a file that is only `#include`d in the TAKEN branch (its inner `#ifdef`s
+    are then always processed in an ENTERED context). This is why the secure_email flow is
+    `sender_screens.spthy` + `screens_pgp.spthy` + `screens_pw.spthy`.
 
 21. **Density detectors of the form "any N of M prompts" explode; use a single marker.** σ2 (`any two
     !Demand`) and σ9 (`any three 'decide'`) are O(M²)/O(M³) lookups in the SOURCE SATURATION. Harmless with
@@ -314,3 +318,25 @@
     capped — the box has no swap, so a runaway proof OOM-freezes it:
     `MAUDE_LIB=/usr/share/maude check.py --prove --timeout 178 FILE -- +RTS -M6G -RTS`
     (without `MAUDE_LIB` tamarin cannot find `prelude.maude` and every profile FAILs spuriously).
+
+26. **A hardened lemma that closes in ~2 steps is a RED FLAG — you have probably assumed the conclusion.**
+    A design lever must CHANGE WHAT THE DEGRADED HUMAN DOES, not be postulated to have worked. The first
+    subject-reminder implementation proved `not (Ex SubjectLeak)` in 2 steps via a *restriction*
+    (`SubjectLeak ⇒ not ControlDesigned`) plus an axiom forcing the design — i.e. it excluded the very
+    traces the lemma was about. Rebuilt with the model's own `!ControlDesign` idiom (the one `MASK_POLICY`
+    already uses): core's `Transcribe_leak` requires `!ControlDesign('transcribe','plain')`, the lever seeds
+    `'clear'` instead, so the leak rule CANNOT FIRE. Same lemma: **103 steps** — derived. And it then proves
+    what the axiom could not: the human still slips, still answers carelessly, and still reaches the other
+    careless routes. **A reminder fixes the field, not the person.**
+
+27. **A leak route is NOT modelled until a profile proves it REACHABLE (exists-trace).** `PwEnteredAtImpostor`
+    sat on the `H_leak_routes` boundary list, had a rule, had a disjunct — and was UNSATISFIABLE in every
+    shipped profile (no PATH_PW profile stressed Blake; Screen B posed one confirm so σ8 could not habituate
+    him). A boundary list padded with unsatisfiable disjuncts makes the (S) lemma look STRONGER than it is.
+    Pair every named route with an exists-trace in some profile.
+
+28. **Give the ceremony a TOKEN, not a second `!StepData` join.** Core's `transcribe` emits
+    `TranscribeLeaked` (Careless) and `TranscribeSlipped` (Busy); the ceremony consumes the token and decides
+    what it MEANS (a mistyped recipient misaddresses; a mistyped passphrase just fails). Re-joining the
+    committed `!StepData` in the send effect — a SECOND free-valued lookup — is exactly what opened the
+    source chains that never closed. One free-valued `!StepData` per effect rule, always.

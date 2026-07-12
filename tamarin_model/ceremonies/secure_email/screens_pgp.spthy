@@ -1,21 +1,78 @@
 /*
-  screens_pgp.spthy -- the PGP pathway of the full interface: Alex's fingerprint verify + send (Screen A,
-  PGP mode) and Blake's end-to-end inbox (Screen C). Included by sender_screens.spthy ONLY when PATH_PGP
-  is armed.
+  screens_pgp.spthy -- the PGP pathway of the full interface: Alex's fingerprint verify + sign/attach-key
+  + send (Screen A, PGP mode) and Blake's end-to-end inbox (Screen C), plus the REPLY leg that closes the
+  ceremony (A13). Included by sender_screens.spthy ONLY when PATH_PGP is armed.
 
   Gating the pathway per profile is what buys the budget: with BOTH pathways compiled in, every profile
   carried the whole two-pathway, two-party surface and only ONE stressor fitted in 3 min. Compiled alone,
   a pathway is roughly half the surface, so a profile can arm a stressor TRIO again (as the legacy
   profiles do). A profile arms PATH_PGP and/or PATH_PW; the baseline arms both (it has no stressor).
+
+  THE REPLY LEG (A13) IS ITS OWN LEVER -- PGP_REPLY -- and here is WHY it is opt-in rather than always-on.
+  S3 (the recipient trio: sigma6+sigma8+sigma9+anxiety on Blake) already costs ~117s of the 180s budget
+  with the pathway alone. Compiling the reply leg + the adversary-mediated C3 compare into EVERY PGP
+  profile pushes S3 over 170s (measured: TIMEOUT). The leg is therefore a lever a profile ARMS, exactly
+  like OUTCOME_PREMATURE / OUTCOME_CARELESS_MISROUTE: profiles that want the reciprocity story pay for it,
+  the legacy trios do not. (screens_pgp.spthy is itself only INCLUDED in the taken PATH_PGP branch, so its
+  inner #ifdefs are always processed in an ENTERED context -- never skipped through, which is the one
+  thing tamarin's preprocessor cannot do.)
+
+  WHAT THE LEG MODELS. The mock's composer carries a "Sign - attach my key" control (A13). Skipping it
+  leaks NOTHING: it is not a secrecy control, it is a RECIPROCITY one. If Alex never attaches her key,
+  Blake holds no key to encrypt a reply TO, so the conversation cannot come back -- the guide's
+  completion story. Modelled as a PERFORMED confirm:
+      Attentive       -> verify-self (fires only on <ownKey, ownKey>) -> Confirmed -> key attached
+      Busy/Habituated -> autoapprove (clicks without looking)         -> Confirmed -> key attached
+      Careless        -> dismiss     (swats the dialog away)          -> NO Confirmed -> NO key attached
+  so the completion property (Sx_reply_completes) is an exists-trace, and its complement -- a DISMISSED
+  confirm can never be followed by a reply -- is the all-traces Sx_reply_needs_attach. Neither is a
+  secrecy claim: the dismissal path is a pure USABILITY failure and emits no Out.
+
+  AND BLAKE'S TRUSTED-KEY COMPARE BECOMES ADVERSARY-MEDIATED (C3). It used to display a FIXED
+  <'AliceKey','AliceKey'>, so Blake could never actually BE shown a substituted sender key -- his mistakes
+  were mask-driven only. Under PGP_REPLY it reads In(senderKey) and displays <senderKey, 'Alex'>, exactly
+  mirroring Alex's own compare (the OOB reference is the correspondent IDENTITY; tamperedness is DERIVED
+  from the committed key, never from a genuine/tampered rule branch -- lesson 14). An Attentive Blake then
+  fires only on <k,k> (i.e. only on the genuine 'Alex' key: he CATCHES the substitution), while a credulous
+  mask accepts whatever was offered -> Mistake. The CONSEQUENCE is wired through the reply leg: a credulous
+  Blake who trusts a substituted sender key encrypts his REPLY to the ADVERSARY's key and the reply leaves
+  the boundary (Out). That reuses the existing Mistake(p,vid) outcome, which H_leak_routes in lemmas.spthy
+  already carries as a disjunct -- NO new leak route, NO new disjunct, lemmas.spthy untouched.
+
+  TRACTABILITY (each of these was the difference between a proof and a non-terminating search):
+    * every Prompt is posed off a SHALLOW persistent anchor (!AlexScreen / BlakeInit), never off a deep
+      linear chain.
+    * an effect rule joins AT MOST ONE free-valued !StepData. The send joins the compare's recipient; the
+      HIJACKED reply joins Blake's committed key. The GOOD reply joins !StepData(.., 'Alex') -- a GROUND
+      pattern, so it costs nothing.
+    * the attach is threaded as the LINEAR Confirmed token, never as a second free-valued !StepData.
+    * the reply is bounded by a LINEAR ReplyToken minted at the decrypt: a persistent-only premise set
+      plus Fr(~reply) would let the reply rules fire unboundedly.
 */
 
 // ---- Screen A (PGP mode): fingerprint compare (verify), posed off the SHALLOW persistent !AlexScreen
-// (as legacy IF_verify_fp is posed off !AlexSession). The recipient is the compare's committed key. ----
+// (as legacy IF_verify_fp is posed off !AlexSession). The recipient is the compare's committed key.
+// Under PGP_REPLY the screen ALSO poses the A13 "Sign - attach my key" confirm. ----
+#ifdef PGP_REPLY
+rule IF_screen_pgp [color=#f2994a]:
+    [ !AlexScreen('Alex', idA, subjId, sendId), In(offered), Fr(~vid), Fr(~cfgId), Fr(~sk) ]
+  --[ UIStep('Alex','btn_verify_fp'), UIStep('Alex','btn_sign_attach'),
+      KeyGenerated('Alex'), OwnSkGen('Alex', ~sk), PosePgpScreen('Alex') ]->
+    [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
+      // A13 "Sign - attach my key": a PERFORMED confirm on Alex's OWN key. Attentive verify-self fires
+      // only on <k,k>; Busy/Habituated autoapprove it; Careless DISMISSES it (-> no key attached -> no
+      // reply is possible at all). 'confirm' carries no !Demands row, so this cannot trip sigma1/3/6/7,
+      // and sigma8 needs TWO co-present confirms -- Alex has exactly one, so the screen stays
+      // stressor-neutral for her.
+      Prompt('Alex', ~cfgId, 'confirm'), !Demand('Alex', ~cfgId, 'confirm'), !Displayed('Alex', ~cfgId, <'AlexKey', 'AlexKey'>),
+      AlexVerifying(idA, ~vid), !AlexAttachCtl(idA, ~cfgId) ]
+#else
 rule IF_screen_pgp [color=#f2994a]:
     [ !AlexScreen('Alex', idA, subjId, sendId), In(offered), Fr(~vid), Fr(~sk) ]
   --[ UIStep('Alex','btn_verify_fp'), KeyGenerated('Alex'), OwnSkGen('Alex', ~sk), PosePgpScreen('Alex') ]->
     [ Prompt('Alex', ~vid, 'compare'), !Demand('Alex', ~vid, 'compare'), !Displayed('Alex', ~vid, <offered, 'Blake'>),
       AlexVerifying(idA, ~vid) ]
+#endif
 
 restriction OncePosePgpScreen:
   "All p #i #j. PosePgpScreen(p)@i & PosePgpScreen(p)@j ==> #i = #j"
@@ -43,8 +100,38 @@ rule IF_send_pgp_screen_premature [color=#c0392b]:
     [ Out(~m), SentMsg(idA, ~m, subjId) ]
 #endif
 
+// A13 EFFECT: the confirm was CONFIRMED (verify-self OR autoapprove -- both stand behind the attach; only
+// the Careless DISMISS produces no Confirmed at all), so Alex's public key rides along with the message
+// and Blake ends up holding a key he can encrypt a reply to. Joins the LINEAR Confirmed token, so it
+// fires at most once and threads no second free-valued !StepData.
+#ifdef PGP_REPLY
+rule IF_attach_key [color=#1f6fd0]:
+    [ !AlexAttachCtl(idA, cfgId), Confirmed('Alex', cfgId, mask) ]
+  --[ KeyAttached('Alex', cfgId), AttachMask('Alex', mask) ]->
+    [ !ReplyKeyAvail('Blake') ]
+#endif
+
 // ---- Screen C: recipient end-to-end inbox (Blake). Encryption/signature badges (C1/C2), trusted-key
-// compare (C3), decrypt authorize, Reply (C6) + Forward (C7) + overflow (C8). ----
+// compare (C3), decrypt authorize, Reply (C6) + Forward (C7) + overflow (C8). Under PGP_REPLY the C3
+// compare is ADVERSARY-MEDIATED (In(senderKey) against the OOB reference 'Alex'); otherwise it shows the
+// fixed pair and is mask-driven only. ----
+#ifdef PGP_REPLY
+rule IF_screen_blake_pgp [color=#f2994a]:
+    [ BlakeInit(idB), In(senderKey), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
+  --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
+    [ // C3 shows the OFFERED sender key against the OOB reference (the correspondent identity 'Alex'): an
+      // Attentive compare fires only on <k,k> and so CATCHES a substituted key; a credulous mask accepts
+      // any offered key -> Mistake -> the reply gets encrypted to the adversary (IF_blake_reply_hijacked).
+      Prompt('Blake', ~vid,   'compare'),   !Demand('Blake', ~vid,   'compare'),   !Displayed('Blake', ~vid, <senderKey, 'Alex'>),
+      Prompt('Blake', ~decId, 'authorize'), !Demand('Blake', ~decId, 'authorize'),
+      Prompt('Blake', ~fwdId, 'decide'),    !Demand('Blake', ~fwdId, 'decide'),
+      !Demand('Blake', ~b1,    'confirm'),
+      !Demand('Blake', ~b2,    'confirm'),
+      !Demand('Blake', ~rplId, 'decide'),
+      !Demand('Blake', ~ovfId, 'decide'),
+      !Copresent('Blake'), !CopresentDecide('Blake'),
+      !BlakePgpScreen(idB, ~decId, ~fwdId), !BlakeTrustCtl(idB, ~vid) ]
+#else
 rule IF_screen_blake_pgp [color=#f2994a]:
     [ BlakeInit(idB), Fr(~vid), Fr(~b1), Fr(~b2), Fr(~decId), Fr(~rplId), Fr(~fwdId), Fr(~ovfId), Fr(~sk) ]
   --[ UIStep('Blake','inbox'), KeyGenerated('Blake'), OwnSkGen('Blake', ~sk), Published('Blake'), PoseBlakePgp('Blake') ]->
@@ -61,16 +148,58 @@ rule IF_screen_blake_pgp [color=#f2994a]:
       // >=2 co-present controls (sigma2) and >=3 co-present DECIDES (sigma9) -- single markers, O(1).
       !Copresent('Blake'), !CopresentDecide('Blake'),
       !BlakePgpScreen(idB, ~decId, ~fwdId) ]
+#endif
 
 restriction OncePoseBlakePgp:
   "All p #i #j. PoseBlakePgp(p)@i & PoseBlakePgp(p)@j ==> #i = #j"
 
 // decrypt (authorize) gates the read; a Fearful freeze on the authorize = the guide's abandonment case
 // (safe-fail -- no Read). Reading holds m for a possible forward.
+#ifdef PGP_REPLY
+// ... and mints the ONE linear ReplyToken that BOUNDS the reply leg (see the header).
+rule IF_blake_decrypt [color=#1f6fd0]:
+    [ !BlakePgpScreen(idB, decId, fwdId), Granted('Blake', decId), Mailbox('Blake', m) ]
+  --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
+    [ BlakeHasMsg(idB, m), ReplyToken(idB) ]
+#else
 rule IF_blake_decrypt [color=#1f6fd0]:
     [ !BlakePgpScreen(idB, decId, fwdId), Granted('Blake', decId), Mailbox('Blake', m) ]
   --[ UIStep('Blake','btn_decrypt'), Read('Blake', m), ReadVia('Blake','PGP') ]->
     [ BlakeHasMsg(idB, m) ]
+#endif
+
+// ---- the REPLY leg (C6). Blake can only reply ENCRYPTED, so he needs (a) a key from Alex -- the A13
+// attach -- and (b) a key he TRUSTS: the one his C3 compare committed. WHICH key that is decides where the
+// reply goes. Both rules burn the linear ReplyToken, so exactly one reply happens. ----
+#ifdef PGP_REPLY
+// good: Blake's compare committed the GENUINE sender ('Alex' -- the only key an Attentive compare can
+// accept, since it fires only on <k,k>), and Alex attached her key. Delivered on the PRIVATE Mailbox --
+// no Out, no new leak route. This is the RECIPROCITY property the user guide calls out.
+rule IF_blake_reply_good [color=#1f6fd0]:
+    [ ReplyToken(idB), !BlakeTrustCtl(idB, vid), !StepData('Blake', vid, 'Alex'), !ReplyKeyAvail('Blake'), Fr(~reply) ]
+  --[ UIStep('Blake','btn_reply'), Reply('Blake', ~reply), Secret(~reply), ReplySentTo('Blake','Alex') ]->
+    [ Mailbox('Alex', ~reply) ]
+
+// HIJACKED: a credulous Blake trusted a SUBSTITUTED sender key (a Mistake at the C3 compare -- the key is
+// adversary-supplied via In(senderKey)), so his reply is encrypted to the ADVERSARY's key and leaves the
+// boundary. Joins the ONE free-valued !StepData (the committed key). Already covered by the Mistake(p,vid)
+// disjunct of H_leak_routes -- no new disjunct.
+rule IF_blake_reply_hijacked [color=#c0392b]:
+    [ ReplyToken(idB), !BlakeTrustCtl(idB, vid), !StepData('Blake', vid, k), !ReplyKeyAvail('Blake'), Fr(~reply) ]
+  --[ UIStep('Blake','btn_reply'), Reply('Blake', ~reply), Secret(~reply), NeqSender(k, 'Alex'),
+      ReplyHijacked('Blake'), MisdirectedTo('Blake','substituted-sender-key') ]->
+    [ Out(~reply) ]
+
+restriction NeqSenderKey:
+  "All k #i. NeqSender(k, 'Alex')@i ==> not (k = 'Alex')"
+
+// the reply lands back on Alex's screen: the completion half of the ceremony. NOT labelled Read -- that
+// label is reserved for the recipient reading m (the S*_read_only_blake lemmas pin it to Blake).
+rule IF_alex_read_reply [color=#1f6fd0]:
+    [ !AlexScreen('Alex', idA, subjId, sendId), Mailbox('Alex', r) ]
+  --[ UIStep('Alex','read_reply'), ReplyRead('Alex', r) ]->
+    [ ]
+#endif
 
 // Forward MISROUTE: Forward to a keyless third party re-sends m in the clear -> ForwardedOutside ->
 // Out(m). The recipient-side breach of "only Alex and Blake know m" even when the sender was perfect.

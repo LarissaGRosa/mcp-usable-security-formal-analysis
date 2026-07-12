@@ -49,18 +49,34 @@ lemma S8_sigma10_closure:
      AdditiveLoad('Alex')@a & Slip('Alex')@s & RepeatedFailure('Alex')@r & SubjectLeak('Alex')@l
    & #a < #s & #s < #r & #r < #l"
 
-// ---- the SLIP alone is a SAFE-FAIL: with every EXPORT route excluded, the only way the adversary can
-// still learn m is a credulous compare (Mistake) -- a Slip is NOT a leak route. This is precisely why the
-// closure matters: the slip does not breach, it DEGRADES, and the degradation breaches. ----
-lemma S8_slip_alone_is_safe:
+// ---- WHAT A SLIP IS, EXACTLY. A slip is not intrinsically a breach -- it is a wrong value in a field.
+// Whether it breaches depends ENTIRELY on WHICH field:
+//   * subject / passphrase : a wrong value is a SAFE-FAIL (the step just fails; nothing leaves)
+//   * the To ADDRESS field : a wrong value MISADDRESSES the message -> it leaves the boundary
+// Adding the A2 route made the old blanket claim "a slip alone is safe" FALSE -- and it should be false.
+// The precise statement is the one below: a slip is not a leak route IN ITSELF; every K(m) still traces to
+// one of the NAMED routes on the boundary list (of which the misaddressed send is now one).
+lemma S8_slip_is_not_itself_a_leak:
   all-traces
   "All m #s #k. Secret(m)@s & K(m)@k
      & not (Ex p #d. SubjectLeak(p)@d)
      & not (Ex p #d. SendPremature(p)@d)
      & not (Ex p #d. ForwardedOutside(p)@d)
+     & not (Ex p #d. MisaddressedSend(p)@d)
      & not (Ex p #d. LeakPw(p)@d)
      & not (Ex p #d. MisdeliveredPw(p)@d)
    ==> (Ex p vid #d. Mistake(p, vid)@d)"
+
+// ...and the TWO ways a slip can hurt are now BOTH proved, which is the whole point of the class:
+//   DIRECTLY  -- a slip in the address field misaddresses the message  (S8_to_field_misaddressed)
+//   INDIRECTLY -- a slip anywhere raises !Failed -> sigma10 -> Careless -> the NEXT entry leaks
+//                 (S8_sigma10_closure). The indirect route is the one no prior model could express.
+
+// the OTHER outcome of the same field-entry class: a BUSY slip in the To field commits a fresh WRONG
+// address, so the message is sent to someone who is not the correspondent (A2 finally drives an outcome).
+// A leak route is not "modelled" until a profile proves it REACHABLE.
+lemma S8_to_field_misaddressed:
+  exists-trace "Ex #i. MisaddressedSend('Alex')@i"
 
 // the Careless state also reaches the TLS exit -- a NAMED outcome, never an Out.
 lemma S8_tls_misroute_chain:
@@ -71,7 +87,8 @@ lemma S8_only_correspondents_know:
   all-traces
   "All m #s #k. Secret(m)@s & K(m)@k
    ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
-     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
 
 lemma S8_read_only_blake:
   all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"

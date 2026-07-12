@@ -1,0 +1,61 @@
+theory SecureEmail_S15_Reply
+begin
+/*
+  S15 -- the RECIPROCITY leg (A13 "Sign - attach my key") and the recipient-side key substitution.
+  This is the profile that actually EXERCISES the PGP_REPLY machinery -- without it those rules exist but
+  no proof ever reaches them, and a route nobody reaches is not modelled.
+
+  A13. Attaching your key is not a secrecy control: SKIPPING it leaks nothing. It is a COMPLETION control
+  -- if Alex never attaches her key, Blake has nothing to encrypt a reply TO. So a Careless DISMISS of the
+  confirm is a pure USABILITY failure: the ceremony half-works, the reply leg silently never happens, and
+  no security lemma notices. That asymmetry is the point (it is the reciprocity property the user guide
+  calls out).
+
+  Screen C. Blake's trusted-key view is ADVERSARY-MEDIATED (In(senderKey)): an Attentive compare fires
+  only on <k,k> and so accepts only Alex's real key, while a degraded Blake trusts a SUBSTITUTED key and
+  encrypts his reply to the ADVERSARY -- the reply leaves the boundary even though Alex's send was perfect.
+  The hijack is absorbed by the existing Mistake disjunct of H_leak_routes (no new leak route).
+*/
+#define MASK_TRANSCRIBE
+#define MASK_COMPUTE
+#define MASK_DECIDE
+#define MASK_CONFIRM
+#define PATH_PGP
+#define PGP_REPLY
+
+#define STRESS_BLAKE
+#define SIGMA6_ABSTRACTION
+#define OUTCOME_CARELESS_SKIPCHECK
+
+#include "base.spthy"
+
+lemma S15_abstraction_onset: exists-trace "Ex #i. Abstraction('Blake')@i"
+
+// (C) RECIPROCITY: Alex attaches her key -> Blake's encrypted reply gets back to her.
+lemma S15_reply_completes:
+  exists-trace "Ex c rep #a #r. KeyAttached('Alex', c)@a & ReplyRead('Alex', rep)@r & #a < #r"
+
+// ...and it CANNOT happen without the attach. A dismissed A13 is a USABILITY failure, not a security one:
+// the reply leg simply never completes, and nothing leaks.
+lemma S15_reply_needs_attach:
+  all-traces
+  "All rep #r. ReplyRead('Alex', rep)@r ==> (Ex c #a. KeyAttached('Alex', c)@a & #a < #r)"
+
+// (S) the recipient-side substitution: a degraded Blake trusts a substituted sender key and encrypts his
+// reply to the adversary. Alex's send was perfect; the breach is entirely on the recipient's screen.
+lemma S15_reply_hijacked:
+  exists-trace "Ex #i. ReplyHijacked('Blake')@i"
+
+// attribution: the hijack requires the credulous trusted-key compare (an Attentive Blake catches it).
+lemma S15_hijack_requires_mistake:
+  all-traces "All p #i. ReplyHijacked(p)@i ==> (Ex q vid #d. Mistake(q, vid)@d)"
+
+lemma S15_only_correspondents_know:
+  all-traces
+  "All m #s #k. Secret(m)@s & K(m)@k
+   ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
+
+lemma S15_completes: exists-trace "Ex m #s #r. Send('Alex','PGP', m)@s & Read('Blake', m)@r"
+end

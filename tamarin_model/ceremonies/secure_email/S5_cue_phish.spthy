@@ -30,7 +30,8 @@ lemma S5_only_correspondents_know:
   all-traces
   "All m #s #k. Secret(m)@s & K(m)@k
    ==> (Ex p vid #d. Mistake(p, vid)@d) | (Ex p #d. LeakPw(p)@d) | (Ex p #d. MisdeliveredPw(p)@d)
-     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)"
+     | (Ex p #d. SubjectLeak(p)@d) | (Ex p #d. SendPremature(p)@d) | (Ex p #d. ForwardedOutside(p)@d)
+     | (Ex p #d. MisaddressedSend(p)@d)"
 
 lemma S5_read_only_blake:
   all-traces "All p m #r. Read(p, m)@r ==> p = 'Blake'"
