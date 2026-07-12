@@ -1,0 +1,44 @@
+theory KDF_K4_Worstcase
+begin
+/*
+  K4 -- WORST CASE: BOTH parties stressed. Only now can the adversary actually learn sk, and only by
+  BOTH of them exporting a nonce -- which is exactly what the private wire buys and what the public-wire
+  P-profiles cannot state. The (S) pair is the headline: the breach is REACHABLE, and every breach is
+  attributable to that pair of mistakes.
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+#define STRESS_ALEX
+#define STRESS_BLAKE
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_DEGRADED_CLICK
+#define PROPERTIES
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+// (S) the breach is REACHABLE -- and needs BOTH parties to leak.
+lemma K4_breach_reachable:
+  exists-trace "Ex na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k"
+
+lemma K4_only_correspondents_know_sk:
+  all-traces
+  "All na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k
+   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
+
+// (C) the ceremony still completes with the stressor in force.
+lemma K4_completes:
+  exists-trace "Ex #o #a #b. Distract('Alex')@o & SessionUp('Alex')@a & SessionUp('Blake')@b"
+end

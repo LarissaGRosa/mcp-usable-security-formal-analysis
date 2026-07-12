@@ -1,0 +1,41 @@
+theory KDF_K2_Leak
+begin
+/*
+  K2 -- the CARELESS in-band leak (sigma2 -> Careless): the nonce is pasted into a public channel
+  (share inband-leak) -> Out(nonce) while the partner STILL receives it, so the ceremony completes and
+  nothing looks wrong. One nonce out is still NOT sk (H_sk_requires_both_leaks).
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+lemma K2_distract_onset:
+  exists-trace "Ex #i. Distract('Alex')@i"
+
+lemma K2_inband_leak_reachable:
+  exists-trace "Ex #i. NonceLeaked('Alex')@i"
+
+lemma K2_silent_leak_still_completes:
+  exists-trace "Ex #l #a #b. NonceLeaked('Alex')@l & SessionUp('Alex')@a & SessionUp('Blake')@b"
+
+lemma K2_only_correspondents_know_sk:
+  all-traces
+  "All na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k
+   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
+end

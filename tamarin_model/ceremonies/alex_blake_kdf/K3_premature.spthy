@@ -1,0 +1,45 @@
+theory KDF_K3_Premature
+begin
+/*
+  K3 -- the ORDER VIOLATION (OUTCOME_PREMATURE): a degraded human presses "start session" BEFORE the K4
+  key-confirmation read-back. The grant emits GrantedUnchecked, the session goes live on an UNCONFIRMED
+  key (SessionUnconfirmed) -- the shutdown that would have caught a slipped key is simply skipped.
+  This is the SAME core lever proved in secure_email (SendPremature): one lever, two ceremonies.
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+#define STRESS_ALEX
+#define SIGMA2_CONCURRENCY
+#define OUTCOME_DEGRADED_CLICK
+#define OUTCOME_PREMATURE
+#define PROPERTIES
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+lemma K3_premature_reachable:
+  exists-trace "Ex #i. SessionUnconfirmed('Alex')@i"
+
+// the order violation is never available to an Attentive human (core UP_premature_requires_degrade
+// carries the general form; here we witness the ceremony-level consequence).
+lemma K3_premature_requires_degrade:
+  all-traces
+  "All p #i. SessionUnconfirmed(p)@i ==> (Ex m #j. SetMask(p, m)@j & not(m = 'Attentive') & #j < #i)"
+
+lemma K3_only_correspondents_know_sk:
+  all-traces
+  "All na nb #s #k. Secret(kdf(na,nb))@s & K(kdf(na,nb))@k
+   ==> ( (Ex #a. MisdeliveredNonce('Alex')@a) | (Ex #a. NonceLeaked('Alex')@a) )
+     & ( (Ex #b. MisdeliveredNonce('Blake')@b) | (Ex #b. NonceLeaked('Blake')@b) )"
+end

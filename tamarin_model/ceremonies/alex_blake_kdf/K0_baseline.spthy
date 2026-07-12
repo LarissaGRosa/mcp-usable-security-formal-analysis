@@ -1,0 +1,33 @@
+theory KDF_K0_Baseline
+begin
+/*
+  K0 -- BASELINE of the invented PRIVATE messenger (KDF_MESSENGER). No stressor: both parties transcribe
+  and share their nonce over the private chat, derive sk = kdf(Na,Nb), the key-confirmation shutdown
+  passes, and both sessions come up. Secrecy is ABSOLUTE -- with no human mistake no nonce ever leaves.
+*/
+#define KDF_INIT
+#define KDF_MESSENGER
+#define COMPUTE_KEYRESULT
+#define MASK_COMPUTE
+#define MASK_TRANSCRIBE
+#define MASK_SHARE
+#define MASK_AUTHORIZE
+#define LEXICON_DEFAULT
+#include "../../core/framework.spthy"
+#include "protocol.spthy"
+#include "../../core/demands.spthy"
+#include "../../core/masks.spthy"
+#include "../../core/stressors.spthy"
+#include "../../core/knobs.spthy"
+#include "../../core/properties.spthy"
+#include "k_lemmas.spthy"
+
+lemma K0_completes:
+  exists-trace "Ex #a #b. SessionUp('Alex')@a & SessionUp('Blake')@b"
+
+lemma K0_agreement:
+  exists-trace "Ex #a #b. KeyConfirmed('Alex')@a & KeyConfirmed('Blake')@b"
+
+lemma K0_secrecy_absolute:
+  all-traces "All na nb #s. Secret(kdf(na,nb))@s ==> not (Ex #k. K(kdf(na,nb))@k)"
+end

@@ -376,16 +376,22 @@ rule IF_recv_blake [color=#1f6fd0]:
 
 // --- K3 calculate: the interface DISPLAYS the correct key kdf(Na,Nb); the compute mask commits it
 // (COMPUTE_KEYRESULT adapter -> KeyResult). Secret(sk) is born here (both nonces known). ---
+// K3 also poses the K4 "start session" AUTHORIZE, co-present with the derivation (the two controls the
+// human faces at once). The session normally requires the key-confirmation shutdown to have PASSED.
 rule IF_k3_alex [color=#f2994a]:
-    [ AlexBoth(idA, Na, Nb), Fr(~rid) ]
+    [ AlexBoth(idA, Na, Nb), Fr(~rid), Fr(~sid) ]
   --[ PoseK3('Alex'), Secret(kdf(Na, Nb)) ]->
-    [ Prompt('Alex', ~rid, 'compute'), !Demand('Alex', ~rid, 'compute'), !Displayed('Alex', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
-      AlexAwaitKey(idA, ~rid) ]
+    [ Prompt('Alex', ~rid, 'compute'),   !Demand('Alex', ~rid, 'compute'), !Displayed('Alex', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
+      Prompt('Alex', ~sid, 'authorize'), !Demand('Alex', ~sid, 'authorize'),
+      !Copresent('Alex'),
+      AlexAwaitKey(idA, ~rid), !AlexStart(idA, ~sid) ]
 rule IF_k3_blake [color=#f2994a]:
-    [ BlakeBoth(idB, Na, Nb), Fr(~rid) ]
+    [ BlakeBoth(idB, Na, Nb), Fr(~rid), Fr(~sid) ]
   --[ PoseK3('Blake'), Secret(kdf(Na, Nb)) ]->
-    [ Prompt('Blake', ~rid, 'compute'), !Demand('Blake', ~rid, 'compute'), !Displayed('Blake', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
-      BlakeAwaitKey(idB, ~rid) ]
+    [ Prompt('Blake', ~rid, 'compute'),   !Demand('Blake', ~rid, 'compute'), !Displayed('Blake', ~rid, kdf(Na, Nb)), !UnderDeadline(~rid),
+      Prompt('Blake', ~sid, 'authorize'), !Demand('Blake', ~sid, 'authorize'),
+      !Copresent('Blake'),
+      BlakeAwaitKey(idB, ~rid), !BlakeStart(idB, ~sid) ]
 
 restriction OncePoseK3: "All p #i #j. PoseK3(p)@i & PoseK3(p)@j ==> #i = #j"
 
@@ -408,4 +414,20 @@ rule IF_k4_blake_abort [color=#1f6fd0]:
 
 restriction KMKeyEqHolds:  "All x y #i. KMKeyEq(x,y)@i ==> x = y"
 restriction KMKeyNeqHolds: "All x #i. KMKeyNeq(x,x)@i ==> F"
+
+// K4 PREMATURE (OUTCOME_PREMATURE): a degraded human presses "start session" BEFORE the key-confirmation
+// read-back. The grant emits GrantedUnchecked, and THIS rule is its only consumer -- it starts the
+// session WITHOUT the KMKeyEq shutdown join, so an unconfirmed (possibly slipped or MITM'd) key goes
+// live: SessionUnconfirmed. This is the SAME order-violation lever proved in secure_email
+// (SendPremature), which is the RFC-grade generality claim: one core lever, two ceremonies.
+#ifdef OUTCOME_PREMATURE
+rule IF_k4_alex_premature [color=#c0392b]:
+    [ AlexAwaitKey(idA, rid), KeyResult('Alex', rid, sk), !AlexStart(idA, sid), GrantedUnchecked('Alex', sid) ]
+  --[ SessionUnconfirmed('Alex'), SessionUp('Alex'), Finish('Alex') ]->
+    [ !Session('Alex', idA, sk) ]
+rule IF_k4_blake_premature [color=#c0392b]:
+    [ BlakeAwaitKey(idB, rid), KeyResult('Blake', rid, sk), !BlakeStart(idB, sid), GrantedUnchecked('Blake', sid) ]
+  --[ SessionUnconfirmed('Blake'), SessionUp('Blake'), Finish('Blake') ]->
+    [ !Session('Blake', idB, sk) ]
+#endif
 #endif
